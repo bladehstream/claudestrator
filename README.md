@@ -161,7 +161,9 @@ Each task file captures:
 
 - [User Guide](docs/user_guide.md) - Comprehensive usage documentation
 - [Protocol](orchestrator_protocol_v3.md) - Full protocol specification
-- [Skill Manifest](skills/skill_manifest.md) - Available skills reference
+- [Initialization Flow](initialization_flow.md) - First-run interaction scripts
+- [Skill Loader](skill_loader.md) - Dynamic skill discovery specification
+- [Skill Reference](skills/skill_manifest.md) - Bundled skills reference
 
 ## Contributing
 

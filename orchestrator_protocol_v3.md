@@ -10,6 +10,8 @@ The Orchestrator Protocol defines how a primary Claude agent coordinates complex
 5. Tracking progress through a persistent journal
 6. Verifying completion through QA
 
+> **See also**: `initialization_flow.md` for detailed first-run interaction scripts and user prompts.
+
 ## Core Principles
 
 | Principle | Description |

@@ -80,9 +80,60 @@ your-project/                    # Your project directory
 | File | Purpose |
 |------|---------|
 | `orchestrator_protocol_v3.md` | The complete protocol Claude follows |
-| `skill_manifest.md` | Index of available skills for matching |
+| `skill_loader.md` | Dynamic skill discovery specification |
+| `skills/*.md` | Skill files (auto-discovered from frontmatter) |
 | `journal/index.md` | Project state, task list, context map |
 | `journal/task-*.md` | Detailed log for each task |
+
+---
+
+## Dynamic Skill Loading
+
+Skills are discovered automatically - no static manifest required.
+
+### How It Works
+
+1. **On session start**, orchestrator scans the skill directory
+2. **Parses YAML frontmatter** from each `.md` file
+3. **Builds runtime index** searchable by domain, keywords, task types
+4. **Reports loaded skills** to user
+
+### Skill Directory Priority
+
+```
+1. User-specified: "Use skills from /path/to/skills"
+2. Project-local: ./skills/ or ./.claude/skills/
+3. User global: ~/.claude/skills/
+4. Default: orchestrator/skills/
+```
+
+### Adding New Skills
+
+Simply drop a properly formatted skill file into the directory:
+
+```bash
+# Copy template
+cp skills/skill_template.md skills/implementation/my_new_skill.md
+
+# Edit with your skill definition
+# Ensure frontmatter has: name, id, domain, task_types, keywords, complexity
+
+# Done - available next session
+```
+
+### Required Frontmatter
+
+```yaml
+---
+name: My Skill Name
+id: my_skill_id
+domain: [web, backend]
+task_types: [implementation, feature]
+keywords: [keyword1, keyword2, keyword3]
+complexity: [normal, complex]
+pairs_with: [related_skill]  # optional
+---
+```
 
 ---
 

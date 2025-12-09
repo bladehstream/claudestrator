@@ -54,15 +54,35 @@ ELSE:
     OPTIONAL: Save to project/PRD.md
 ```
 
-### 1.3 Load Skill Manifest
+### 1.3 Dynamic Skill Discovery
 
 ```
-Read: orchestrator/skills/skill_manifest.md
-Build in-memory index of available skills:
-    - ID → metadata mapping
-    - Keyword → skill ID mapping
-    - Domain → skill ID mapping
+DETERMINE skill_directory:
+    1. User-specified path (if provided)
+    2. Project-local: ./skills/ or ./.claude/skills/
+    3. User global: ~/.claude/skills/
+    4. System default: orchestrator/skills/
+
+SCAN skill_directory recursively for *.md files:
+    FOR each file:
+        Parse YAML frontmatter
+        IF valid skill metadata (id, name, domain, task_types, keywords, complexity):
+            Add to skill library
+        ELSE:
+            Log warning, skip file
+
+BUILD in-memory skill index:
+    - by_id: id → skill mapping
+    - by_domain: domain → [skills] mapping
+    - by_task_type: task_type → [skills] mapping
+    - by_keyword: keyword → [skills] mapping
+
+REPORT to user:
+    "Loaded N skills from [directory]:
+     - [category]: skill1, skill2, ..."
 ```
+
+See: `skill_loader.md` for full specification.
 
 ---
 

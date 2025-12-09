@@ -1,15 +1,17 @@
-# Skill Manifest
+# Skill Manifest (Reference Only)
 
 ## Overview
 
-This manifest indexes all available skills for the orchestrator's agent construction system. Skills are matched to tasks based on domain, task type, keywords, and complexity.
+> **Note**: This manifest is now **optional**. Skills are auto-discovered from frontmatter at runtime. This file serves as a reference and documentation of bundled skills.
 
-## How to Use This Manifest
+See `skill_loader.md` for the dynamic discovery system.
 
-1. **Orchestrator** queries this file to find candidate skills
-2. **Matching algorithm** scores skills against task requirements
-3. **Top 1-3 skills** are injected into agent prompts
-4. **New skills** should be added here when created
+## How Skills Are Loaded
+
+1. **Orchestrator scans** the skill directory for `*.md` files
+2. **Parses YAML frontmatter** from each file
+3. **Builds runtime index** - no static manifest required
+4. **New skills**: Just drop a file with valid frontmatter into the directory
 
 ---
 

@@ -16,6 +16,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 
 | Feature | Description |
 |---------|-------------|
+| **Dynamic Skill Discovery** | Skills auto-loaded from directory - just drop in new .md files |
 | **Skill-Based Matching** | Tasks matched to skills via domain, keywords, and complexity |
 | **Dynamic Model Selection** | Easy→Haiku, Normal→Sonnet, Complex→Opus |
 | **Persistent Journal** | Tracks decisions, reasoning, and context across sessions |
@@ -44,10 +45,11 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 ```
 claudestrator/
 ├── orchestrator_protocol_v3.md    # Core protocol definition
+├── skill_loader.md                # Dynamic skill discovery spec
 ├── docs/
 │   └── user_guide.md              # Comprehensive usage guide
-├── skills/
-│   ├── skill_manifest.md          # Index of all skills
+├── skills/                        # Default skill directory (auto-scanned)
+│   ├── skill_manifest.md          # Optional reference index
 │   ├── skill_template.md          # Template for new skills
 │   ├── agent_model_selection.md   # Model selection criteria
 │   ├── implementation/            # Code-writing skills
@@ -59,6 +61,25 @@ claudestrator/
     ├── task_entry.md              # Task file template
     └── agent_prompt.md            # Agent prompt template
 ```
+
+## Dynamic Skill Loading
+
+Skills are discovered automatically at runtime - no manifest required:
+
+1. **Drop skill files** into any skills directory
+2. **Orchestrator scans** for `*.md` files with valid frontmatter
+3. **Index built** from metadata (id, domain, keywords, task_types)
+4. **Matching uses** live index for task→skill assignment
+
+```
+# Skill directory priority:
+1. User-specified path
+2. Project-local: ./skills/ or ./.claude/skills/
+3. User global: ~/.claude/skills/
+4. Default: orchestrator/skills/
+```
+
+To add a new skill: copy `skill_template.md`, fill in metadata, drop in directory. Done.
 
 ## Available Skills
 

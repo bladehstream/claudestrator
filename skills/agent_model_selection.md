@@ -19,7 +19,7 @@ Define criteria for selecting appropriate models when spawning subagents via the
 - Formatting or documentation updates
 - Grep/find operations with clear targets
 
-**Max Skills**: 1
+**Max Skills**: 3
 
 **Examples:**
 - "Change PLAYER_SPEED from 300 to 400"
@@ -42,7 +42,7 @@ Define criteria for selecting appropriate models when spawning subagents via the
 - Code review tasks
 - Feature specifications with defined parameters
 
-**Max Skills**: 2
+**Max Skills**: 7
 
 **Examples:**
 - "Implement PowerupSplash class with fade animation"
@@ -67,7 +67,7 @@ Define criteria for selecting appropriate models when spawning subagents via the
 - Debugging subtle/intermittent issues
 - Tasks with unclear requirements needing exploration
 
-**Max Skills**: 3
+**Max Skills**: 15
 
 **Examples:**
 - "Design state machine architecture for game flow"
@@ -115,9 +115,9 @@ FUNCTION selectModel(task):
 
 | Complexity | Model | Max Skills | Typical Tasks |
 |------------|-------|------------|---------------|
-| Easy | Haiku | 1 | Constants, searches, simple edits |
-| Normal | Sonnet | 2 | Features, fixes, single components |
-| Complex | Opus | 3 | Architecture, algorithms, multi-system |
+| Easy | Haiku | 3 | Constants, searches, simple edits |
+| Normal | Sonnet | 7 | Features, fixes, single components |
+| Complex | Opus | 15 | Architecture, algorithms, multi-system |
 
 ## Context Efficiency Tips
 

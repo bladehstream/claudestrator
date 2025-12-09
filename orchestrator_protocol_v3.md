@@ -214,9 +214,9 @@ FUNCTION matchSkills(task):
     candidates.sortBy(score, DESC)
 
     max_skills = CASE complexity
-        WHEN 'easy' THEN 1
-        WHEN 'normal' THEN 2
-        WHEN 'complex' THEN 3
+        WHEN 'easy' THEN 3
+        WHEN 'normal' THEN 7
+        WHEN 'complex' THEN 15
 
     RETURN candidates.take(max_skills)
 ```

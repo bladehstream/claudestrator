@@ -195,9 +195,9 @@ Each task file captures:
 
 | Complexity | Model | Max Skills | Use For |
 |------------|-------|------------|---------|
-| Easy | Haiku | 1 | Constants, searches, simple edits |
-| Normal | Sonnet | 2 | Features, fixes, single components |
-| Complex | Opus | 3 | Architecture, algorithms, multi-system |
+| Easy | Haiku | 3 | Constants, searches, simple edits |
+| Normal | Sonnet | 7 | Features, fixes, single components |
+| Complex | Opus | 15 | Architecture, algorithms, multi-system |
 
 ## Documentation
 

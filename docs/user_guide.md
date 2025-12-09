@@ -192,9 +192,9 @@ For each task, Claude:
 2. **Selects model** based on complexity:
    | Complexity | Model | Max Skills |
    |------------|-------|------------|
-   | Easy | Haiku | 1 |
-   | Normal | Sonnet | 2 |
-   | Complex | Opus | 3 |
+   | Easy | Haiku | 3 |
+   | Normal | Sonnet | 7 |
+   | Complex | Opus | 15 |
 
 3. **Constructs agent prompt** combining:
    - Base agent instructions
@@ -486,9 +486,9 @@ Claude: Creating project journal and decomposing into tasks...
 
 | Model | When to Use | Max Skills |
 |-------|-------------|------------|
-| Haiku | Simple changes, searches, constants | 1 |
-| Sonnet | Features, fixes, standard implementation | 2 |
-| Opus | Architecture, algorithms, complex decisions | 3 |
+| Haiku | Simple changes, searches, constants | 3 |
+| Sonnet | Features, fixes, standard implementation | 7 |
+| Opus | Architecture, algorithms, complex decisions | 15 |
 
 ### Task Types
 

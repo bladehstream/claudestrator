@@ -38,6 +38,32 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 
 All implementation work is delegated to agents via the Task tool. See [Orchestrator Constraints](orchestrator_constraints.md) for detailed rules.
 
+## Session Management
+
+The orchestrator maintains persistent state across sessions via slash commands:
+
+| Command | Action |
+|---------|--------|
+| `/orchestrate` | Initialize or resume orchestrator mode |
+| `/checkpoint` | Save current state (can continue working) |
+| `/status` | Show project and task status |
+| `/tasks` | Show task list with progress |
+| `/skills` | Show loaded skills |
+| `/deorchestrate` | Clean exit with full state save |
+
+### Memory System
+
+```
+project/.claude/
+├── orchestrator_state.md    # Global orchestrator memory
+├── journal/
+│   ├── index.md             # Task registry
+│   └── task-*.md            # Task execution logs
+└── config.md                # User preferences
+```
+
+State is auto-saved after task completions and key decisions. Use `/checkpoint` for manual saves.
+
 ## Quick Start
 
 1. **Copy to your Claude skills directory:**
@@ -178,9 +204,11 @@ Each task file captures:
 - [User Guide](docs/user_guide.md) - Comprehensive usage documentation
 - [Protocol](orchestrator_protocol_v3.md) - Full protocol specification
 - [Orchestrator Constraints](orchestrator_constraints.md) - Role boundaries and rules
+- [Memory System](orchestrator_memory.md) - State persistence and session management
 - [Initialization Flow](initialization_flow.md) - First-run interaction scripts
 - [Skill Loader](skill_loader.md) - Dynamic skill discovery specification
 - [Skill Reference](skills/skill_manifest.md) - Bundled skills reference
+- [Slash Commands](commands/) - Session management commands
 
 ## Contributing
 

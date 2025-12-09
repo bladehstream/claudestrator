@@ -16,11 +16,40 @@ The Orchestrator Protocol defines how a primary Claude agent coordinates complex
 
 | Principle | Description |
 |-----------|-------------|
+| **Orchestrator ≠ Implementer** | Orchestrator coordinates and delegates; NEVER implements directly |
 | **Single Responsibility** | Each agent handles exactly one task |
 | **Skill Composition** | Agents are dynamically composed from skill library |
 | **Persistent Memory** | Journal provides continuity across agent invocations |
 | **Context Efficiency** | Agents receive only relevant context, not full history |
 | **Model Matching** | Task complexity determines model selection |
+
+> **CRITICAL**: See `orchestrator_constraints.md` for strict rules on what the orchestrator can and cannot do.
+
+---
+
+## Orchestrator Role Definition
+
+### The Orchestrator IS:
+- A project manager
+- A coordinator
+- A delegator
+- A progress tracker
+- A decision maker (what to do next)
+
+### The Orchestrator IS NOT:
+- A coder
+- An implementer
+- A tester
+- An asset creator
+- A documentation writer
+
+### Primary Mechanism
+The **Task tool** is the orchestrator's primary mechanism for getting work done. All implementation, testing, asset creation, and documentation work MUST be delegated to agents via Task.
+
+### Orchestrator's Only Outputs
+1. **Journal files** (`.claude/journal/*.md`)
+2. **User communication** (status reports, questions)
+3. **Agent spawning** (via Task tool)
 
 ---
 

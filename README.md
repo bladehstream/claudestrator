@@ -16,11 +16,27 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 
 | Feature | Description |
 |---------|-------------|
+| **Strict Role Separation** | Orchestrator manages; agents implement. Never mixed. |
 | **Dynamic Skill Discovery** | Skills auto-loaded from directory - just drop in new .md files |
 | **Skill-Based Matching** | Tasks matched to skills via domain, keywords, and complexity |
 | **Dynamic Model Selection** | Easy→Haiku, Normal→Sonnet, Complex→Opus |
 | **Persistent Journal** | Tracks decisions, reasoning, and context across sessions |
 | **Agent Factory** | Dynamically constructs agent prompts from skills + context |
+
+## Orchestrator Role
+
+> **The orchestrator is a PROJECT MANAGER, not an IMPLEMENTER.**
+
+| Orchestrator DOES | Orchestrator DOES NOT |
+|-------------------|----------------------|
+| Plan & decompose work | Write code |
+| Track progress | Edit project files |
+| Match skills to tasks | Run build/test commands |
+| Spawn agents | Create assets |
+| Review results | Implement features |
+| Coordinate iteration | Fix bugs directly |
+
+All implementation work is delegated to agents via the Task tool. See [Orchestrator Constraints](orchestrator_constraints.md) for detailed rules.
 
 ## Quick Start
 
@@ -161,6 +177,7 @@ Each task file captures:
 
 - [User Guide](docs/user_guide.md) - Comprehensive usage documentation
 - [Protocol](orchestrator_protocol_v3.md) - Full protocol specification
+- [Orchestrator Constraints](orchestrator_constraints.md) - Role boundaries and rules
 - [Initialization Flow](initialization_flow.md) - First-run interaction scripts
 - [Skill Loader](skill_loader.md) - Dynamic skill discovery specification
 - [Skill Reference](skills/skill_manifest.md) - Bundled skills reference

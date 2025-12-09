@@ -1,0 +1,25 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Project journals (these are project-specific, not part of the framework)
+journal/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Node modules (if any examples added later)
+node_modules/
+
+# Environment files
+.env
+.env.local

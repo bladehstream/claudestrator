@@ -102,9 +102,50 @@ The PRD Generator supports 7 project templates: web app, CLI, API, game, mobile,
 
 ## Quick Start
 
-### Option A: Global Installation (All Projects)
+### One-Line Install (Recommended)
 
-Use this if you want Claudestrator available across all your projects.
+**Global installation** (available in all projects):
+```bash
+curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash
+```
+
+**Project-local installation** (current directory only):
+```bash
+curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash -s -- --local
+```
+
+The installer will:
+- **Preview all changes with diffs** before making any modifications
+- Clone the repository
+- Set up slash commands (symlinks)
+- Copy skills (new only, never overwrites)
+- Configure CLAUDE.md
+- **Never overwrite existing files** (shows diffs for conflicts)
+- Create backups before modifying CLAUDE.md
+
+**Dry run** (preview changes without installing):
+```bash
+curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash -s -- --dry-run
+```
+
+To inspect the script before running:
+```bash
+curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh -o install.sh
+less install.sh
+bash install.sh
+```
+
+To uninstall:
+```bash
+curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash -s -- --uninstall
+```
+
+### Manual Installation
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+#### Option A: Global Installation (All Projects)
 
 ```bash
 # 1. Clone the repository
@@ -132,9 +173,7 @@ PRD templates: ~/.claude/claudestrator/prd_generator/templates/
 ' >> ~/.claude/CLAUDE.md
 ```
 
-### Option B: Project-Local Installation
-
-Use this for a single project or to customize per-project.
+#### Option B: Project-Local Installation
 
 ```bash
 # 1. Clone into your project
@@ -164,6 +203,8 @@ PRD templates: .claudestrator/prd_generator/templates/
 State files: .claude/ (session_state.md, orchestrator_memory.md, etc.)
 EOF
 ```
+
+</details>
 
 ### After Installation
 

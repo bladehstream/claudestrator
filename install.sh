@@ -526,7 +526,7 @@ install_commands() {
                 if [ "$INSTALL_MODE" = "global" ]; then
                     ln -sf "$cmd_file" "$target"
                 else
-                    ln -sf "../$REPO_DIR/commands/$cmd_name" "$target"
+                    ln -sf "../../$REPO_DIR/commands/$cmd_name" "$target"
                 fi
                 ((installed++))
             fi

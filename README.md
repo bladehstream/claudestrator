@@ -271,7 +271,7 @@ PRD templates: ~/.claude/claudestrator/prd_generator/templates/
    ```
 
 4. **Claude (as orchestrator) will:**
-   - Read your PRD (or interview you if none exists)
+   - Read your PRD (required - run `/prdgen` first if needed)
    - Decompose work into tasks
    - Execute using specialized agents
    - Track progress in `.claude/journal/`
@@ -477,7 +477,7 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 ## How It Works
 
 ### 1. Discovery
-Claude checks for a PRD or interviews you about your project requirements.
+Claude loads your PRD. If no PRD exists, it prompts you to run `/prdgen` first to keep orchestration context clean.
 
 ### 2. Planning
 Requirements are decomposed into tasks with:

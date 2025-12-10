@@ -3,7 +3,7 @@
 ## Overview
 
 The Orchestrator Protocol defines how a primary Claude agent coordinates complex, multi-step projects by:
-1. Discovering requirements (PRD or user interview)
+1. Loading requirements from PRD
 2. Planning and decomposing work into discrete tasks
 3. Matching tasks to appropriate skills from a skill library
 4. Constructing and spawning specialized agents
@@ -75,14 +75,16 @@ IF project/PRD.md OR project/specs/*.md EXISTS:
     Summarize understanding to user
     Request confirmation or clarification
 ELSE:
-    Conduct user interview:
-        Q1: "What are you building? (brief description)"
-        Q2: "What are the key features or requirements?"
-        Q3: "Any technical constraints? (language, framework, dependencies)"
-        Q4: "What does success look like?"
+    STOP orchestration
+    INFORM user:
+        "No PRD found. To keep orchestration context clean, please:
 
-    Generate PRD from responses
-    OPTIONAL: Save to project/PRD.md
+        1. Run /prdgen to generate requirements
+        2. Run /clear to reset context
+        3. Run /orchestrate to begin execution
+
+        This ensures maximum context capacity for project work."
+    EXIT
 ```
 
 ### 1.3 Dynamic Skill Discovery
@@ -566,7 +568,7 @@ orchestrator/
 ### Orchestrator Checklist
 
 - [ ] Journal exists or created
-- [ ] PRD loaded or user interviewed
+- [ ] PRD loaded (required)
 - [ ] Skill manifest loaded
 - [ ] Tasks decomposed with dependencies
 - [ ] Journal initialized with all tasks

@@ -80,12 +80,14 @@ Claudestrator commands are split into two phases to optimize context window usag
 
 Run these commands **before** starting orchestration. They handle project setup and skill management. After completing these, run `/clear` to start orchestration with a clean context.
 
-| Command | Action |
-|---------|--------|
-| `/prdgen` | Generate PRD through interactive interview |
-| `/audit-skills` | Generate skill library health report |
-| `/skill-enhance [id]` | Research and propose updates to a skill |
-| `/ingest-skill <source>` | Import external skills from URLs or local paths |
+| Command | Model | Action |
+|---------|-------|--------|
+| `/prdgen` | Sonnet | Generate PRD through interactive interview |
+| `/audit-skills` | Sonnet | Generate skill library health report |
+| `/skill-enhance [id]` | Opus | Research and propose updates to a skill |
+| `/ingest-skill <source>` | (main) | Import external skills from URLs or local paths |
+
+> **Model transparency:** Commands spawn agents using the specified model. "(main)" means the command runs in your current context without spawning a sub-agent.
 
 **Recommended workflow:**
 ```
@@ -103,14 +105,16 @@ Run these commands **before** starting orchestration. They handle project setup 
 
 Run these commands **during** active orchestration to manage the session.
 
-| Command | Action |
-|---------|--------|
-| `/orchestrate` | Initialize or resume orchestrator mode |
-| `/checkpoint` | Save current state (can continue working) |
-| `/status` | Show project and task status |
-| `/tasks` | Show task list with progress |
-| `/skills` | Show loaded skills |
-| `/deorchestrate` | Clean exit with full state save |
+| Command | Model | Action |
+|---------|-------|--------|
+| `/orchestrate` | (main) + dynamic | Initialize or resume orchestrator mode |
+| `/checkpoint` | (main) | Save current state (can continue working) |
+| `/status` | (main) | Show project and task status |
+| `/tasks` | (main) | Show task list with progress |
+| `/skills` | (main) | Show loaded skills |
+| `/deorchestrate` | (main) | Clean exit with full state save |
+
+> **Dynamic model selection:** `/orchestrate` runs in your main context but spawns sub-agents with models selected by task complexity: Easy→Haiku, Normal→Sonnet, Complex→Opus.
 
 ### Command Details
 

@@ -27,6 +27,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **Strategy Evolution** | Orchestrator learns from execution feedback |
 | **Prompt Caching** | Stable prefix structure for cache optimization |
 | **Dynamic Model Selection** | Easy→Haiku, Normal→Sonnet, Complex→Opus |
+| **Git Integration** | Auto-commits after each task; prompts to init if missing |
 
 ## Architecture
 
@@ -483,17 +484,22 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 
 ## How It Works
 
-### 1. Discovery
+### 1. Initialization
+- Check for git repository; prompt to initialize if missing
+- Load skills from directory
+- Enable auto-commits if git is available
+
+### 2. Discovery
 Claude loads your PRD. If no PRD exists, it prompts you to run `/prdgen` first to keep orchestration context clean.
 
-### 2. Planning
+### 3. Planning
 Requirements are decomposed into tasks with:
 - Clear objectives
 - Acceptance criteria
 - Complexity assessment
 - Dependencies
 
-### 3. Execution
+### 4. Execution
 For each task:
 1. Match relevant skills from the library (one per category)
 2. Select model based on complexity
@@ -502,8 +508,9 @@ For each task:
 5. Spawn specialized agent
 6. Process structured handoff
 7. Update knowledge graph and strategies
+8. **Auto-commit** changes (if git enabled)
 
-### 4. Verification
+### 5. Verification
 QA agent validates all acceptance criteria. Issues become new tasks for iteration.
 
 ## Model Selection

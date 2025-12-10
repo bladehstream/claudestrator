@@ -18,19 +18,29 @@ This approach keeps the primary agent (orchestrator) focused on coordination whi
 
 ### Starting a New Project
 
-1. **Tell Claude what you want to build:**
+1. **Generate a PRD first** (recommended):
    ```
-   "I want to build a REST API for a todo list application"
+   /prdgen
+   ```
+   Then clear context and start orchestration:
+   ```
+   /clear
+   /orchestrate
    ```
 
 2. **Claude (as orchestrator) will:**
-   - Ask clarifying questions or read your PRD if one exists
+   - Check for git repository (prompt to initialize if missing)
+   - Load your PRD and skills
    - Decompose the work into tasks
    - Initialize a journal to track progress
    - Begin executing tasks using specialized agents
+   - **Auto-commit** after each task completes (if git enabled)
 
-3. **You can optionally provide a PRD:**
-   Create `PRD.md` in your project directory with requirements, and Claude will use it instead of interviewing you.
+3. **Git integration:**
+   - If `.git` exists, orchestrator enables auto-commits
+   - If not, you'll be prompted: "Initialize git?"
+   - Each completed task creates a commit with task details
+   - This allows easy review and rollback of agent changes
 
 ### Resuming Work
 
@@ -50,14 +60,17 @@ Claude will read the journal and resume from where work left off.
 ```
 orchestrator/                    # The orchestrator system
 ├── orchestrator_protocol_v3.md  # Core protocol definition
+├── initialization_flow.md       # First-run interaction scripts
 ├── skills/                      # Skill library
 │   ├── skill_manifest.md        # Index of all skills
 │   ├── skill_template.md        # Template for new skills
-│   ├── agent_model_selection.md # Model selection criteria
 │   ├── implementation/          # Code-writing skills
 │   ├── design/                  # Design/planning skills
 │   ├── quality/                 # QA/review skills
-│   └── support/                 # Supporting skills
+│   ├── support/                 # Supporting skills
+│   ├── security/                # Security skills
+│   ├── domain/                  # Domain-specific skills
+│   └── orchestrator/            # Self-use skills (agent_construction)
 ├── templates/                   # Document templates
 │   ├── journal_index.md         # Journal index template
 │   ├── task_entry.md            # Task file template

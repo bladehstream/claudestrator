@@ -12,10 +12,10 @@
 #   bash install.sh
 #
 # Options:
-#   --local     Install to current project (.claudestrator/) instead of global
-#   --force     Skip confirmation prompts
-#   --uninstall Remove Claudestrator installation
-#   --dry-run   Show what would be done without making changes
+#   --global, -g  Install globally (~/.claude/) instead of current project
+#   --force       Skip confirmation prompts
+#   --uninstall   Remove Claudestrator installation
+#   --dry-run     Show what would be done without making changes
 #
 
 set -e
@@ -42,7 +42,7 @@ else
 fi
 
 # Default configuration
-INSTALL_MODE="global"
+INSTALL_MODE="local"
 FORCE_INSTALL=false
 UNINSTALL=false
 DRY_RUN=false
@@ -55,8 +55,8 @@ TEMP_DIR=""
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --local)
-            INSTALL_MODE="local"
+        --global|-g)
+            INSTALL_MODE="global"
             shift
             ;;
         --force)
@@ -76,12 +76,14 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Usage: install.sh [options]"
             echo ""
+            echo "By default, installs to current project directory (.claudestrator/)"
+            echo ""
             echo "Options:"
-            echo "  --local      Install to current project instead of global (~/.claude/)"
-            echo "  --force      Skip confirmation prompts"
-            echo "  --uninstall  Remove Claudestrator installation"
-            echo "  --dry-run    Show what would be done without making changes"
-            echo "  --help       Show this help message"
+            echo "  --global, -g  Install globally to ~/.claude/ (available in all projects)"
+            echo "  --force       Skip confirmation prompts"
+            echo "  --uninstall   Remove Claudestrator installation"
+            echo "  --dry-run     Show what would be done without making changes"
+            echo "  --help        Show this help message"
             exit 0
             ;;
         *)

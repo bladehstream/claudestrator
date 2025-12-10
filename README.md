@@ -104,14 +104,14 @@ The PRD Generator supports 7 project templates: web app, CLI, API, game, mobile,
 
 ### One-Line Install (Recommended)
 
-**Global installation** (available in all projects):
+**Project-local installation** (default, current directory):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash
 ```
 
-**Project-local installation** (current directory only):
+**Global installation** (available in all projects):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash -s -- --local
+curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash -s -- --global
 ```
 
 The installer will:
@@ -145,35 +145,7 @@ curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/ins
 <details>
 <summary>Click to expand manual installation steps</summary>
 
-#### Option A: Global Installation (All Projects)
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/bladehstream/claudestrator.git ~/.claude/claudestrator
-
-# 2. Install slash commands (symlink to personal commands directory)
-mkdir -p ~/.claude/commands
-for cmd in ~/.claude/claudestrator/commands/*.md; do
-  ln -sf "$cmd" ~/.claude/commands/
-done
-
-# 3. Install skills
-mkdir -p ~/.claude/skills
-cp -r ~/.claude/claudestrator/skills/* ~/.claude/skills/
-
-# 4. Add orchestrator to your CLAUDE.md (or create one)
-echo '
-## Claudestrator
-
-When I say "/orchestrate", read and follow the protocol at:
-~/.claude/claudestrator/orchestrator_protocol_v3.md
-
-Skill directory: ~/.claude/skills/
-PRD templates: ~/.claude/claudestrator/prd_generator/templates/
-' >> ~/.claude/CLAUDE.md
-```
-
-#### Option B: Project-Local Installation
+#### Option A: Project-Local Installation (Default)
 
 ```bash
 # 1. Clone into your project
@@ -202,6 +174,34 @@ Skill directory: .claude/skills/
 PRD templates: .claudestrator/prd_generator/templates/
 State files: .claude/ (session_state.md, orchestrator_memory.md, etc.)
 EOF
+```
+
+#### Option B: Global Installation (All Projects)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/bladehstream/claudestrator.git ~/.claude/claudestrator
+
+# 2. Install slash commands (symlink to personal commands directory)
+mkdir -p ~/.claude/commands
+for cmd in ~/.claude/claudestrator/commands/*.md; do
+  ln -sf "$cmd" ~/.claude/commands/
+done
+
+# 3. Install skills
+mkdir -p ~/.claude/skills
+cp -r ~/.claude/claudestrator/skills/* ~/.claude/skills/
+
+# 4. Add orchestrator to your CLAUDE.md (or create one)
+echo '
+## Claudestrator
+
+When I say "/orchestrate", read and follow the protocol at:
+~/.claude/claudestrator/orchestrator_protocol_v3.md
+
+Skill directory: ~/.claude/skills/
+PRD templates: ~/.claude/claudestrator/prd_generator/templates/
+' >> ~/.claude/CLAUDE.md
 ```
 
 </details>

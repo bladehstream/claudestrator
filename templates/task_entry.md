@@ -30,7 +30,8 @@
 |------|-----------|---------|
 | File | [path:lines] | [why agent needs this] |
 | Task | [task-XXX summary] | [relevant decision/outcome] |
-| External | [URL/doc] | [what it provides] |
+| Pattern | [pattern from knowledge graph] | [how to apply] |
+| Gotcha | [warning from prior task] | [what to avoid] |
 
 ---
 
@@ -56,7 +57,7 @@
 
 | File | Lines | Change Type | Description |
 |------|-------|-------------|-------------|
-| [path] | [range] | [add/modify/delete] | [what changed] |
+| [path] | [range] | [add/modify/delete/refactor] | [what changed] |
 
 ### Errors Encountered
 
@@ -86,13 +87,56 @@
 - [x] [Criterion 2]
 - [ ] [Criterion 3 - why not met]
 
-### Handoff Notes
+---
 
-[Information for the next agent or orchestrator. Include:]
-- New file locations or line numbers
-- Gotchas or edge cases discovered
-- Suggested next steps
-- Open questions or concerns
+## Handoff
+
+```yaml
+outcome: [completed | partial | failed | blocked]
+
+files_created:
+  - path: [relative/path/to/file]
+    purpose: [what this file does]
+    lines: [1-N or "all"]
+
+files_modified:
+  - path: [relative/path/to/file]
+    lines: [start-end]
+    change_type: [add | modify | delete | refactor]
+    description: [what changed and why]
+
+patterns_discovered:
+  - pattern: [the pattern in one sentence]
+    location: [where it's used/defined]
+    applies_to: [tag1, tag2, tag3]
+
+gotchas:
+  - issue: [the gotcha in one sentence]
+    discovered_in: [where/how found]
+    mitigation: [how to avoid/handle]
+    severity: [high | medium | low]
+
+dependencies_for_next:
+  - file: [path next agent should read]
+    reason: [why it's needed]
+
+open_questions:
+  - question: [unresolved question]
+    context: [why it matters]
+    recommendation: [suggested answer]
+    blocking: [true | false]
+
+suggested_next_steps:
+  - step: [what should happen next]
+    priority: [high | medium | low]
+    depends_on: [file1, file2]
+
+blockers:  # Required if outcome is blocked or partial
+  - blocker: [what's blocking]
+    impact: [what can't be done]
+    suggested_resolution: [how to resolve]
+    blocking_tasks: [task-XXX, task-YYY]
+```
 
 ---
 

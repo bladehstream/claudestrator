@@ -1,0 +1,281 @@
+# Skill Ingestion Command
+
+You are ingesting external skills into the Claudestrator skill library. This is a multi-step workflow that requires careful analysis, security review, and user confirmation.
+
+## Input
+
+The user has provided one or more skill sources: `$ARGUMENTS`
+
+Sources can be:
+- Local file paths (e.g., `/path/to/skill.md`)
+- Local directories (e.g., `/path/to/skill-folder/`)
+- Raw GitHub URLs (e.g., `https://raw.githubusercontent.com/user/repo/main/skills/skill.md`)
+- GitHub blob URLs (e.g., `https://github.com/user/repo/blob/main/skills/skill.md`)
+- GitHub directory URLs (e.g., `https://github.com/user/repo/tree/main/skills/my-skill/`)
+- Generic URLs to markdown files
+
+## Workflow
+
+Process each source sequentially, completing all steps for one skill before moving to the next.
+
+### Step 1: Source Detection and Fetching
+
+For each source:
+
+1. **Detect source type:**
+   - Local path: Check if file or directory exists
+   - GitHub blob URL: Convert to raw URL
+     - `github.com/user/repo/blob/branch/path` → `raw.githubusercontent.com/user/repo/branch/path`
+   - GitHub tree URL (directory): Use GitHub API to list contents
+     - API: `https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}`
+     - If rate limited, warn user and attempt HTML scrape as fallback
+   - Raw GitHub URL: Fetch directly
+   - Generic URL: Fetch directly
+
+2. **Fetch content:**
+   - For single files: Use WebFetch or Read tool
+   - For directories: List contents, identify relevant files:
+     - Main skill file: `SKILL.md`, `skill.md`, `*.md` (prefer files with skill-like content)
+     - Helper scripts: `*.js`, `*.py`, `*.sh`
+     - Dependencies: `package.json`, `requirements.txt`
+     - Supporting files: `lib/`, `scripts/`, `helpers/`
+
+3. **Report to user:**
+   ```
+   Detected: [Single file | Directory with N files]
+   Main skill file: [filename]
+   Helper scripts: [list or "None"]
+   Dependencies: [package.json | requirements.txt | None]
+   ```
+
+### Step 2: Security Analysis (For Skills with Scripts)
+
+If the skill contains executable scripts (`.js`, `.py`, `.sh`, etc.), perform security analysis:
+
+**Check for suspicious patterns:**
+- Base64 encoded strings (especially long ones)
+- `eval()`, `exec()`, `Function()` calls with dynamic input
+- Obfuscated variable names (e.g., `_0x`, `\x` escape sequences)
+- Network requests to unknown/hardcoded IPs
+- File system operations outside expected directories
+- Environment variable exfiltration
+- Encoded/encrypted payloads
+- Shell command execution with user input
+- Attempts to disable security features
+
+**For each script, report:**
+```
+Security Analysis: [filename]
+─────────────────────────────
+Risk Level: [Low | Medium | High]
+Findings:
+  - [Finding 1]
+  - [Finding 2]
+Recommendation: [Safe to proceed | Review required | Do not ingest]
+```
+
+**If High risk:** Warn user strongly and require explicit confirmation to proceed.
+
+### Step 3: Parse Existing Frontmatter
+
+Check if the skill file has YAML frontmatter:
+
+```yaml
+---
+name: ...
+id: ...
+# etc.
+---
+```
+
+**If frontmatter exists:**
+- Parse and extract existing metadata
+- Note any non-standard fields
+- Identify missing required fields
+
+**If no frontmatter:**
+- Note that metadata will be generated from content analysis
+
+**Report:**
+```
+Existing Frontmatter: [Found | Not found]
+Parsed fields: [list]
+Missing required fields: [list]
+Non-standard fields: [list] (will be preserved)
+```
+
+### Step 4: Content Analysis and Metadata Suggestion
+
+Analyze the skill content to suggest appropriate metadata:
+
+**Required fields to determine:**
+
+| Field | How to Determine |
+|-------|------------------|
+| `name` | Use existing, or derive from title/content |
+| `id` | Use existing, or generate snake_case from name |
+| `version` | Use existing, or default to `1.0` |
+| `category` | Analyze content for best fit (see categories below) |
+| `domain` | What tech domains does this apply to? |
+| `task_types` | What types of tasks does this skill support? |
+| `keywords` | Extract key terms that should trigger this skill |
+| `complexity` | Assess based on scope and depth |
+| `pairs_with` | Which existing skills complement this one? |
+
+**Categories:**
+- `implementation` - Building/coding features (html5_canvas, game_feel, data_visualization)
+- `design` - Planning/architecture (api_designer, database_designer, frontend_design, game_designer)
+- `quality` - Testing/review (qa_agent, security_reviewer, webapp_testing, user_persona_reviewer)
+- `support` - Supporting tasks (documentation, refactoring, svg_asset_generator, prd_generator)
+- `maintenance` - Skill/system maintenance (skill_auditor, skill_enhancer)
+- `security` - Security implementation (authentication, software_security)
+- `domain` - Domain-specific expertise (financial_app)
+
+**Task types:** `design`, `planning`, `implementation`, `review`, `testing`, `documentation`, `security`, `optimization`, `feature`, `bugfix`
+
+**Complexity:** `easy`, `normal`, `complex`
+
+**Present suggested metadata to user:**
+```
+Suggested Metadata for: [skill name]
+════════════════════════════════════════
+
+name: [suggested]
+id: [suggested]
+version: [suggested]
+category: [suggested]
+domain: [suggested list]
+task_types: [suggested list]
+keywords: [suggested list]
+complexity: [suggested]
+pairs_with: [suggested list]
+
+Source: [original URL/path]
+
+Changes from original (if any):
+  - [field]: [old] → [new]
+
+Accept this metadata? [Y/n/edit]
+```
+
+If user chooses "edit", use AskUserQuestion to let them modify specific fields.
+
+### Step 5: Conflict Detection
+
+Check if a skill with the same `id` already exists in `.claude/skills/`:
+
+```bash
+# Check all category directories
+find .claude/skills -name "*.md" -exec grep -l "^id: {skill_id}$" {} \;
+```
+
+**If conflict found:**
+```
+⚠️  CONFLICT DETECTED
+════════════════════
+
+A skill with id '[id]' already exists:
+  Location: [path]
+  Name: [existing name]
+  Version: [existing version]
+
+The new skill would overwrite this file.
+
+Overwrite existing skill? [y/N]
+```
+
+If user confirms, ask again:
+```
+Are you sure you want to overwrite '[existing name]'? This cannot be undone. [y/N]
+```
+
+Only proceed if both confirmations are "y" or "yes".
+
+### Step 6: Write Skill Files
+
+1. **Determine target directory:** `.claude/skills/{category}/`
+
+2. **Create directory if needed:** `mkdir -p .claude/skills/{category}/`
+
+3. **Write main skill file:**
+   - Combine generated frontmatter with skill content
+   - Add `source:` field with original URL/path
+   - Write to `.claude/skills/{category}/{id}.md`
+
+4. **Write helper files (if any):**
+   - Create subdirectory: `.claude/skills/{category}/{id}/`
+   - Copy scripts maintaining relative structure
+   - Update any relative paths in the main skill file if needed
+
+5. **Report:**
+   ```
+   Written: .claude/skills/{category}/{id}.md
+   Written: .claude/skills/{category}/{id}/run.js
+   Written: .claude/skills/{category}/{id}/lib/helpers.js
+   ```
+
+### Step 7: Handle Dependencies
+
+If `package.json` or `requirements.txt` was included:
+
+```
+This skill includes dependencies:
+  - package.json (Node.js)
+
+Install dependencies now? [y/N]
+```
+
+If user confirms:
+- For `package.json`: Run `cd .claude/skills/{category}/{id} && npm install`
+- For `requirements.txt`: Run `pip install -r .claude/skills/{category}/{id}/requirements.txt`
+
+Report success or failure.
+
+### Step 8: Update Skill Manifest
+
+Append the new skill to `.claude/skills/skill_manifest.md`:
+
+```markdown
+### {name}
+- **ID:** {id}
+- **Category:** {category}
+- **Location:** skills/{category}/{id}.md
+- **Keywords:** {keywords}
+- **Source:** {original URL/path}
+```
+
+### Step 9: Summary
+
+After processing all skills, provide a summary:
+
+```
+Skill Ingestion Complete
+════════════════════════
+
+Processed: [N] skill(s)
+
+✓ [skill_name_1] → .claude/skills/{category}/{id}.md
+✓ [skill_name_2] → .claude/skills/{category}/{id}.md
+✗ [skill_name_3] → Failed: [reason]
+
+Security warnings: [N]
+Conflicts resolved: [N]
+Dependencies installed: [Y/N]
+
+Run /audit-skills to verify the new skills are correctly configured.
+```
+
+## Error Handling
+
+- **Network errors:** Retry once, then report failure and continue with next skill
+- **Parse errors:** Report issue, show problematic content, ask user whether to skip or attempt manual fix
+- **Write errors:** Report permission issue, suggest fix
+- **API rate limits:** Warn user, suggest waiting or providing fewer URLs
+
+## Important Notes
+
+- Always preserve any non-standard frontmatter fields from the original
+- Add `source:` field to track where the skill came from
+- Maintain the skill's original structure and content as much as possible
+- Only modify frontmatter, not the skill's actual instructions/content
+- If a skill is very large, warn user about potential context usage when the skill is loaded

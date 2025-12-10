@@ -217,7 +217,7 @@ Multi-agent orchestration framework. When orchestrating:
 - **PRD Templates**: $templates_path
 - **State Files**: .claude/ (session_state.md, orchestrator_memory.md, knowledge_graph.json)
 
-Commands: /orchestrate, /prdgen, /checkpoint, /status, /tasks, /skills, /deorchestrate, /audit-skills, /skill-enhance
+Commands: /orchestrate, /prdgen, /checkpoint, /status, /tasks, /skills, /deorchestrate, /audit-skills, /skill-enhance, /ingest-skill
 EOF
 }
 
@@ -677,7 +677,7 @@ uninstall() {
 
     # Remove command symlinks
     if [ -d "$COMMANDS_DIR" ]; then
-        for cmd in orchestrate deorchestrate checkpoint status tasks skills prdgen audit-skills skill-enhance; do
+        for cmd in orchestrate deorchestrate checkpoint status tasks skills prdgen audit-skills skill-enhance ingest-skill; do
             local target="$COMMANDS_DIR/$cmd.md"
             if [ -L "$target" ]; then
                 local link_target=$(readlink "$target")

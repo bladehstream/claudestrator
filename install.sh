@@ -16,6 +16,7 @@
 #   --force       Skip confirmation prompts
 #   --uninstall   Remove Claudestrator installation
 #   --dry-run     Show what would be done without making changes
+#   --verbose, -v Show detailed output for each action
 #
 
 set -e
@@ -46,6 +47,7 @@ INSTALL_MODE="local"
 FORCE_INSTALL=false
 UNINSTALL=false
 DRY_RUN=false
+VERBOSE=false
 REPO_URL="https://github.com/bladehstream/claudestrator.git"
 REPO_RAW_URL="https://raw.githubusercontent.com/bladehstream/claudestrator/main"
 
@@ -71,6 +73,10 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --verbose|-v)
+            VERBOSE=true
+            shift
+            ;;
         --help|-h)
             echo "Claudestrator Installer"
             echo ""
@@ -83,6 +89,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --force       Skip confirmation prompts"
             echo "  --uninstall   Remove Claudestrator installation"
             echo "  --dry-run     Show what would be done without making changes"
+            echo "  --verbose, -v Show detailed output for each action"
             echo "  --help        Show this help message"
             exit 0
             ;;
@@ -112,6 +119,12 @@ log_error() {
 
 log_dry_run() {
     echo -e "${CYAN}[DRY-RUN]${NC} $1"
+}
+
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${DIM}[VERBOSE]${NC} $1"
+    fi
 }
 
 confirm() {
@@ -504,8 +517,11 @@ install_repo() {
 # Install slash commands
 install_commands() {
     log_info "Installing slash commands..."
+    log_verbose "Source: $REPO_DIR/commands/"
+    log_verbose "Target: $COMMANDS_DIR/"
 
     mkdir -p "$COMMANDS_DIR"
+    log_verbose "Created directory: $COMMANDS_DIR"
 
     local installed=0
     local skipped=0
@@ -514,19 +530,27 @@ install_commands() {
         if [ -f "$cmd_file" ]; then
             local cmd_name=$(basename "$cmd_file")
             local target="$COMMANDS_DIR/$cmd_name"
+            log_verbose "Processing command: $cmd_name"
 
             if [ -e "$target" ] && [ ! -L "$target" ]; then
                 log_warning "Skipping $cmd_name (file exists and is not a symlink)"
+                log_verbose "  Skipped: $target exists as regular file"
                 ((skipped++))
             else
                 # Remove old symlink if exists
-                [ -L "$target" ] && rm "$target"
+                if [ -L "$target" ]; then
+                    rm "$target"
+                    log_verbose "  Removed old symlink: $target"
+                fi
 
                 # Create symlink (use relative path for local, absolute for global)
                 if [ "$INSTALL_MODE" = "global" ]; then
                     ln -sf "$cmd_file" "$target"
+                    log_verbose "  Created symlink: $target -> $cmd_file"
                 else
-                    ln -sf "../../$REPO_DIR/commands/$cmd_name" "$target"
+                    local link_target="../../$REPO_DIR/commands/$cmd_name"
+                    ln -sf "$link_target" "$target"
+                    log_verbose "  Created symlink: $target -> $link_target"
                 fi
                 ((installed++))
             fi
@@ -539,8 +563,11 @@ install_commands() {
 # Install skills
 install_skills() {
     log_info "Installing skills..."
+    log_verbose "Source: $REPO_DIR/skills/"
+    log_verbose "Target: $SKILLS_DIR/"
 
     mkdir -p "$SKILLS_DIR"
+    log_verbose "Created directory: $SKILLS_DIR"
 
     local installed=0
     local skipped=0
@@ -549,9 +576,11 @@ install_skills() {
     for skill_subdir in implementation design quality support maintenance security domain; do
         local src_dir="$REPO_DIR/skills/$skill_subdir"
         local dst_dir="$SKILLS_DIR/$skill_subdir"
+        log_verbose "Processing skill category: $skill_subdir"
 
         if [ -d "$src_dir" ]; then
             mkdir -p "$dst_dir"
+            log_verbose "  Created directory: $dst_dir"
 
             for skill_file in "$src_dir"/*.md; do
                 if [ -f "$skill_file" ]; then
@@ -560,28 +589,37 @@ install_skills() {
 
                     if [ -f "$target" ]; then
                         # File exists - skip (already showed diff in preview)
+                        log_verbose "  Skipped (exists): $skill_name"
                         ((skipped++))
                     else
                         cp "$skill_file" "$target"
+                        log_verbose "  Copied: $skill_name -> $target"
                         ((installed++))
                     fi
                 fi
             done
+        else
+            log_verbose "  Directory not found: $src_dir (skipping)"
         fi
     done
 
     # Copy top-level skill files
+    log_verbose "Processing top-level skill files"
     for top_file in skill_manifest.md skill_template.md agent_model_selection.md; do
         local src="$REPO_DIR/skills/$top_file"
         local dst="$SKILLS_DIR/$top_file"
 
         if [ -f "$src" ]; then
             if [ -f "$dst" ]; then
+                log_verbose "  Skipped (exists): $top_file"
                 ((skipped++))
             else
                 cp "$src" "$dst"
+                log_verbose "  Copied: $top_file -> $dst"
                 ((installed++))
             fi
+        else
+            log_verbose "  Not found: $src (skipping)"
         fi
     done
 
@@ -591,14 +629,17 @@ install_skills() {
 # Configure CLAUDE.md
 configure_claude_md() {
     log_info "Configuring CLAUDE.md..."
+    log_verbose "Target file: $CLAUDE_MD"
 
     backup_claude_md
 
     # Create directory if needed
     mkdir -p "$(dirname "$CLAUDE_MD")"
+    log_verbose "Ensured directory exists: $(dirname "$CLAUDE_MD")"
 
     # Append configuration
     generate_claude_md_content >> "$CLAUDE_MD"
+    log_verbose "Appended Claudestrator configuration to $CLAUDE_MD"
 
     log_success "CLAUDE.md configured"
 }
@@ -608,7 +649,9 @@ create_directories() {
     log_info "Creating directory structure..."
 
     mkdir -p "$CLAUDE_DIR/journal"
+    log_verbose "Created: $CLAUDE_DIR/journal"
     mkdir -p "$CLAUDE_DIR/memories"
+    log_verbose "Created: $CLAUDE_DIR/memories"
 
     log_success "Directories created"
 }

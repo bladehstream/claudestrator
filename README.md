@@ -322,11 +322,11 @@ claudestrator/
 │   ├── support/                   # Supporting skills
 │   ├── maintenance/               # Skill maintenance skills
 │   ├── security/                  # Security implementation skills
-│   └── domain/                    # Domain-specific expertise
+│   ├── domain/                    # Domain-specific expertise
+│   └── orchestrator/              # Orchestrator self-use skills
 │
 ├── docs/
-│   ├── user_guide.md              # Comprehensive usage guide
-│   └── agent_model_selection.md   # Model selection criteria
+│   └── user_guide.md              # Comprehensive usage guide
 │
 ├── templates/
 │   ├── session_state.md           # Hot state template
@@ -405,7 +405,7 @@ Orchestrator learns from execution feedback:
 
 See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 
-## Available Skills (21 total)
+## Available Skills (22 total)
 
 ### Implementation
 | Skill | Description |
@@ -454,6 +454,11 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 | Skill | Description |
 |-------|-------------|
 | `financial_app` | Personal finance, budgeting, transactions |
+
+### Orchestrator
+| Skill | Description |
+|-------|-------------|
+| `agent_construction` | Model selection, skill composition, context budgeting (self-use) |
 
 ## How It Works
 

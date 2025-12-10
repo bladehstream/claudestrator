@@ -378,7 +378,7 @@ preview_changes() {
     local skill_diff=()
     local skill_same=()
 
-    for skill_subdir in implementation design quality support maintenance security domain; do
+    for skill_subdir in implementation design quality support maintenance security domain orchestrator; do
         local src_dir="$TEMP_DIR/claudestrator/skills/$skill_subdir"
         local dst_dir="$SKILLS_DIR/$skill_subdir"
 
@@ -573,7 +573,7 @@ install_skills() {
     local skipped=0
 
     # Copy skill subdirectories
-    for skill_subdir in implementation design quality support maintenance security domain; do
+    for skill_subdir in implementation design quality support maintenance security domain orchestrator; do
         local src_dir="$REPO_DIR/skills/$skill_subdir"
         local dst_dir="$SKILLS_DIR/$skill_subdir"
         log_verbose "Processing skill category: $skill_subdir"

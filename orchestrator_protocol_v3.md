@@ -349,6 +349,8 @@ FUNCTION constructPrompt(task, skills, context, model):
 
 ### 3.6 Spawn Agent
 
+> **Apply**: [skills/orchestrator/agent_construction.md](skills/orchestrator/agent_construction.md) for model selection, skill composition, and context budgeting.
+
 ```
 Task(
     subagent_type: "general-purpose",
@@ -535,11 +537,15 @@ orchestrator/
 ├── skills/
 │   ├── skill_manifest.md           # Skill index
 │   ├── skill_template.md           # Template for new skills
-│   ├── agent_model_selection.md    # Model selection criteria
 │   ├── implementation/             # Code-writing skills
 │   ├── design/                     # Design skills
 │   ├── quality/                    # QA/review skills
-│   └── support/                    # Supporting skills
+│   ├── support/                    # Supporting skills
+│   ├── maintenance/                # Skill maintenance skills
+│   ├── security/                   # Security implementation skills
+│   ├── domain/                     # Domain-specific expertise
+│   └── orchestrator/               # Orchestrator self-use skills
+│       └── agent_construction.md   # Model selection, skill composition
 ├── templates/
 │   ├── session_state.md            # Hot state template
 │   ├── orchestrator_memory.md      # Cold state template

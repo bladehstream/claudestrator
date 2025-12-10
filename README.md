@@ -83,6 +83,13 @@ All implementation work is delegated to agents via the Task tool. See [Orchestra
 | `/skills` | Show loaded skills |
 | `/deorchestrate` | Clean exit with full state save |
 
+### Skill Maintenance
+
+| Command | Action |
+|---------|--------|
+| `/audit-skills` | Generate skill library health report |
+| `/skill-enhance [id]` | Research and propose updates to a skill (human approval required) |
+
 ## Quick Start
 
 1. **Copy to your Claude skills directory:**
@@ -225,6 +232,10 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 - `svg_asset_gen` - SVG graphics creation
 - `refactoring` - Code restructuring
 - `documentation` - Technical writing
+
+### Maintenance
+- `skill_auditor` - Skill library health auditing
+- `skill_enhancer` - Web research and skill updates (human-approved)
 
 ## How It Works
 

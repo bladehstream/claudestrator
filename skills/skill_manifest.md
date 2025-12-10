@@ -29,6 +29,8 @@ See `skill_loader.md` for the dynamic discovery system.
 | security_reviewer | Security Reviewer | security | any | review, audit | complex |
 | refactoring | Refactoring Specialist | refactoring | any | refactor | normal, complex |
 | documentation | Documentation Writer | documentation | any | documentation | easy, normal |
+| skill_auditor | Skill Auditor | skill-maintenance | orchestrator | audit, review | normal |
+| skill_enhancer | Skill Enhancer | skill-maintenance | orchestrator | enhancement, update | complex |
 
 > **Note**: Only one skill per category is selected for each agent. This ensures diverse expertise without redundancy.
 
@@ -227,10 +229,13 @@ orchestrator/skills/
 │   ├── qa_agent.md
 │   ├── user_persona_reviewer.md
 │   └── security_reviewer.md
-└── support/                 # Supporting skills
-    ├── svg_asset_generator.md
-    ├── refactoring.md
-    └── documentation.md
+├── support/                 # Supporting skills
+│   ├── svg_asset_generator.md
+│   ├── refactoring.md
+│   └── documentation.md
+└── maintenance/             # Orchestrator maintenance skills
+    ├── skill_auditor.md
+    └── skill_enhancer.md
 ```
 
 ---

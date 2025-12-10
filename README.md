@@ -83,13 +83,15 @@ All implementation work is delegated to agents via the Task tool. See [Orchestra
 | `/skills` | Show loaded skills |
 | `/deorchestrate` | Clean exit with full state save |
 
-### PRD Generation
+### PRD Generation (Standalone)
 
 | Command | Action |
 |---------|--------|
-| `/prdgen` | Generate PRD through interactive interview (standalone, web-enabled) |
+| `/prdgen` | Generate PRD through interactive interview |
 
-The PRD Generator operates independently of the orchestrator, producing a clean `PRD.md` that the orchestrator can consume. Supports 7 project templates: web app, CLI, API, game, mobile, library, and minimal.
+> **Why Standalone?** The PRD Generator runs as a separate agent, independent of the orchestrator. This prevents the requirements-gathering conversation from consuming orchestrator context. The agent conducts an interview, writes `PRD.md`, and exits. When you later run `/orchestrate`, the orchestrator reads the finished PRD with a clean context window—no interview history bloating its memory.
+
+The PRD Generator supports 7 project templates: web app, CLI, API, game, mobile, library, and minimal. It has web access enabled for validating requirements and researching competitors during the interview.
 
 ### Skill Maintenance
 
@@ -100,22 +102,98 @@ The PRD Generator operates independently of the orchestrator, producing a clean 
 
 ## Quick Start
 
-1. **Copy to your Claude skills directory:**
-   ```bash
-   cp -r skills/* ~/.claude/skills/
+### Option A: Global Installation (All Projects)
+
+Use this if you want Claudestrator available across all your projects.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/bladehstream/claudestrator.git ~/.claude/claudestrator
+
+# 2. Install slash commands (symlink to personal commands directory)
+mkdir -p ~/.claude/commands
+for cmd in ~/.claude/claudestrator/commands/*.md; do
+  ln -sf "$cmd" ~/.claude/commands/
+done
+
+# 3. Install skills
+mkdir -p ~/.claude/skills
+cp -r ~/.claude/claudestrator/skills/* ~/.claude/skills/
+
+# 4. Add orchestrator to your CLAUDE.md (or create one)
+echo '
+## Claudestrator
+
+When I say "/orchestrate", read and follow the protocol at:
+~/.claude/claudestrator/orchestrator_protocol_v3.md
+
+Skill directory: ~/.claude/skills/
+PRD templates: ~/.claude/claudestrator/prd_generator/templates/
+' >> ~/.claude/CLAUDE.md
+```
+
+### Option B: Project-Local Installation
+
+Use this for a single project or to customize per-project.
+
+```bash
+# 1. Clone into your project
+cd /path/to/your/project
+git clone https://github.com/bladehstream/claudestrator.git .claudestrator
+
+# 2. Set up .claude directory structure
+mkdir -p .claude/commands .claude/skills .claude/journal
+
+# 3. Install slash commands
+for cmd in .claudestrator/commands/*.md; do
+  ln -sf "../.claudestrator/commands/$(basename $cmd)" .claude/commands/
+done
+
+# 4. Install skills (copy to allow customization)
+cp -r .claudestrator/skills/* .claude/skills/
+
+# 5. Create project CLAUDE.md
+cat > .claude/CLAUDE.md << 'EOF'
+## Claudestrator
+
+When I say "/orchestrate", read and follow the protocol at:
+.claudestrator/orchestrator_protocol_v3.md
+
+Skill directory: .claude/skills/
+PRD templates: .claudestrator/prd_generator/templates/
+State files: .claude/ (session_state.md, orchestrator_memory.md, etc.)
+EOF
+```
+
+### After Installation
+
+1. **Start Claude Code** in your project directory
+
+2. **Generate a PRD** (optional but recommended):
+   ```
+   /prdgen
+   ```
+   This interviews you and creates `PRD.md`.
+
+3. **Start orchestration**:
+   ```
+   /orchestrate
    ```
 
-2. **Start a project with Claude Code:**
-   ```
-   "I want to build [your project description]"
-   ```
-
-3. **Claude (as orchestrator) will:**
-   - Interview you or read your PRD
+4. **Claude (as orchestrator) will:**
+   - Read your PRD (or interview you if none exists)
    - Decompose work into tasks
    - Execute using specialized agents
-   - Track progress and learnings
-   - Evolve strategies based on feedback
+   - Track progress in `.claude/journal/`
+   - Learn and adapt from feedback
+
+### Verifying Installation
+
+After setup, run `/help` in Claude Code. You should see:
+- `/orchestrate` - Initialize or resume orchestrator mode
+- `/prdgen` - Generate PRD through interview
+- `/audit-skills` - Skill library health report
+- Plus other Claudestrator commands
 
 ## Directory Structure
 

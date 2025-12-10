@@ -605,7 +605,7 @@ install_skills() {
 
     # Copy top-level skill files
     log_verbose "Processing top-level skill files"
-    for top_file in skill_manifest.md skill_template.md agent_model_selection.md; do
+    for top_file in skill_manifest.md skill_template.md; do
         local src="$REPO_DIR/skills/$top_file"
         local dst="$SKILLS_DIR/$top_file"
 

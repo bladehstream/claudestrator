@@ -83,6 +83,14 @@ All implementation work is delegated to agents via the Task tool. See [Orchestra
 | `/skills` | Show loaded skills |
 | `/deorchestrate` | Clean exit with full state save |
 
+### PRD Generation
+
+| Command | Action |
+|---------|--------|
+| `/prdgen` | Generate PRD through interactive interview (standalone, web-enabled) |
+
+The PRD Generator operates independently of the orchestrator, producing a clean `PRD.md` that the orchestrator can consume. Supports 7 project templates: web app, CLI, API, game, mobile, library, and minimal.
+
 ### Skill Maintenance
 
 | Command | Action |
@@ -125,6 +133,18 @@ claudestrator/
 ├── strategy_evolution.md          # Adaptive learning system
 ├── prompt_caching.md              # Cache-optimized prompt structure
 │
+├── prd_generator/                 # Standalone PRD generation system
+│   ├── prd_protocol.md            # Interview methodology
+│   ├── prd_constraints.md         # Agent boundaries
+│   └── templates/                 # PRD templates by project type
+│       ├── web_application.md
+│       ├── cli_tool.md
+│       ├── api_service.md
+│       ├── game.md
+│       ├── mobile_app.md
+│       ├── library.md
+│       └── minimal.md
+│
 ├── skills/                        # Default skill directory
 │   ├── skill_manifest.md          # Optional reference index
 │   ├── skill_template.md          # Template for new skills
@@ -132,7 +152,8 @@ claudestrator/
 │   ├── implementation/            # Code-writing skills
 │   ├── design/                    # Planning/architecture skills
 │   ├── quality/                   # QA/review skills
-│   └── support/                   # Supporting skills
+│   ├── support/                   # Supporting skills
+│   └── maintenance/               # Skill maintenance skills
 │
 ├── templates/
 │   ├── session_state.md           # Hot state template
@@ -232,6 +253,7 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 - `svg_asset_gen` - SVG graphics creation
 - `refactoring` - Code restructuring
 - `documentation` - Technical writing
+- `prd_generator` - Interactive requirements elicitation and PRD generation
 
 ### Maintenance
 - `skill_auditor` - Skill library health auditing

@@ -29,6 +29,7 @@ See `skill_loader.md` for the dynamic discovery system.
 | security_reviewer | Security Reviewer | security | any | review, audit | complex |
 | refactoring | Refactoring Specialist | refactoring | any | refactor | normal, complex |
 | documentation | Documentation Writer | documentation | any | documentation | easy, normal |
+| prd_generator | PRD Generator | requirements | product, planning | discovery, documentation | normal, complex |
 | skill_auditor | Skill Auditor | skill-maintenance | orchestrator | audit, review | normal |
 | skill_enhancer | Skill Enhancer | skill-maintenance | orchestrator | enhancement, update | complex |
 
@@ -208,6 +209,23 @@ See `skill_loader.md` for the dynamic discovery system.
 
 ---
 
+### prd_generator
+
+| Field | Value |
+|-------|-------|
+| **Name** | PRD Generator |
+| **ID** | prd_generator |
+| **Category** | requirements |
+| **Path** | skills/support/prd_generator.md |
+| **Domain** | product, planning, requirements |
+| **Task Types** | discovery, documentation, planning |
+| **Keywords** | prd, requirements, product, specification, scope, interview, discovery, planning |
+| **Complexity** | normal, complex |
+| **Pairs With** | - |
+| **Description** | Conducts structured interviews to extract requirements and generate PRD documents |
+
+---
+
 ## Adding New Skills
 
 1. Create skill file using `skill_template.md`
@@ -232,7 +250,8 @@ orchestrator/skills/
 ├── support/                 # Supporting skills
 │   ├── svg_asset_generator.md
 │   ├── refactoring.md
-│   └── documentation.md
+│   ├── documentation.md
+│   └── prd_generator.md
 └── maintenance/             # Orchestrator maintenance skills
     ├── skill_auditor.md
     └── skill_enhancer.md

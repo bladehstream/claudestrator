@@ -173,8 +173,11 @@ The installer will:
 - Set up slash commands (symlinks)
 - Copy skills (new only, never overwrites)
 - Configure CLAUDE.md
+- Install settings.json with `/init` protection hook
 - **Never overwrite existing files** (shows diffs for conflicts)
 - Create backups before modifying CLAUDE.md
+
+> **⚠️ Important:** After installation, do NOT run `/init` - it will overwrite your Claudestrator configuration. The installer adds a SessionStart hook that warns you about this.
 
 **Dry run** (preview changes without installing):
 ```bash

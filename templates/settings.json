@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f CLAUDE.md ] || [ -f .claude/CLAUDE.md ]; then echo '⚠️  Claudestrator detected. Do NOT run /init - it will overwrite your configuration.'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -656,6 +656,37 @@ create_directories() {
     log_success "Directories created"
 }
 
+# Install settings.json with SessionStart hook
+install_settings() {
+    local settings_file="$CLAUDE_DIR/settings.json"
+    local template="$REPO_DIR/templates/settings.json"
+
+    log_info "Configuring settings.json..."
+
+    if [ -f "$settings_file" ]; then
+        log_verbose "settings.json already exists, checking for hook..."
+        # Check if our hook is already present
+        if grep -q "Claudestrator detected" "$settings_file" 2>/dev/null; then
+            log_verbose "SessionStart hook already configured"
+            log_success "Settings already configured"
+            return
+        else
+            log_warning "Existing settings.json found - manual merge may be needed"
+            log_verbose "Template location: $template"
+            log_success "Settings skipped (merge manually if needed)"
+            return
+        fi
+    fi
+
+    if [ -f "$template" ]; then
+        cp "$template" "$settings_file"
+        log_verbose "Copied settings template to $settings_file"
+        log_success "Settings configured (SessionStart hook active)"
+    else
+        log_warning "Settings template not found: $template"
+    fi
+}
+
 # Uninstall function
 uninstall() {
     log_info "Uninstalling Claudestrator..."
@@ -749,6 +780,7 @@ main() {
     install_skills
     create_directories
     configure_claude_md
+    install_settings
     print_summary
 }
 

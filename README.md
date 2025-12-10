@@ -72,7 +72,36 @@ project/.claude/
 
 All implementation work is delegated to agents via the Task tool. See [Orchestrator Constraints](orchestrator_constraints.md) for detailed rules.
 
-## Session Management
+## Commands
+
+Claudestrator commands are split into two phases to optimize context window usage.
+
+### Phase 1: Pre-Orchestration Commands
+
+Run these commands **before** starting orchestration. They handle project setup and skill management. After completing these, run `/clear` to start orchestration with a clean context.
+
+| Command | Action |
+|---------|--------|
+| `/prdgen` | Generate PRD through interactive interview |
+| `/audit-skills` | Generate skill library health report |
+| `/skill-enhance [id]` | Research and propose updates to a skill |
+| `/ingest-skill <source>` | Import external skills from URLs or local paths |
+
+**Recommended workflow:**
+```
+/prdgen                    # Generate project requirements
+/clear                     # Clear context window
+/audit-skills              # Verify skill library health
+/ingest-skill <url>        # Import any needed skills
+/clear                     # Clear context before orchestration
+/orchestrate               # Start with clean context
+```
+
+> **Why clear between phases?** PRD generation, skill auditing, and skill ingestion consume context with their interview/analysis history. Clearing before `/orchestrate` ensures maximum context capacity for actual project work.
+
+### Phase 2: Orchestration Commands
+
+Run these commands **during** active orchestration to manage the session.
 
 | Command | Action |
 |---------|--------|
@@ -83,22 +112,42 @@ All implementation work is delegated to agents via the Task tool. See [Orchestra
 | `/skills` | Show loaded skills |
 | `/deorchestrate` | Clean exit with full state save |
 
-### PRD Generation (Standalone)
+### Command Details
 
-| Command | Action |
-|---------|--------|
-| `/prdgen` | Generate PRD through interactive interview |
+#### PRD Generation (`/prdgen`)
 
-> **Why Standalone?** The PRD Generator runs as a separate agent, independent of the orchestrator. This prevents the requirements-gathering conversation from consuming orchestrator context. The agent conducts an interview, writes `PRD.md`, and exits. When you later run `/orchestrate`, the orchestrator reads the finished PRD with a clean context window—no interview history bloating its memory.
+Standalone agent that interviews you and generates `PRD.md`. Supports 7 project templates:
+- Web application, CLI tool, API service, Game, Mobile app, Library, Minimal
 
-The PRD Generator supports 7 project templates: web app, CLI, API, game, mobile, library, and minimal. It has web access enabled for validating requirements and researching competitors during the interview.
+Has web access for researching competitors and validating requirements.
 
-### Skill Maintenance
+#### Skill Ingestion (`/ingest-skill`)
 
-| Command | Action |
-|---------|--------|
-| `/audit-skills` | Generate skill library health report |
-| `/skill-enhance [id]` | Research and propose updates to a skill (human approval required) |
+Import external skills from multiple sources:
+
+```bash
+# Single skill from GitHub
+/ingest-skill https://github.com/user/repo/blob/main/skills/my-skill.md
+
+# Multiple skills
+/ingest-skill ./local-skill.md https://raw.githubusercontent.com/user/repo/main/skill.md
+
+# Directory with helper scripts
+/ingest-skill https://github.com/user/repo/tree/main/skills/complex-skill/
+```
+
+Features:
+- Auto-detects metadata (category, keywords, complexity) with user approval
+- Security analysis on helper scripts (detects obfuscation, suspicious patterns)
+- Parses and merges existing frontmatter
+- Double confirmation before overwriting existing skills
+- Handles skills with helper scripts (`.js`, `.py`, etc.)
+- Prompts before running `npm install` for dependencies
+
+#### Skill Maintenance (`/audit-skills`, `/skill-enhance`)
+
+- `/audit-skills` - Analyzes skill library health, identifies issues, suggests improvements
+- `/skill-enhance [id]` - Researches web for updates, proposes changes with human approval
 
 ## Quick Start
 
@@ -267,12 +316,17 @@ claudestrator/
 ├── skills/                        # Default skill directory
 │   ├── skill_manifest.md          # Optional reference index
 │   ├── skill_template.md          # Template for new skills
-│   ├── agent_model_selection.md   # Model selection criteria
 │   ├── implementation/            # Code-writing skills
 │   ├── design/                    # Planning/architecture skills
 │   ├── quality/                   # QA/review skills
 │   ├── support/                   # Supporting skills
-│   └── maintenance/               # Skill maintenance skills
+│   ├── maintenance/               # Skill maintenance skills
+│   ├── security/                  # Security implementation skills
+│   └── domain/                    # Domain-specific expertise
+│
+├── docs/
+│   ├── user_guide.md              # Comprehensive usage guide
+│   └── agent_model_selection.md   # Model selection criteria
 │
 ├── templates/
 │   ├── session_state.md           # Hot state template
@@ -284,9 +338,7 @@ claudestrator/
 │   ├── task_entry.md              # Task file template (with YAML handoff)
 │   └── agent_prompt.md            # Cache-optimized prompt template
 │
-├── commands/                      # Slash command definitions
-└── docs/
-    └── user_guide.md              # Comprehensive usage guide
+└── commands/                      # Slash command definitions
 ```
 
 ## New in v2: Research-Based Improvements
@@ -353,30 +405,55 @@ Orchestrator learns from execution feedback:
 
 See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 
-## Available Skills
+## Available Skills (21 total)
 
 ### Implementation
-- `html5_canvas` - HTML5 Canvas games and 2D graphics
-- `game_feel` - Polish, "juice", and game effects
+| Skill | Description |
+|-------|-------------|
+| `html5_canvas` | HTML5 Canvas games and 2D graphics |
+| `game_feel` | Polish, "juice", and game effects |
+| `data_visualization` | Charts, graphs, D3.js, Chart.js, dashboards |
 
 ### Design
-- `game_designer` - Game mechanics, progression, balance
-- `api_designer` - REST/GraphQL API design
+| Skill | Description |
+|-------|-------------|
+| `game_designer` | Game mechanics, progression, balance |
+| `api_designer` | REST/GraphQL API design |
+| `database_designer` | Schema design, indexing, migrations |
+| `frontend_design` | UI/UX, CSS, responsive design |
 
 ### Quality
-- `qa_agent` - Testing and verification
-- `user_persona` - UX review and accessibility
-- `security_reviewer` - Security audits
+| Skill | Description |
+|-------|-------------|
+| `qa_agent` | Testing and verification |
+| `user_persona_reviewer` | UX review and accessibility |
+| `security_reviewer` | Post-implementation security audits |
+| `webapp_testing` | Playwright, E2E testing, browser automation |
 
 ### Support
-- `svg_asset_gen` - SVG graphics creation
-- `refactoring` - Code restructuring
-- `documentation` - Technical writing
-- `prd_generator` - Interactive requirements elicitation and PRD generation
+| Skill | Description |
+|-------|-------------|
+| `svg_asset_generator` | SVG graphics creation |
+| `refactoring` | Code restructuring |
+| `documentation` | Technical writing |
+| `prd_generator` | Interactive requirements elicitation |
 
 ### Maintenance
-- `skill_auditor` - Skill library health auditing
-- `skill_enhancer` - Web research and skill updates (human-approved)
+| Skill | Description |
+|-------|-------------|
+| `skill_auditor` | Skill library health auditing |
+| `skill_enhancer` | Web research and skill updates |
+
+### Security
+| Skill | Description |
+|-------|-------------|
+| `authentication` | OAuth2, JWT, sessions, password security |
+| `software_security` | Secure coding, OWASP, injection prevention |
+
+### Domain
+| Skill | Description |
+|-------|-------------|
+| `financial_app` | Personal finance, budgeting, transactions |
 
 ## How It Works
 

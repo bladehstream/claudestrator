@@ -535,7 +535,7 @@ install_commands() {
             if [ -e "$target" ] && [ ! -L "$target" ]; then
                 log_warning "Skipping $cmd_name (file exists and is not a symlink)"
                 log_verbose "  Skipped: $target exists as regular file"
-                ((skipped++))
+                ((++skipped))
             else
                 # Remove old symlink if exists
                 if [ -L "$target" ]; then
@@ -552,7 +552,7 @@ install_commands() {
                     ln -sf "$link_target" "$target"
                     log_verbose "  Created symlink: $target -> $link_target"
                 fi
-                ((installed++))
+                ((++installed))
             fi
         fi
     done
@@ -590,11 +590,11 @@ install_skills() {
                     if [ -f "$target" ]; then
                         # File exists - skip (already showed diff in preview)
                         log_verbose "  Skipped (exists): $skill_name"
-                        ((skipped++))
+                        ((++skipped))
                     else
                         cp "$skill_file" "$target"
                         log_verbose "  Copied: $skill_name -> $target"
-                        ((installed++))
+                        ((++installed))
                     fi
                 fi
             done
@@ -612,11 +612,11 @@ install_skills() {
         if [ -f "$src" ]; then
             if [ -f "$dst" ]; then
                 log_verbose "  Skipped (exists): $top_file"
-                ((skipped++))
+                ((++skipped))
             else
                 cp "$src" "$dst"
                 log_verbose "  Copied: $top_file -> $dst"
-                ((installed++))
+                ((++installed))
             fi
         else
             log_verbose "  Not found: $src (skipping)"

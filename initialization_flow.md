@@ -104,6 +104,100 @@ ORCHESTRATOR OUTPUT:
 
 ---
 
+## Phase 0.5: Autonomy Selection
+
+After git check, prompt user for their preferred autonomy level.
+
+### Autonomy Prompt
+
+```
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+🔐 Autonomy Level
+
+How much control do you want during orchestration?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Supervised (Recommended)
+    Approve each tool operation individually
+
+  ○ Trust Agents
+    Approve once per agent, then agent runs freely
+
+  ○ Full Autonomy
+    Auto-approve safe operations, block dangerous ones
+─────────────────────────────────────────────────────
+```
+
+### Autonomy Level Behaviors
+
+| Level | Behavior |
+|-------|----------|
+| **Supervised** | Default Claude Code behavior - prompts for each operation |
+| **Trust Agents** | Single approval per Task spawn, agent runs autonomously |
+| **Full Autonomy** | Safe-autonomy hook auto-approves most operations |
+
+### Full Autonomy Safety Guardrails
+
+When "Full Autonomy" is selected, the `safe-autonomy.sh` hook provides guardrails:
+
+**Auto-Approved:**
+- Read, Glob, Grep (most files)
+- Edit (within project directory)
+- Git commands (except force push to main)
+- Package managers (npm, pip, cargo, etc.)
+- Build/test commands
+- Task tool (agent spawns)
+
+**Auto-Denied:**
+- `sudo`, `su` (privilege escalation)
+- `rm -rf /` or recursive delete outside project
+- `curl | bash` (code injection)
+- Editing system files (/etc, ~/.bashrc)
+- Reading sensitive files (.env, ~/.ssh, ~/.aws)
+- `chmod 777`, `dd`, `mkfs`
+
+**Passthrough (asks user):**
+- Unrecognized commands
+- Network operations not in allowlist
+
+### Hook Verification
+
+```
+IF autonomy_level == "Full Autonomy":
+    IF .claude/hooks/safe-autonomy.sh EXISTS AND EXECUTABLE:
+        ORCHESTRATOR OUTPUT:
+        ─────────────────────────────────────────────────────
+        ✓ Full Autonomy enabled
+          Safe-autonomy hook active
+          Dangerous operations will be blocked
+        ─────────────────────────────────────────────────────
+    ELSE:
+        ORCHESTRATOR OUTPUT:
+        ─────────────────────────────────────────────────────
+        ⚠️ Safe-autonomy hook not found
+
+        Full Autonomy requires the safe-autonomy.sh hook.
+        Run the installer or manually install:
+          cp .claudestrator/templates/hooks/safe-autonomy.sh .claude/hooks/
+          chmod +x .claude/hooks/safe-autonomy.sh
+
+        Falling back to Supervised mode.
+        ─────────────────────────────────────────────────────
+        SET autonomy_level = "Supervised"
+```
+
+### Store Autonomy Selection
+
+```
+WRITE to session_state.md:
+    autonomy_level: [selected level]
+    autonomy_set_at: [timestamp]
+```
+
+---
+
 ## Phase 1: Skill Discovery
 
 ### Automatic Discovery (Silent)
@@ -821,6 +915,6 @@ Ready to begin extension?
 
 ---
 
-*Flow Version: 2.0*
+*Flow Version: 2.1*
 *Updated: December 2024*
-*Added: Phase 6 Iteration/Extension flows, Enhanced state detection*
+*Added: Phase 6 Iteration/Extension flows, Enhanced state detection, Autonomy selection*

@@ -10,6 +10,34 @@
           }
         ]
       }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/safe-autonomy.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(su:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(dd:*)",
+      "Bash(mkfs:*)",
+      "Read(~/.ssh/*)",
+      "Read(~/.aws/*)",
+      "Read(~/.gnupg/*)",
+      "Edit(/etc/*)",
+      "Edit(/usr/*)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.profile)"
     ]
   }
 }

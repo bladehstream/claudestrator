@@ -725,6 +725,47 @@ install_settings() {
     fi
 }
 
+# Install hook scripts for safe autonomy mode
+install_hooks() {
+    local hooks_dir="$CLAUDE_DIR/hooks"
+    local template_hooks="$REPO_DIR/templates/hooks"
+
+    log_info "Installing hook scripts..."
+
+    # Create hooks directory
+    mkdir -p "$hooks_dir"
+    log_verbose "Created hooks directory: $hooks_dir"
+
+    # Install safe-autonomy hook
+    local hook_file="$hooks_dir/safe-autonomy.sh"
+    local hook_template="$template_hooks/safe-autonomy.sh"
+
+    if [ -f "$hook_file" ]; then
+        log_verbose "safe-autonomy.sh already exists, checking version..."
+        # Check if it's our hook (has our header comment)
+        if grep -q "Claudestrator Safe Autonomy Hook" "$hook_file" 2>/dev/null; then
+            # Update to latest version
+            if [ -f "$hook_template" ]; then
+                cp "$hook_template" "$hook_file"
+                chmod +x "$hook_file"
+                log_verbose "Updated safe-autonomy.sh to latest version"
+            fi
+        else
+            log_warning "Custom safe-autonomy.sh found - skipping"
+        fi
+    else
+        if [ -f "$hook_template" ]; then
+            cp "$hook_template" "$hook_file"
+            chmod +x "$hook_file"
+            log_verbose "Installed safe-autonomy.sh"
+        else
+            log_warning "Hook template not found: $hook_template"
+        fi
+    fi
+
+    log_success "Hooks installed (safe autonomy mode available)"
+}
+
 # Uninstall function
 uninstall() {
     log_info "Uninstalling Claudestrator..."
@@ -819,6 +860,7 @@ main() {
     create_directories
     configure_claude_md
     install_settings
+    install_hooks
     print_summary
 }
 

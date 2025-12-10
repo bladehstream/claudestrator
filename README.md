@@ -30,6 +30,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **Git Integration** | Auto-commits after each task; prompts to init if missing |
 | **Iteration Support** | Iterate on feedback, extend with new features, or archive and restart |
 | **PRD Versioning** | Automatic PRD history for audit trail across iterations |
+| **Autonomy Levels** | Supervised, Trust Agents, or Full Autonomy with safety guardrails |
 
 ## Architecture
 

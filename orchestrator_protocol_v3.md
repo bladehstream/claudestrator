@@ -78,6 +78,44 @@ ELSE:
         WARN: "Continuing without git - changes won't be tracked"
 ```
 
+### 1.0.5 Autonomy Selection
+
+> **See**: [initialization_flow.md](initialization_flow.md) for detailed prompts and safety guardrails.
+
+```
+PROMPT user (using AskUserQuestion):
+    "How much control do you want during orchestration?"
+    Options:
+        - "Supervised (Recommended)" - Approve each operation
+        - "Trust Agents" - Approve once per agent spawn
+        - "Full Autonomy" - Auto-approve with safety guardrails
+
+SET AUTONOMY_LEVEL = user_selection
+
+IF AUTONOMY_LEVEL == "Full Autonomy":
+    IF .claude/hooks/safe-autonomy.sh EXISTS AND EXECUTABLE:
+        Report: "✓ Full Autonomy enabled - safe-autonomy hook active"
+    ELSE:
+        WARN: "Safe-autonomy hook not found - falling back to Supervised"
+        SET AUTONOMY_LEVEL = "Supervised"
+
+STORE in session_state.md:
+    autonomy_level: {AUTONOMY_LEVEL}
+```
+
+**Autonomy Levels:**
+
+| Level | Behavior |
+|-------|----------|
+| Supervised | Default - approve each tool operation |
+| Trust Agents | Approve per agent spawn, agent runs freely |
+| Full Autonomy | Hook auto-approves safe ops, blocks dangerous ones |
+
+**Full Autonomy Safety Guardrails (via safe-autonomy.sh hook):**
+- Auto-approve: Read, Edit (in project), git, npm, build commands, Task spawns
+- Auto-deny: sudo, rm -rf outside project, curl|bash, system files, .env
+- Passthrough: Unknown commands (user prompted)
+
 ### 1.1 Check for Existing Journal (Enhanced State Detection)
 
 ```
@@ -923,7 +961,7 @@ orchestrator/
 
 ---
 
-*Protocol Version: 3.2*
+*Protocol Version: 3.3*
 *Updated: December 2024*
-*Added: Phase 6 Iteration Support, Enhanced State Detection*
+*Added: Phase 6 Iteration Support, Enhanced State Detection, Autonomy Levels*
 *Memory Architecture v2 based on research from Anthropic, Google Cloud ADK, and A-MEM*

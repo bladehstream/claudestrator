@@ -83,6 +83,82 @@ Claude will read the journal and resume from where work left off.
 
 ---
 
+## Autonomy Levels
+
+When you run `/orchestrate`, you'll be asked to choose an autonomy level:
+
+| Level | Behavior | Best For |
+|-------|----------|----------|
+| **Supervised** | Approve each tool operation | Learning, sensitive projects |
+| **Trust Agents** | Approve once per agent spawn | Balanced control |
+| **Full Autonomy** | Auto-approve with safety guardrails | Experienced users, long runs |
+
+### Supervised Mode (Default)
+
+Standard Claude Code behavior - you approve each operation:
+- Every file edit
+- Every bash command
+- Every agent spawn
+
+Good for: First-time users, sensitive codebases, when you want full visibility.
+
+### Trust Agents Mode
+
+You approve when an agent is spawned (Task tool), but the agent runs without further prompts:
+- Approve agent spawn once
+- Agent executes all its operations freely
+- Useful for trusting the skill matching system
+
+Good for: Users comfortable with the skill system, medium-length runs.
+
+### Full Autonomy Mode
+
+The `safe-autonomy.sh` hook auto-approves most operations with safety guardrails:
+
+**Auto-Approved:**
+- File read/search operations (Read, Glob, Grep)
+- File edits within project directory
+- Git commands (except force push to main/master)
+- Package managers (npm, pip, cargo, etc.)
+- Build and test commands
+- Agent spawns (Task tool)
+
+**Auto-Denied (blocked):**
+- `sudo`, `su` (privilege escalation)
+- `rm -rf /` or recursive delete outside project
+- `curl | bash` (code injection)
+- Editing system files (/etc, ~/.bashrc, etc.)
+- Reading sensitive files (.env, ~/.ssh, ~/.aws)
+- Destructive disk operations (dd, mkfs)
+
+**Passthrough (asks you):**
+- Unrecognized commands
+- Network operations not in allowlist
+
+Good for: Experienced users, long orchestration runs, trusted codebases.
+
+### Hook Installation
+
+The safe-autonomy hook is installed automatically by the installer:
+```
+.claude/hooks/safe-autonomy.sh
+```
+
+If you need to reinstall it manually:
+```bash
+cp .claudestrator/templates/hooks/safe-autonomy.sh .claude/hooks/
+chmod +x .claude/hooks/safe-autonomy.sh
+```
+
+### Customizing the Hook
+
+You can edit `.claude/hooks/safe-autonomy.sh` to adjust:
+- Which commands are auto-approved
+- Which domains are allowed for web fetches
+- Additional safety rules
+
+---
+
 ## System Components
 
 ### Directory Structure

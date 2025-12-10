@@ -11,6 +11,8 @@
 | Phase | [Planning | Implementation | Testing | Documentation | Review] |
 | Active Task | [task-XXX or "none"] |
 | Active Branch | [git branch name] |
+| Autonomy Level | [Supervised | Trust Agents | Full Autonomy] |
+| Git Enabled | [true | false] |
 
 ## Working Memory
 

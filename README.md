@@ -265,23 +265,54 @@ PRD templates: ~/.claude/claudestrator/prd_generator/templates/
 
 ### After Installation
 
+**Recommended workflow:**
+
+```
+1. /prdgen                    # Generate project requirements (required)
+2. /clear                     # Clear context window
+3. /audit-skills              # Check skill library health
+4. /ingest-skill <source>     # Import any missing skills (if needed)
+5. /clear                     # Clear context before orchestration
+6. /orchestrate               # Start with clean context
+```
+
+**Step-by-step:**
+
 1. **Start Claude Code** in your project directory
 
-2. **Generate a PRD** (optional but recommended):
+2. **Generate a PRD** (required):
    ```
    /prdgen
    ```
-   This interviews you and creates `PRD.md`.
+   Interactive interview that creates `PRD.md`. Uses clickable options for structured choices.
 
-3. **Start orchestration**:
+3. **Clear context** after PRD generation:
+   ```
+   /clear
+   ```
+
+4. **Audit and enhance skills** (recommended):
+   ```
+   /audit-skills              # Check for issues
+   /ingest-skill <url>        # Import any needed skills
+   ```
+
+5. **Clear context** before orchestration:
+   ```
+   /clear
+   ```
+
+6. **Start orchestration**:
    ```
    /orchestrate
    ```
 
-4. **Claude (as orchestrator) will:**
-   - Read your PRD (required - run `/prdgen` first if needed)
+7. **Claude (as orchestrator) will:**
+   - Check for git repository (prompt to initialize if missing)
+   - Load your PRD (stops if not found, prompts for `/prdgen`)
    - Decompose work into tasks
    - Execute using specialized agents
+   - Auto-commit after each task completion
    - Track progress in `.claude/journal/`
    - Learn and adapt from feedback
 

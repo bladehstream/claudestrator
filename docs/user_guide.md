@@ -18,25 +18,55 @@ This approach keeps the primary agent (orchestrator) focused on coordination whi
 
 ### Starting a New Project
 
-1. **Generate a PRD first** (recommended):
+**Recommended workflow:**
+
+```
+1. /prdgen                    # Generate project requirements (required)
+2. /clear                     # Clear context window
+3. /audit-skills              # Check skill library health
+4. /ingest-skill <source>     # Import any missing skills (if needed)
+5. /clear                     # Clear context before orchestration
+6. /orchestrate               # Start with clean context
+```
+
+**Step-by-step:**
+
+1. **Generate a PRD** (required):
    ```
    /prdgen
    ```
-   Then clear context and start orchestration:
+   Interactive interview that creates `PRD.md`. Uses clickable options for structured choices (template selection, platform choices, etc.).
+
+2. **Clear context** after PRD generation:
    ```
    /clear
+   ```
+
+3. **Audit and enhance skills** (recommended):
+   ```
+   /audit-skills              # Check for issues, missing coverage
+   /ingest-skill <url>        # Import any needed skills
+   ```
+
+4. **Clear context** before orchestration:
+   ```
+   /clear
+   ```
+
+5. **Start orchestration**:
+   ```
    /orchestrate
    ```
 
-2. **Claude (as orchestrator) will:**
+6. **Claude (as orchestrator) will:**
    - Check for git repository (prompt to initialize if missing)
-   - Load your PRD and skills
+   - Load your PRD (stops if not found, prompts for `/prdgen`)
    - Decompose the work into tasks
    - Initialize a journal to track progress
    - Begin executing tasks using specialized agents
    - **Auto-commit** after each task completes (if git enabled)
 
-3. **Git integration:**
+7. **Git integration:**
    - If `.git` exists, orchestrator enables auto-commits
    - If not, you'll be prompted: "Initialize git?"
    - Each completed task creates a commit with task details
@@ -154,26 +184,20 @@ pairs_with: [related_skill]  # optional
 
 ### Phase 1: Discovery
 
-When you start a project, Claude will:
+When you start orchestration, Claude will:
 
-1. **Check for existing journal** - Resume if found
-2. **Look for PRD.md** - Use requirements if found
-3. **Interview you** - Ask about what you're building if no PRD
+1. **Check git status** - Prompt to initialize if missing (enables auto-commits)
+2. **Check for existing journal** - Resume if found
+3. **Load PRD.md** - Parse requirements from your PRD
 
-Example interview:
+**If no PRD exists:** The orchestrator will stop and instruct you to:
 ```
-Q: What are you building?
-A: A task management API
-
-Q: What are the key features?
-A: CRUD operations for tasks, user authentication, due dates
-
-Q: Any technical constraints?
-A: Node.js, Express, MongoDB
-
-Q: What does success look like?
-A: Working API with tests that I can deploy to Heroku
+1. Run /prdgen to generate requirements
+2. Run /clear to reset context
+3. Run /orchestrate again
 ```
+
+This keeps the orchestration context clean and focused on execution rather than requirements gathering.
 
 ### Phase 2: Planning
 
@@ -347,12 +371,18 @@ Add entry to `skill_manifest.md`:
 
 ### For Project Setup
 
-1. **Write a PRD** for complex projects
-   - Saves interview time
-   - Provides reference throughout
-   - Can be refined as you go
+1. **Generate a PRD first** (required)
+   - Use `/prdgen` for interactive generation
+   - Provides clear reference throughout execution
+   - Can be refined before orchestration begins
+   - Run `/clear` after PRD generation
 
-2. **Be specific about constraints**
+2. **Audit skills before orchestration**
+   - Run `/audit-skills` to check library health
+   - Use `/ingest-skill` to import missing capabilities
+   - Run `/clear` before starting orchestration
+
+3. **Be specific about constraints**
    - Language/framework preferences
    - Performance requirements
    - Integration needs
@@ -536,5 +566,5 @@ Claude: Creating project journal and decomposing into tasks...
 
 ---
 
-*User Guide Version: 1.0*
+*User Guide Version: 1.1*
 *Last Updated: December 2024*

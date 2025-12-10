@@ -53,6 +53,8 @@ REPO_RAW_URL="https://raw.githubusercontent.com/bladehstream/claudestrator/main"
 
 # Temporary directory for downloads during diff preview
 TEMP_DIR=""
+SKIP_PREVIEW=false
+LOCAL_REPO=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -77,6 +79,10 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --skip-preview)
+            SKIP_PREVIEW=true
+            shift
+            ;;
         --help|-h)
             echo "Claudestrator Installer"
             echo ""
@@ -85,12 +91,13 @@ while [[ $# -gt 0 ]]; do
             echo "By default, installs to current project directory (.claudestrator/)"
             echo ""
             echo "Options:"
-            echo "  --global, -g  Install globally to ~/.claude/ (available in all projects)"
-            echo "  --force       Skip confirmation prompts"
-            echo "  --uninstall   Remove Claudestrator installation"
-            echo "  --dry-run     Show what would be done without making changes"
-            echo "  --verbose, -v Show detailed output for each action"
-            echo "  --help        Show this help message"
+            echo "  --global, -g    Install globally to ~/.claude/ (available in all projects)"
+            echo "  --force         Skip confirmation prompts"
+            echo "  --uninstall     Remove Claudestrator installation"
+            echo "  --dry-run       Show what would be done without making changes"
+            echo "  --verbose, -v   Show detailed output for each action"
+            echo "  --skip-preview  Skip change preview (useful for private repos)"
+            echo "  --help          Show this help message"
             exit 0
             ;;
         *)
@@ -278,17 +285,48 @@ show_skill_diff() {
     fi
 }
 
+# Detect if running from within the repo
+detect_local_repo() {
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    # Check if we're in the repo by looking for key files
+    if [ -f "$script_dir/orchestrator_protocol_v3.md" ] && [ -d "$script_dir/skills" ]; then
+        LOCAL_REPO="$script_dir"
+        log_verbose "Detected local repo at: $LOCAL_REPO"
+        return 0
+    fi
+    return 1
+}
+
 # Preview all changes before installation
 preview_changes() {
+    if [ "$SKIP_PREVIEW" = true ]; then
+        log_info "Skipping preview (--skip-preview)"
+        return
+    fi
+
     log_info "Previewing changes..."
 
-    # We need to clone the repo to a temp location to compare
-    TEMP_DIR=$(mktemp -d)
-    log_info "Fetching repository for comparison..."
-    git clone --quiet --depth 1 "$REPO_URL" "$TEMP_DIR/claudestrator" 2>/dev/null || {
-        log_error "Failed to fetch repository for preview"
-        exit 1
-    }
+    # Check if we're running from within the repo
+    if detect_local_repo; then
+        log_info "Using local repository for comparison..."
+        TEMP_DIR=$(mktemp -d)
+        mkdir -p "$TEMP_DIR/claudestrator"
+        # Create symlink to local repo content
+        ln -s "$LOCAL_REPO"/* "$TEMP_DIR/claudestrator/" 2>/dev/null || {
+            # If symlinks fail, copy instead
+            cp -r "$LOCAL_REPO"/* "$TEMP_DIR/claudestrator/"
+        }
+    else
+        # Clone from remote
+        TEMP_DIR=$(mktemp -d)
+        log_info "Fetching repository for comparison..."
+        git clone --quiet --depth 1 "$REPO_URL" "$TEMP_DIR/claudestrator" 2>/dev/null || {
+            log_warning "Failed to fetch repository for preview (private repo?)"
+            log_info "Use --skip-preview to bypass, or run from within a local clone"
+            exit 1
+        }
+    fi
 
     local has_changes=false
     local changes_summary=()

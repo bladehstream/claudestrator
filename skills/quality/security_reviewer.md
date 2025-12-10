@@ -236,4 +236,4 @@ When this skill is applied, the agent should:
 
 ---
 
-*Skill Version: 1.0*
+*Skill Version: 1.1*

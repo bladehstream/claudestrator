@@ -19,6 +19,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 |---------|-------------|
 | **Strict Role Separation** | Orchestrator manages; agents implement. Never mixed. |
 | **Dynamic Skill Discovery** | Skills auto-loaded from directory - just drop in new .md files |
+| **Category Deduplication** | One skill per category - no redundant expertise |
 | **Knowledge Graph** | Tag-based retrieval of project knowledge and learnings |
 | **Computed Context** | Fresh, relevant context computed per-agent (not accumulated) |
 | **Hot/Cold State** | Working memory (hot) separate from archival memory (cold) |
@@ -239,7 +240,7 @@ Requirements are decomposed into tasks with:
 
 ### 3. Execution
 For each task:
-1. Match relevant skills from the library
+1. Match relevant skills from the library (one per category)
 2. Select model based on complexity
 3. **Compute** context (query knowledge graph, filter by relevance)
 4. Construct agent prompt (cache-optimized structure)

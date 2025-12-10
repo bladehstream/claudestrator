@@ -2,6 +2,7 @@
 name: SVG Asset Generator
 id: svg_asset_gen
 version: 1.0
+category: assets
 domain: [web, game, design]
 task_types: [asset, implementation]
 keywords: [svg, sprite, icon, graphic, vector, animation, visual, art, image, asset]

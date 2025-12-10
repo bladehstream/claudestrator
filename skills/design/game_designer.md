@@ -2,6 +2,7 @@
 name: Game Designer
 id: game_designer
 version: 1.0
+category: game-mechanics
 domain: [game]
 task_types: [design, planning, specification]
 keywords: [game, mechanics, balance, progression, player, experience, loop, difficulty, scoring, rules]

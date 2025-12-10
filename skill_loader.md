@@ -67,6 +67,7 @@ Required frontmatter fields:
 ---
 name: [required] Human-readable name
 id: [required] Unique identifier (lowercase, underscore)
+category: [required] Primary category for deduplication
 domain: [required] Array of applicable domains
 task_types: [required] Array of task types handled
 keywords: [required] Array of matching keywords
@@ -78,8 +79,11 @@ version: [optional] Skill version
 
 Validation rules:
 - `id` must be unique across all skills
+- `category` must be a non-empty string (used for deduplication)
 - `domain`, `task_types`, `keywords`, `complexity` must be non-empty arrays
 - File must have valid YAML frontmatter block
+
+Standard categories: `rendering`, `game-mechanics`, `polish`, `api-design`, `testing`, `security`, `ux-review`, `assets`, `refactoring`, `documentation`
 
 ### Step 3: Build Index
 
@@ -152,16 +156,68 @@ FUNCTION matchSkills(task, index):
 
         scores[skill.id] = score
 
-    # Step 4: Sort and return top matches
+    # Step 4: Sort by score
     candidates.sortBy(scores, DESC)
 
+    # Step 5: Deduplicate by category (NEW)
+    # Select only the highest-scoring skill from each category
+    selected = deduplicateByCategory(candidates, scores)
+
+    # Step 6: Apply max_skills limit
     max_skills = CASE task.complexity
         WHEN 'easy' THEN 3
         WHEN 'normal' THEN 7
         WHEN 'complex' THEN 15
 
-    RETURN candidates.take(max_skills)
+    RETURN selected.take(max_skills)
 ```
+
+### Category-Based Deduplication
+
+The deduplication step ensures only one skill per category is selected, preventing redundant expertise:
+
+```
+FUNCTION deduplicateByCategory(candidates, scores):
+    selected = []
+    seen_categories = SET()
+
+    # Candidates already sorted by score DESC
+    FOR skill IN candidates:
+        category = skill.category
+
+        IF category NOT IN seen_categories:
+            selected.append(skill)
+            seen_categories.add(category)
+
+    RETURN selected
+```
+
+**Example**:
+Given candidates (sorted by score):
+| Skill | Category | Score |
+|-------|----------|-------|
+| html5_canvas | rendering | 8 |
+| game_feel | polish | 6 |
+| webgl_renderer | rendering | 5 |
+| qa_agent | testing | 4 |
+| game_designer | game-mechanics | 3 |
+| canvas_sprites | rendering | 2 |
+
+After deduplication:
+| Skill | Category | Score |
+|-------|----------|-------|
+| html5_canvas | rendering | 8 |
+| game_feel | polish | 6 |
+| qa_agent | testing | 4 |
+| game_designer | game-mechanics | 3 |
+
+The `webgl_renderer` and `canvas_sprites` skills are skipped because `html5_canvas` (higher score) already claimed the `rendering` category.
+
+**Benefits**:
+- Prevents skill redundancy (no 3 testing skills for one task)
+- Forces diversity in agent expertise
+- Reduces context size while maintaining breadth
+- Allows specialized skills to coexist with general ones (best wins)
 
 ---
 

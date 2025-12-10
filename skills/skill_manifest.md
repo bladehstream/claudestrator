@@ -17,18 +17,20 @@ See `skill_loader.md` for the dynamic discovery system.
 
 ## Quick Reference
 
-| ID | Name | Domain | Task Types | Complexity |
-|----|------|--------|------------|------------|
-| html5_canvas | HTML5 Canvas Developer | web, game | impl, feature, bugfix | normal, complex |
-| svg_asset_gen | SVG Asset Generator | web, game | asset, impl | easy, normal |
-| game_designer | Game Designer | game | design, planning | normal, complex |
-| game_feel | Game Feel Developer | game | polish, feature | normal |
-| qa_agent | QA Agent | any | testing, verification | normal |
-| user_persona | User Persona Reviewer | any | testing, review | normal |
-| api_designer | API Designer | backend, api | design, planning | normal, complex |
-| security_reviewer | Security Reviewer | any | review, audit | complex |
-| refactoring | Refactoring Specialist | any | refactor | normal, complex |
-| documentation | Documentation Writer | any | documentation | easy, normal |
+| ID | Name | Category | Domain | Task Types | Complexity |
+|----|------|----------|--------|------------|------------|
+| html5_canvas | HTML5 Canvas Developer | rendering | web, game | impl, feature, bugfix | normal, complex |
+| svg_asset_gen | SVG Asset Generator | assets | web, game | asset, impl | easy, normal |
+| game_designer | Game Designer | game-mechanics | game | design, planning | normal, complex |
+| game_feel | Game Feel Developer | polish | game | polish, feature | normal |
+| qa_agent | QA Agent | testing | any | testing, verification | normal |
+| user_persona | User Persona Reviewer | ux-review | any | testing, review | normal |
+| api_designer | API Designer | api-design | backend, api | design, planning | normal, complex |
+| security_reviewer | Security Reviewer | security | any | review, audit | complex |
+| refactoring | Refactoring Specialist | refactoring | any | refactor | normal, complex |
+| documentation | Documentation Writer | documentation | any | documentation | easy, normal |
+
+> **Note**: Only one skill per category is selected for each agent. This ensures diverse expertise without redundancy.
 
 ---
 
@@ -40,6 +42,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | HTML5 Canvas Developer |
 | **ID** | html5_canvas |
+| **Category** | rendering |
 | **Path** | skills/implementation/html5_canvas.md |
 | **Domain** | web, game, visualization |
 | **Task Types** | implementation, feature, bugfix |
@@ -56,6 +59,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | SVG Asset Generator |
 | **ID** | svg_asset_gen |
+| **Category** | assets |
 | **Path** | skills/support/svg_asset_generator.md |
 | **Domain** | web, game, design |
 | **Task Types** | asset, implementation |
@@ -72,6 +76,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | Game Designer |
 | **ID** | game_designer |
+| **Category** | game-mechanics |
 | **Path** | skills/design/game_designer.md |
 | **Domain** | game |
 | **Task Types** | design, planning, specification |
@@ -88,6 +93,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | Game Feel Developer |
 | **ID** | game_feel |
+| **Category** | polish |
 | **Path** | skills/implementation/game_feel.md |
 | **Domain** | game |
 | **Task Types** | polish, feature, implementation |
@@ -104,6 +110,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | QA Agent |
 | **ID** | qa_agent |
+| **Category** | testing |
 | **Path** | skills/quality/qa_agent.md |
 | **Domain** | any |
 | **Task Types** | testing, verification, validation |
@@ -120,6 +127,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | User Persona Reviewer |
 | **ID** | user_persona |
+| **Category** | ux-review |
 | **Path** | skills/quality/user_persona_reviewer.md |
 | **Domain** | any |
 | **Task Types** | testing, review, evaluation |
@@ -136,6 +144,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | API Designer |
 | **ID** | api_designer |
+| **Category** | api-design |
 | **Path** | skills/design/api_designer.md |
 | **Domain** | backend, api, web |
 | **Task Types** | design, planning, specification |
@@ -152,6 +161,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | Security Reviewer |
 | **ID** | security_reviewer |
+| **Category** | security |
 | **Path** | skills/quality/security_reviewer.md |
 | **Domain** | any |
 | **Task Types** | review, audit, verification |
@@ -168,6 +178,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | Refactoring Specialist |
 | **ID** | refactoring |
+| **Category** | refactoring |
 | **Path** | skills/support/refactoring.md |
 | **Domain** | any |
 | **Task Types** | refactor, cleanup |
@@ -184,6 +195,7 @@ See `skill_loader.md` for the dynamic discovery system.
 |-------|-------|
 | **Name** | Documentation Writer |
 | **ID** | documentation |
+| **Category** | documentation |
 | **Path** | skills/support/documentation.md |
 | **Domain** | any |
 | **Task Types** | documentation |

@@ -2,6 +2,7 @@
 name: Security Reviewer
 id: security_reviewer
 version: 1.0
+category: security
 domain: [any]
 task_types: [review, audit, verification]
 keywords: [security, vulnerability, injection, xss, csrf, authentication, authorization, owasp, sanitize]

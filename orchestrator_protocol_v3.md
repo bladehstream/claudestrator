@@ -178,6 +178,8 @@ SELECT first task
 
 ### 3.2 Match Skills to Task
 
+> **See**: [skill_loader.md](skill_loader.md) for full matching specification including category deduplication.
+
 ```
 FUNCTION matchSkills(task):
     # Step 1: Extract task signals
@@ -210,16 +212,23 @@ FUNCTION matchSkills(task):
 
         skill.score = score
 
-    # Step 4: Select top skills
+    # Step 4: Sort by score
     candidates.sortBy(score, DESC)
 
+    # Step 5: Deduplicate by category (NEW in v3.1)
+    # Only one skill per category - highest scorer wins
+    selected = deduplicateByCategory(candidates)
+
+    # Step 6: Apply max_skills limit
     max_skills = CASE complexity
         WHEN 'easy' THEN 3
         WHEN 'normal' THEN 7
         WHEN 'complex' THEN 15
 
-    RETURN candidates.take(max_skills)
+    RETURN selected.take(max_skills)
 ```
+
+**Category Deduplication**: Each skill has a `category` field (e.g., `rendering`, `testing`, `security`). Only the highest-scoring skill from each category is selected. This prevents redundant skills (e.g., three different testing skills) while ensuring diversity.
 
 ### 3.3 Select Model
 

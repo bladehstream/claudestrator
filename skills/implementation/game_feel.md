@@ -2,6 +2,7 @@
 name: Game Feel Developer
 id: game_feel
 version: 1.0
+category: polish
 domain: [game]
 task_types: [polish, feature, implementation]
 keywords: [juice, polish, animation, feedback, shake, particle, easing, effect, feel, vfx, satisfaction]

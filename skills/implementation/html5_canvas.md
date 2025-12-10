@@ -2,6 +2,7 @@
 name: HTML5 Canvas Developer
 id: html5_canvas
 version: 1.0
+category: rendering
 domain: [web, game, visualization]
 task_types: [implementation, feature, bugfix]
 keywords: [canvas, html5, javascript, game, animation, rendering, sprite, 2d, graphics, gameloop, collision, input]

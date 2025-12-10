@@ -186,32 +186,162 @@ Using this directory for skill matching.
 
 ---
 
-## Phase 2: Project Detection
+## Phase 2: Project Detection (Enhanced State Detection)
 
 ### Check 1: Existing Journal
 
+The orchestrator detects multiple states and offers appropriate options:
+
+#### State A: Tasks In Progress
+
 ```
-IF ./.claude/journal/index.md EXISTS:
+IF ./.claude/journal/index.md EXISTS AND
+   any task has status == 'in_progress' OR pending with met dependencies:
 
 ORCHESTRATOR OUTPUT:
 ─────────────────────────────────────────────────────
-📋 Existing Project Found
+📋 Resuming Project
 
 Project: [name from index.md]
-Status: [X/Y tasks completed]
-Last active: [date from index.md]
+Run: [run_number] ([run_type])
+Progress: [X/Y] tasks completed
 
 Current state:
   • Completed: task-001, task-002, task-003
   • In progress: task-004 (Implement user authentication)
   • Pending: task-005, task-006
 
-Would you like to:
-1. Resume from where we left off
-2. Start fresh (archive current journal)
-3. Review the journal first
+Resuming from task-004...
+─────────────────────────────────────────────────────
+```
 
-How should we proceed?
+#### State B: Project Complete (All Tasks Done)
+
+```
+IF ./.claude/journal/index.md EXISTS AND
+   all tasks have status == 'completed' AND
+   index.phase == 'complete':
+
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+✅ Project Complete
+
+Run [N] finished with all [X] tasks completed.
+
+Project: [name]
+Completed: [date]
+Files created: [count]
+
+What would you like to do?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Iterate
+    Review outputs, gather feedback, create improvement tasks
+
+  ○ Extend
+    Add new requirements to the project
+
+  ○ Archive
+    Mark this run complete and start fresh
+─────────────────────────────────────────────────────
+```
+
+**If user selects "Iterate":**
+```
+→ Enter Phase 6.1: Iteration Mode
+→ See "Iteration Flow" section below
+```
+
+**If user selects "Extend":**
+```
+→ Enter Phase 6.2: Extension Mode
+→ See "Extension Flow" section below
+```
+
+**If user selects "Archive":**
+```
+→ Archive current run to journal/archive/run-{N}/
+→ Archive PRD to PRD-history/
+→ Proceed to Phase 2, Check 2 (PRD Detection)
+```
+
+#### State C: Deorchestrated (Paused Session)
+
+```
+IF ./.claude/journal/index.md EXISTS AND
+   (index.phase == 'paused' OR index.deorchestrated == true):
+
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+📋 Previous Session Found
+
+Project: [name]
+Last active: [last_updated date]
+Progress: [X/Y] tasks completed
+Run: [N] ([run_type])
+Phase: [phase] (paused via /deorchestrate)
+
+Resume from where you left off?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Yes, resume (Recommended)
+    Continue from task [next_task]
+
+  ○ No, start fresh
+    Archive current progress and begin new run
+─────────────────────────────────────────────────────
+```
+
+**If user selects "Yes, resume":**
+```
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+✓ Resuming session
+
+Reloading context from journal...
+  • Loaded [X] completed task summaries
+  • Loaded [Y] key decisions
+  • Loaded context map with [Z] entries
+
+Continuing with task-[next]...
+─────────────────────────────────────────────────────
+```
+
+#### State D: Failed/Blocked State
+
+```
+IF ./.claude/journal/index.md EXISTS AND
+   (active_blockers exist OR multiple tasks have status == 'failed'):
+
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+⚠️ Previous Run Had Issues
+
+Project: [name]
+Run: [N]
+
+Blockers:
+  • [blocker 1]
+  • [blocker 2]
+
+Failed tasks:
+  • task-[X]: [name] - [failure reason]
+  • task-[Y]: [name] - [failure reason]
+
+How would you like to proceed?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Review and retry
+    Examine failures, attempt recovery
+
+  ○ Skip and continue
+    Mark blockers as skipped, proceed with remaining tasks
+
+  ○ Reset and start fresh
+    Archive current state, begin new run
 ─────────────────────────────────────────────────────
 ```
 
@@ -456,28 +586,241 @@ Subsequent sessions read this config and skip prompts if valid.
 
 ---
 
+## Phase 6: Iteration Flow
+
+Entered when user selects "Iterate" from a completed project state.
+
+### 6.1 Summary Generation
+
+```
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+📊 Run [N] Summary
+
+Completed: [X] tasks
+Duration: [start_date] → [end_date]
+
+Files Created:
+  • src/components/Dashboard.tsx
+  • src/services/api.ts
+  • [...]
+
+Key Features Implemented:
+  • [feature 1 from PRD]
+  • [feature 2 from PRD]
+
+Architecture Decisions:
+  • [decision 1 from journal]
+  • [decision 2 from journal]
+
+Known Limitations:
+  • [from QA feedback]
+─────────────────────────────────────────────────────
+```
+
+### 6.2 Feedback Collection
+
+```
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+What aspects need improvement?
+─────────────────────────────────────────────────────
+
+OPTIONS (multi-select):
+  ☐ Performance issues
+    Speed, memory, responsiveness
+
+  ☐ UX/UI improvements
+    Layout, interactions, accessibility
+
+  ☐ Bug fixes
+    Issues found during testing
+
+  ☐ Feature enhancements
+    Improvements to existing features
+
+  ☐ Code quality
+    Refactoring, patterns, maintainability
+─────────────────────────────────────────────────────
+```
+
+For each selection, follow up with freeform:
+```
+ORCHESTRATOR PROMPT:
+─────────────────────────────────────────────────────
+Describe the [selected category] issues:
+
+(Enter details about what needs to change)
+─────────────────────────────────────────────────────
+```
+
+### 6.3 Task Generation
+
+```
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+📝 Iteration Tasks
+
+Based on your feedback, I've created:
+
+ID   | Name                      | Complexity | Improves
+-----|---------------------------|------------|----------
+009  | Optimize API response time| normal     | task-005
+010  | Add loading indicators    | easy       | task-003
+011  | Fix date parsing bug      | easy       | task-004
+012  | Refactor auth middleware  | normal     | task-006
+
+Run: 2 (iteration)
+PRD: Updated with iteration notes
+
+Ready to begin iteration?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Yes, start iteration (Recommended)
+    Begin with task 009
+
+  ○ Modify tasks first
+    Add, remove, or change tasks
+
+  ○ Cancel
+    Return to main menu
+─────────────────────────────────────────────────────
+```
+
+---
+
+## Phase 6.2: Extension Flow
+
+Entered when user selects "Extend" from a completed project state.
+
+### Extension Context
+
+```
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+📋 Current Project State
+
+Project: [name]
+Completed: [X] tasks across [Y] runs
+PRD Version: v[N]
+
+Current Features:
+  • [feature 1]
+  • [feature 2]
+  • [feature 3]
+
+Architecture:
+  • [key architectural pattern]
+  • [tech stack summary]
+─────────────────────────────────────────────────────
+```
+
+### Extension Options
+
+```
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+How would you like to add new requirements?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Run /prdgen (Recommended for large features)
+    Generate full PRD for extension, then merge
+
+  ○ Describe inline (For smaller additions)
+    Add requirements directly in this session
+─────────────────────────────────────────────────────
+```
+
+**If inline description:**
+```
+ORCHESTRATOR PROMPT:
+─────────────────────────────────────────────────────
+Describe the new features you want to add:
+
+(List requirements, constraints, and success criteria)
+─────────────────────────────────────────────────────
+```
+
+### Extension Task Generation
+
+```
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+📝 Extension Tasks
+
+Analyzing new requirements against existing codebase...
+
+Integration points identified:
+  • [existing file] → needs modification for [new feature]
+  • [existing component] → will be extended
+
+New tasks:
+
+ID   | Name                      | Complexity | Type
+-----|---------------------------|------------|------
+013  | Design export API         | normal     | design
+014  | Implement CSV exporter    | normal     | implementation
+015  | Add export UI controls    | normal     | feature
+016  | Integration testing       | normal     | testing
+
+Run: 3 (extension)
+PRD: Updated with extension requirements
+
+Ready to begin extension?
+─────────────────────────────────────────────────────
+```
+
+---
+
 ## Summary: What Happens on First Run
 
-1. **Skill Discovery**
+1. **Git Check**
+   - Checks for .git repository
+   - Prompts to initialize if missing
+   - Enables auto-commits if present
+
+2. **Skill Discovery**
    - Automatically searches default locations
    - Reports what was found
    - Prompts only if nothing found
 
-2. **Project Requirements**
-   - Checks for existing journal (resume?)
+3. **Project Requirements**
+   - Checks for existing journal (detects state)
    - Checks for PRD.md (parse it)
-   - If neither: conducts 4-question interview
+   - If no PRD: prompts for /prdgen
 
-3. **Confirmation**
+4. **Confirmation**
    - Summarizes understanding
    - Shows task breakdown
    - Gets user approval before starting
 
-4. **Execution**
+5. **Execution**
    - Creates journal
    - Begins first task
    - Reports progress throughout
+   - Auto-commits after each task
+
+## Summary: What Happens on Subsequent Runs
+
+1. **State Detection**
+   - In progress → Resume automatically
+   - Complete → Offer iterate/extend/archive
+   - Paused → Offer resume
+   - Failed → Offer retry/skip/reset
+
+2. **Context Reload**
+   - Load journal summaries
+   - Query knowledge graph
+   - Rebuild context map
+
+3. **Continue Execution**
+   - Resume from next pending task
+   - Or execute new iteration/extension tasks
 
 ---
 
-*Flow Version: 1.0*
+*Flow Version: 2.0*
+*Updated: December 2024*
+*Added: Phase 6 Iteration/Extension flows, Enhanced state detection*

@@ -6,26 +6,37 @@
 |-------|-------|
 | Name | [Project name] |
 | Type | [webapp / cli / library / game / service / other] |
-| PRD | [./PRD.md or N/A] |
+| PRD | [./PRD.md] |
+| PRD Version | [v1] |
 | Created | [YYYY-MM-DD] |
 | Stack | [languages, frameworks] |
 | Domain | [domain tags for skill matching] |
 
-## Current State
+## Current Run
 
 | Field | Value |
 |-------|-------|
-| Phase | [planning / implementation / testing / polish / complete] |
+| Run Number | [1] |
+| Run Type | [initial / iteration / extension] |
+| Phase | [planning / implementation / testing / polish / complete / paused] |
 | Active Task | [task-XXX or "none"] |
 | Progress | [X/Y tasks completed] |
+| Started | [YYYY-MM-DD] |
 | Blocked | [no / yes: reason] |
+| Deorchestrated | [false / true] |
+
+## Orchestration Runs
+
+| Run | Type | Date | Tasks | PRD Ver | Outcome |
+|-----|------|------|-------|---------|---------|
+| 1 | initial | [YYYY-MM-DD] | 001-008 | v1 | [in_progress / complete] |
 
 ## Task Registry
 
-| ID | Name | Status | Model | Complexity | Dependencies | File |
-|----|------|--------|-------|------------|--------------|------|
-| 001 | [task name] | pending | - | [easy/normal/complex] | none | task-001-name.md |
-| 002 | [task name] | pending | - | [easy/normal/complex] | 001 | task-002-name.md |
+| ID | Name | Status | Model | Complexity | Dependencies | Run | Improves | File |
+|----|------|--------|-------|------------|--------------|-----|----------|------|
+| 001 | [task name] | pending | - | [easy/normal/complex] | none | 1 | - | task-001-name.md |
+| 002 | [task name] | pending | - | [easy/normal/complex] | 001 | 1 | - | task-002-name.md |
 
 ### Status Legend
 - `pending` - Not yet started
@@ -33,6 +44,15 @@
 - `completed` - Successfully finished
 - `failed` - Could not complete
 - `blocked` - Waiting on external factor
+- `skipped` - Intentionally skipped (iteration/extension)
+
+### Run Types
+- `initial` - First orchestration run
+- `iteration` - Feedback-driven improvements
+- `extension` - New requirements added
+
+### Improves Column
+For iteration tasks, references the original task being improved (e.g., "task-003")
 
 ## Key Decisions
 
@@ -66,3 +86,4 @@ Quick reference for code locations (updated as tasks complete):
 
 *Journal initialized: [date]*
 *Last updated: [date]*
+*Template version: 2.0 (iteration support)*

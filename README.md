@@ -28,6 +28,8 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **Prompt Caching** | Stable prefix structure for cache optimization |
 | **Dynamic Model Selection** | Easy→Haiku, Normal→Sonnet, Complex→Opus |
 | **Git Integration** | Auto-commits after each task; prompts to init if missing |
+| **Iteration Support** | Iterate on feedback, extend with new features, or archive and restart |
+| **PRD Versioning** | Automatic PRD history for audit trail across iterations |
 
 ## Architecture
 
@@ -543,6 +545,37 @@ For each task:
 
 ### 5. Verification
 QA agent validates all acceptance criteria. Issues become new tasks for iteration.
+
+### 6. Iteration & Extension (Post-Completion)
+
+When a run completes, `/orchestrate` offers three options:
+
+| Option | Use Case | What Happens |
+|--------|----------|--------------|
+| **Iterate** | Improve existing features | Gather feedback → create improvement tasks → execute |
+| **Extend** | Add new features | Add requirements → decompose → execute |
+| **Archive** | Start fresh | Archive current run → begin new project |
+
+**Iteration workflow:**
+```
+1. Review run summary (files, features, decisions)
+2. Select improvement categories (performance, UX, bugs, etc.)
+3. Describe specific issues
+4. New tasks created with "Improves: task-XXX" links
+5. PRD updated with iteration notes
+6. Execute iteration tasks
+```
+
+**Extension workflow:**
+```
+1. View current project state
+2. Choose: /prdgen for large features OR inline for small additions
+3. PRD versioned and updated
+4. New tasks created with integration analysis
+5. Execute extension tasks
+```
+
+**PRD versioning:** Each iteration/extension archives the current PRD to `PRD-history/` before updating.
 
 ## Model Selection
 

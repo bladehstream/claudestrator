@@ -251,6 +251,63 @@ After implementation tasks complete:
 - Issues found become new tasks
 - Iteration continues until all criteria pass
 
+### Phase 5: Iteration & Extension
+
+When all tasks complete, running `/orchestrate` again offers three options:
+
+| Option | When to Use |
+|--------|-------------|
+| **Iterate** | You've tested the output and want improvements |
+| **Extend** | You want to add new features |
+| **Archive** | You're done and want to start fresh |
+
+#### Iteration Mode
+
+Iterate when you want to improve existing functionality:
+
+```
+1. Orchestrator shows run summary (files created, features built)
+2. You select improvement categories:
+   - Performance issues
+   - UX/UI improvements
+   - Bug fixes
+   - Feature enhancements
+   - Code quality
+3. You describe specific issues for each category
+4. New tasks are created with links to original tasks
+5. PRD is updated with iteration notes
+6. Tasks execute as normal
+```
+
+#### Extension Mode
+
+Extend when you want to add new features:
+
+```
+1. Orchestrator shows current project state
+2. You choose how to add requirements:
+   - /prdgen for large features (separate interview)
+   - Inline description for small additions
+3. PRD is archived and updated with new requirements
+4. Tasks are created with integration analysis
+5. Tasks execute as normal
+```
+
+#### PRD Versioning
+
+Each iteration or extension automatically archives the current PRD:
+
+```
+project/
+├── PRD.md                      # Current/active PRD
+└── PRD-history/
+    ├── v1-initial.md           # Original PRD
+    ├── v2-iteration-1.md       # After first iteration
+    └── v3-extension-1.md       # After extension
+```
+
+This provides an audit trail of how requirements evolved.
+
 ---
 
 ## The Journal System

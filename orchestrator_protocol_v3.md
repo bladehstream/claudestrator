@@ -78,17 +78,82 @@ ELSE:
         WARN: "Continuing without git - changes won't be tracked"
 ```
 
-### 1.1 Check for Existing Journal
+### 1.1 Check for Existing Journal (Enhanced State Detection)
 
 ```
 IF project/.claude/journal/index.md EXISTS:
     Read index.md
-    Identify current state and active tasks
-    Resume from last checkpoint
+    DETERMINE project_state:
+
+    CASE 1: Tasks in progress
+        IF any task has status == 'in_progress' OR
+           any task has status == 'pending' AND dependencies met:
+            → Resume execution from current position
+            REPORT: "Resuming from task {active_task}..."
+
+    CASE 2: Project complete (all tasks completed)
+        IF all tasks have status == 'completed' AND
+           index.phase == 'complete':
+            → Offer iteration options (using AskUserQuestion)
+            PROMPT:
+                "✅ Project Complete
+
+                All {X} tasks from the previous run are complete.
+
+                What would you like to do?
+
+                1. Iterate - Review outputs, gather feedback, create improvement tasks
+                2. Extend - Add new requirements to the project
+                3. Archive - Mark this run complete and start fresh
+                "
+
+            IF user selects "Iterate":
+                → Enter Phase 6: Iteration
+            IF user selects "Extend":
+                → Enter Phase 6.2: Extension
+            IF user selects "Archive":
+                → Archive current run, proceed to Phase 1.2
+
+    CASE 3: Deorchestrated (clean exit, work paused)
+        IF index.phase == 'paused' OR
+           index.deorchestrated == true:
+            → Offer resume options
+            PROMPT:
+                "📋 Previous Session Found
+
+                Project: {project_name}
+                Last active: {last_updated}
+                Progress: {X/Y} tasks completed
+                Phase: {phase} (paused)
+
+                Resume from where you left off?"
+
+            IF user confirms:
+                → Reload context from journal
+                → Resume execution
+
+    CASE 4: Failed/blocked state
+        IF active_blockers exist OR
+           multiple tasks have status == 'failed':
+            → Report blockers, offer options
+            PROMPT:
+                "⚠️ Previous Run Had Issues
+
+                Blockers: {blocker_list}
+                Failed tasks: {failed_task_list}
+
+                Options:
+                1. Review and retry failed tasks
+                2. Skip blockers and continue
+                3. Reset and start fresh
+                "
+
 ELSE:
     Create journal structure
     Proceed to requirements discovery
 ```
+
+See [initialization_flow.md](initialization_flow.md) for detailed user prompts.
 
 ### 1.2 Requirements Discovery
 
@@ -503,8 +568,207 @@ Generate summary:
 
 ```
 IF project complete:
-    Move journal/ to journal/archive/session-{date}/
+    Move journal/ to journal/archive/run-{run_number}/
     Keep index.md as historical record
+    Increment run_number in index
+```
+
+---
+
+## Phase 6: Iteration
+
+Phase 6 handles post-completion workflows: iterating on feedback or extending with new requirements.
+
+### 6.1 Iteration Mode (Feedback-Driven Improvement)
+
+Entered when user selects "Iterate" from completed project state.
+
+```
+ITERATION WORKFLOW:
+
+1. GENERATE SUMMARY
+    Compile outputs from previous run:
+        - Files created/modified
+        - Key features implemented
+        - Architecture decisions made
+        - Known limitations (from QA feedback)
+
+    PRESENT to user:
+        "📊 Previous Run Summary
+
+        Completed tasks: {task_list}
+        Files created: {file_list}
+        Key features: {feature_summary}
+
+        What would you like to improve or change?"
+
+2. GATHER FEEDBACK
+    Using AskUserQuestion + freeform input:
+
+    PROMPT:
+        "What aspects need improvement?"
+        Options:
+          - Performance issues
+          - UX/UI improvements
+          - Bug fixes noticed during testing
+          - Feature enhancements
+          - Code quality/refactoring
+          - Other (freeform)
+
+    Allow multi-select + freeform details for each selection.
+
+3. DECOMPOSE FEEDBACK INTO TASKS
+    For each feedback item:
+        - Analyze scope and complexity
+        - Create improvement task(s)
+        - Link to original tasks (predecessor reference)
+        - Estimate complexity
+
+4. VERSION PRD (if substantial changes)
+    IF feedback requires significant changes:
+        ARCHIVE current PRD:
+            cp PRD.md PRD-history/v{N}-{date}.md
+
+        APPEND iteration notes to PRD:
+            ## Iteration {N+1} - {date}
+            ### Feedback
+            {user_feedback}
+            ### New Requirements
+            {decomposed_requirements}
+
+5. UPDATE JOURNAL
+    Create new task entries for improvement items:
+        - ID continues from previous run (e.g., 010, 011...)
+        - Type: "iteration" or original type
+        - Predecessor: link to original task being improved
+        - Mark as iteration_run: {N+1}
+
+    Update index.md:
+        - Phase: implementation (reset)
+        - Iteration: {N+1}
+        - Previous runs: append summary
+
+6. EXECUTE ITERATION TASKS
+    Return to Phase 3 (Task Execution) with new tasks
+```
+
+### 6.2 Extension Mode (New Requirements)
+
+Entered when user selects "Extend" from completed project state.
+
+```
+EXTENSION WORKFLOW:
+
+1. PRESENT CONTEXT
+    PROMPT:
+        "📋 Current Project State
+
+        Project: {name}
+        Completed: {X} tasks in {Y} runs
+        Current features: {feature_summary}
+
+        What would you like to add?"
+
+2. GATHER NEW REQUIREMENTS
+    Options:
+        a. Run /prdgen to generate full extension PRD
+        b. Describe extension inline (for smaller additions)
+
+    IF inline description:
+        - Capture requirements
+        - Validate against existing architecture
+        - Flag potential conflicts
+
+3. VERSION PRD
+    ARCHIVE current PRD:
+        cp PRD.md PRD-history/v{N}-{date}.md
+
+    IF full /prdgen:
+        Merge new PRD with existing
+    ELSE:
+        APPEND to PRD:
+            ## Extension {N+1} - {date}
+            ### New Requirements
+            {requirements}
+
+4. DECOMPOSE AND PLAN
+    - Analyze new requirements against existing codebase
+    - Identify integration points
+    - Create tasks for new features
+    - Add integration/testing tasks
+
+5. UPDATE JOURNAL
+    - Increment run number
+    - Add new tasks to registry
+    - Mark as extension_run: true
+
+6. EXECUTE
+    Return to Phase 3 (Task Execution)
+```
+
+### 6.3 Archive and Reset
+
+Entered when user selects "Archive" from completed project state.
+
+```
+ARCHIVE WORKFLOW:
+
+1. ARCHIVE CURRENT RUN
+    CREATE: journal/archive/run-{N}-{date}/
+    MOVE: All task-*.md files to archive
+    COPY: index.md to archive (snapshot)
+
+2. ARCHIVE PRD VERSION
+    cp PRD.md PRD-history/v{N}-final.md
+
+3. UPDATE INDEX
+    RESET index.md:
+        - Phase: ready
+        - Run number: {N+1}
+        - Tasks: cleared (or keep as historical reference)
+        - Previous runs: append summary
+
+4. PROMPT FOR NEXT ACTION
+    "Run {N} archived.
+
+    Options:
+    1. Start fresh with new /prdgen
+    2. Exit orchestration"
+```
+
+### 6.4 PRD History Structure
+
+```
+project/
+├── PRD.md                      # Current/active PRD
+├── PRD-history/                # Version history
+│   ├── v1-initial.md           # Original PRD
+│   ├── v2-iteration-1.md       # After first iteration
+│   ├── v3-extension-1.md       # After extension
+│   └── v4-final.md             # Archived version
+```
+
+### 6.5 Journal Iteration Tracking
+
+Updated journal index fields for iteration support:
+
+```markdown
+## Orchestration Runs
+
+| Run | Type | Date | Tasks | Outcome |
+|-----|------|------|-------|---------|
+| 1 | initial | 2024-12-01 | 001-008 | complete |
+| 2 | iteration | 2024-12-05 | 009-012 | complete |
+| 3 | extension | 2024-12-10 | 013-018 | in_progress |
+
+## Current Run
+
+| Field | Value |
+|-------|-------|
+| Run Number | 3 |
+| Run Type | extension |
+| PRD Version | v3 |
+| Started | 2024-12-10 |
 ```
 
 ---
@@ -659,6 +923,7 @@ orchestrator/
 
 ---
 
-*Protocol Version: 3.1*
+*Protocol Version: 3.2*
 *Updated: December 2024*
+*Added: Phase 6 Iteration Support, Enhanced State Detection*
 *Memory Architecture v2 based on research from Anthropic, Google Cloud ADK, and A-MEM*

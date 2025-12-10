@@ -110,26 +110,56 @@ This command operates **independently of the orchestrator**. It:
 
 ### During Interview
 
+The agent uses Claude Code's native `AskUserQuestion` tool for structured questions:
+
 ```
-Agent: I'll help you create a PRD for your project.
-       What type of project is this?
+┌─ Project Type ─────────────────────────────────────────────┐
+│ What type of project are you building?                     │
+│                                                            │
+│ ○ Web/API                                                  │
+│   Web apps, dashboards, REST/GraphQL services              │
+│                                                            │
+│ ○ Mobile/Game                                              │
+│   iOS, Android apps, or browser/mobile games               │
+│                                                            │
+│ ○ CLI/Library                                              │
+│   Command-line tools, packages, SDKs                       │
+│                                                            │
+│ ○ Quick/Simple                                             │
+│   Minimal template for prototypes                          │
+└────────────────────────────────────────────────────────────┘
 
-       1. Web Application - SaaS, dashboards, CRUD apps
-       2. CLI Tool - Command-line utilities
-       3. API Service - REST/GraphQL backends
-       4. Game - Browser or mobile games
-       5. Mobile App - iOS/Android applications
-       6. Library/SDK - Reusable packages
-       7. Minimal - Lightweight, flexible
-       8. Custom - Provide template path
+User: [Clicks CLI/Library]
 
-User: 2
+┌─ Specific Type ────────────────────────────────────────────┐
+│ More specifically?                                         │
+│                                                            │
+│ ○ CLI Tool                                                 │
+│   Command-line utilities                                   │
+│                                                            │
+│ ○ Library/SDK                                              │
+│   Reusable packages, npm modules                           │
+└────────────────────────────────────────────────────────────┘
+
+User: [Clicks CLI Tool]
 
 Agent: CLI Tool template selected. Let's start with the basics.
        What problem does this tool solve?
 
-[... interview continues ...]
+[... freeform interview continues for open-ended questions ...]
 ```
+
+### Structured vs Freeform Questions
+
+| Question Type | Interaction Style |
+|---------------|-------------------|
+| Template selection | AskUserQuestion (clickable) |
+| Platform choices | AskUserQuestion multi-select |
+| Priority ranking | AskUserQuestion |
+| Yes/No confirmations | AskUserQuestion |
+| Feature descriptions | Freeform text input |
+| Problem explanations | Freeform text input |
+| User workflows | Freeform text input |
 
 ### On Completion
 

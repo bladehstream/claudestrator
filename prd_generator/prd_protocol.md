@@ -16,6 +16,104 @@ This protocol defines how the PRD Generator agent conducts requirements elicitat
 
 ---
 
+## User Interaction Tools
+
+### AskUserQuestion Tool
+
+Use Claude Code's native `AskUserQuestion` tool for structured questions. This provides a better UX with clickable options.
+
+**Tool Constraints:**
+- 2-4 options per question
+- Up to 4 questions at once
+- "Other" option auto-added for custom input
+- Supports multi-select for non-exclusive choices
+
+### When to Use AskUserQuestion
+
+| Question Type | Tool | Example |
+|---------------|------|---------|
+| Template selection | AskUserQuestion | "What type of project?" |
+| Yes/No confirmations | AskUserQuestion | "Is this understanding correct?" |
+| Priority choices | AskUserQuestion | "What's most important?" |
+| Platform selection | AskUserQuestion (multi) | "Which platforms?" |
+| Feature descriptions | Freeform text | "Describe the main feature" |
+| Problem explanation | Freeform text | "What problem does this solve?" |
+| User workflows | Freeform text | "Walk me through the flow" |
+
+### Template Selection (AskUserQuestion)
+
+Since there are 7 templates but only 4 options allowed, use two-stage selection:
+
+**Stage 1: Category**
+```
+AskUserQuestion:
+  question: "What type of project are you building?"
+  options:
+    - label: "Web/API"
+      description: "Web apps, dashboards, REST/GraphQL services"
+    - label: "Mobile/Game"
+      description: "iOS, Android apps, or browser/mobile games"
+    - label: "CLI/Library"
+      description: "Command-line tools, packages, SDKs"
+    - label: "Quick/Simple"
+      description: "Minimal template for prototypes"
+```
+
+**Stage 2: Specific (if Web/API selected)**
+```
+AskUserQuestion:
+  question: "More specifically?"
+  options:
+    - label: "Web Application"
+      description: "SaaS, dashboards, CRUD apps"
+    - label: "API Service"
+      description: "REST/GraphQL backend"
+```
+
+### Common Structured Questions
+
+**Confirm Understanding:**
+```
+AskUserQuestion:
+  question: "Does this summary accurately capture your requirements?"
+  options:
+    - label: "Yes, looks good"
+      description: "Proceed with PRD generation"
+    - label: "Needs changes"
+      description: "I'll specify what to adjust"
+```
+
+**Priority Selection:**
+```
+AskUserQuestion:
+  question: "What's the single most important feature for MVP?"
+  options:
+    - label: "[Feature A]"
+      description: "[Brief description]"
+    - label: "[Feature B]"
+      description: "[Brief description]"
+    - label: "[Feature C]"
+      description: "[Brief description]"
+```
+
+**Platform Selection (multi-select):**
+```
+AskUserQuestion:
+  question: "Which platforms must this support?"
+  multiSelect: true
+  options:
+    - label: "Web (Desktop)"
+      description: "Browser-based, desktop screens"
+    - label: "Web (Mobile)"
+      description: "Responsive/mobile web"
+    - label: "iOS"
+      description: "Native iPhone/iPad app"
+    - label: "Android"
+      description: "Native Android app"
+```
+
+---
+
 ## Interview Methodology
 
 ### Phase 1: Vision & Context (2-5 questions)

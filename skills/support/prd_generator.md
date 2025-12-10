@@ -1,7 +1,7 @@
 ---
 name: PRD Generator
 id: prd_generator
-version: 1.0
+version: 1.1
 category: requirements
 domain: [product, planning, requirements]
 task_types: [discovery, documentation, planning]
@@ -55,43 +55,118 @@ Ready to get started?"
 
 ### 2. Template Selection
 
+Use the `AskUserQuestion` tool for template selection (provides clickable options):
+
+**Stage 1: Category Selection**
+```yaml
+AskUserQuestion:
+  question: "What type of project are you building?"
+  header: "Project Type"
+  options:
+    - label: "Web/API"
+      description: "Web apps, dashboards, REST/GraphQL services"
+    - label: "Mobile/Game"
+      description: "iOS, Android apps, or browser/mobile games"
+    - label: "CLI/Library"
+      description: "Command-line tools, packages, SDKs"
+    - label: "Quick/Simple"
+      description: "Minimal template for prototypes"
 ```
-Present template options:
 
-"First, let's pick a template structure. What type of project is this?
+**Stage 2: Specific Template (based on Stage 1)**
+```yaml
+# If Web/API selected:
+AskUserQuestion:
+  question: "More specifically?"
+  header: "Template"
+  options:
+    - label: "Web Application"
+      description: "SaaS, dashboards, CRUD apps"
+    - label: "API Service"
+      description: "REST/GraphQL backend"
 
-1. Web Application - SaaS, dashboards, CRUD apps
-2. CLI Tool - Command-line utilities
-3. API Service - REST/GraphQL backends
-4. Game - Browser or mobile games
-5. Mobile App - iOS/Android applications
-6. Library/SDK - Reusable packages
-7. Minimal - Lightweight, flexible (good for quick projects)
-8. Custom - Provide path to your own template
+# If Mobile/Game selected:
+AskUserQuestion:
+  question: "More specifically?"
+  header: "Template"
+  options:
+    - label: "Mobile App"
+      description: "iOS/Android applications"
+    - label: "Game"
+      description: "Browser or mobile games"
 
-Which fits best? (Or describe your project and I'll recommend one)"
+# If CLI/Library selected:
+AskUserQuestion:
+  question: "More specifically?"
+  header: "Template"
+  options:
+    - label: "CLI Tool"
+      description: "Command-line utilities"
+    - label: "Library/SDK"
+      description: "Reusable packages"
+
+# If Quick/Simple selected:
+# Use minimal template directly, no second question needed
 ```
 
 ### 3. Discovery Interview
 
+Use `AskUserQuestion` for structured choices, freeform text for open-ended questions:
+
+| Question Type | Tool |
+|---------------|------|
+| Template, platform, priority choices | `AskUserQuestion` |
+| Yes/No confirmations | `AskUserQuestion` |
+| Feature descriptions, problem explanations | Freeform text |
+| User workflow walk-throughs | Freeform text |
+
+**Platform Selection Example (multi-select):**
+```yaml
+AskUserQuestion:
+  question: "Which platforms must this support?"
+  header: "Platforms"
+  multiSelect: true
+  options:
+    - label: "Web (Desktop)"
+      description: "Browser-based, desktop screens"
+    - label: "Web (Mobile)"
+      description: "Responsive/mobile web"
+    - label: "iOS"
+      description: "Native iPhone/iPad"
+    - label: "Android"
+      description: "Native Android"
+```
+
+**Confirmation Example:**
+```yaml
+AskUserQuestion:
+  question: "Does this summary accurately capture your requirements?"
+  header: "Confirm"
+  options:
+    - label: "Yes, looks good"
+      description: "Proceed with PRD generation"
+    - label: "Needs changes"
+      description: "I'll specify what to adjust"
+```
+
 Follow the protocol phases:
 
-**Phase 1: Vision & Context**
+**Phase 1: Vision & Context** (mostly freeform)
 - What are you building?
 - What problem does it solve?
 - Who are the target users?
 
-**Phase 2: Scope Definition**
+**Phase 2: Scope Definition** (mix of AskUserQuestion and freeform)
 - What's the core feature?
 - What's explicitly out of scope?
 - What does success look like?
 
-**Phase 3: Requirements Deep Dive**
+**Phase 3: Requirements Deep Dive** (mostly freeform)
 - Walk through user flows
 - Identify edge cases
 - Surface technical constraints
 
-**Phase 4: Validation**
+**Phase 4: Validation** (use AskUserQuestion for confirmations)
 - Summarize understanding
 - Confirm accuracy
 - Identify remaining questions

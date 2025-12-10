@@ -55,6 +55,29 @@ The **Task tool** is the orchestrator's primary mechanism for getting work done.
 
 ## Phase 1: Initialization
 
+### 1.0 Git Status Check
+
+> **See**: [initialization_flow.md](initialization_flow.md) for detailed prompts.
+
+```
+IF .git directory EXISTS:
+    GIT_ENABLED = true
+    Report: "✓ Git repository detected - auto-commits enabled"
+ELSE:
+    PROMPT user (using AskUserQuestion):
+        "No git repository detected. Initialize git?"
+        Options: "Yes, initialize" | "No, continue without"
+
+    IF user selects "Yes":
+        RUN: git init
+        RUN: git add -A
+        RUN: git commit -m "Initial commit before orchestration"
+        GIT_ENABLED = true
+    ELSE:
+        GIT_ENABLED = false
+        WARN: "Continuing without git - changes won't be tracked"
+```
+
 ### 1.1 Check for Existing Journal
 
 ```
@@ -398,6 +421,19 @@ AFTER agent completes:
     # Update TodoWrite
     TodoWrite: mark task complete or failed
 
+    # Auto-commit if git enabled
+    IF GIT_ENABLED AND handoff.outcome == 'completed':
+        git add -A
+        git commit -m "task-{task.id}: {task.name}
+
+        Completed by {model} agent with skills: {skills_used}
+
+        Files changed:
+        {handoff.files_modified}
+        {handoff.files_created}
+
+        🤖 Generated with Claudestrator"
+
     # Check for iteration needed
     IF handoff.outcome == 'partial' AND iterations < 3:
         Re-queue task with additional context from failure
@@ -567,6 +603,7 @@ orchestrator/
 
 ### Orchestrator Checklist
 
+- [ ] Git status checked (initialize or note GIT_ENABLED)
 - [ ] Journal exists or created
 - [ ] PRD loaded (required)
 - [ ] Skill manifest loaded
@@ -579,6 +616,7 @@ orchestrator/
   - [ ] Agent spawned
   - [ ] Result processed
   - [ ] Journal updated
+  - [ ] Git commit (if GIT_ENABLED)
 - [ ] QA executed
 - [ ] Results reported
 

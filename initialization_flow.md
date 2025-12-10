@@ -13,20 +13,93 @@ This document defines the exact interaction flow when the orchestrator starts a 
 │                    SESSION INITIALIZATION                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  1. SKILL DISCOVERY (automatic, then prompt if needed)          │
+│  1. GIT STATUS CHECK                                            │
+│     ├── Check if .git exists                                    │
+│     ├── If no git → prompt user to initialize                   │
+│     └── If git exists → note for auto-commits                   │
+│                                                                  │
+│  2. SKILL DISCOVERY (automatic, then prompt if needed)          │
 │     ├── Try default locations silently                          │
 │     ├── If skills found → report and continue                   │
 │     └── If no skills → prompt user for directory                │
 │                                                                  │
-│  2. PROJECT DETECTION                                           │
+│  3. PROJECT DETECTION                                           │
 │     ├── Check for existing journal → resume                     │
 │     ├── Check for PRD.md → parse requirements                   │
-│     └── Neither found → conduct interview                       │
+│     └── Neither found → prompt for /prdgen                      │
 │                                                                  │
-│  3. CONFIRM AND BEGIN                                           │
+│  4. CONFIRM AND BEGIN                                           │
 │     └── Summarize setup, confirm with user, start execution     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 0: Git Status Check
+
+### Check for Git Repository
+
+```
+IF .git directory EXISTS:
+    GIT_ENABLED = true
+
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+✓ Git repository detected
+  Auto-commit after each task: enabled
+─────────────────────────────────────────────────────
+```
+
+### If No Git Repository
+
+```
+IF .git directory DOES NOT EXIST:
+
+ORCHESTRATOR PROMPT (using AskUserQuestion):
+─────────────────────────────────────────────────────
+⚠️  No Git Repository Detected
+
+Version control is recommended for tracking changes
+made by agents. Without git, changes cannot be
+easily reviewed or rolled back.
+
+Would you like to initialize git?
+─────────────────────────────────────────────────────
+
+OPTIONS:
+  ○ Yes, initialize git
+    Run 'git init' and enable auto-commits
+
+  ○ No, continue without git
+    Changes won't be tracked or committed
+─────────────────────────────────────────────────────
+```
+
+**If user selects "Yes":**
+```
+RUN: git init
+RUN: git add -A
+RUN: git commit -m "Initial commit before orchestration"
+
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+✓ Git initialized
+  Initial commit created
+  Auto-commit after each task: enabled
+─────────────────────────────────────────────────────
+```
+
+**If user selects "No":**
+```
+GIT_ENABLED = false
+
+ORCHESTRATOR OUTPUT:
+─────────────────────────────────────────────────────
+⚠️  Continuing without git
+  Auto-commits disabled
+  Consider initializing git later for change tracking
+─────────────────────────────────────────────────────
 ```
 
 ---

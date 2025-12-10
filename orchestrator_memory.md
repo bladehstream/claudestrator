@@ -1,21 +1,37 @@
 # Orchestrator Memory System
 
+> **Note**: This document describes the legacy v1 memory system. For the updated v2 architecture with hot/cold separation, knowledge graph, and strategy evolution, see:
+> - [State Management](state_management.md) - Hot/cold state separation
+> - [Knowledge Graph](knowledge_graph.md) - Tag-based retrieval
+> - [Strategy Evolution](strategy_evolution.md) - Adaptive learning
+
 ## Overview
 
 The orchestrator maintains a **global project memory** that persists across sessions. This is distinct from task-level journals - it captures orchestrator-level state, decisions, and learned context.
 
 ---
 
-## Memory Architecture
+## Memory Architecture (v2)
 
 ```
 project/.claude/
-├── orchestrator_state.md      # PRIMARY: Global orchestrator memory
+├── session_state.md          # HOT: Working memory, read/write constantly
+├── orchestrator_memory.md    # COLD: Long-term memory, append-only
+├── knowledge_graph.json      # Tag-based index for retrieval
+├── strategies.md             # Evolved strategies from feedback
+├── memories/                 # Episodic memory entries
+│   └── YYYY-MM-DD-topic.md
 ├── journal/
-│   ├── index.md               # Task registry and progress
-│   └── task-*.md              # Task-level execution logs
-└── config.md                  # User preferences and settings
+│   ├── index.md              # Task registry and progress
+│   └── task-*.md             # Task-level execution logs (YAML handoffs)
+└── config.md                 # User preferences and settings
 ```
+
+### v2 Key Changes
+- **Hot/Cold Separation**: Working memory (session_state.md) separate from archival (orchestrator_memory.md)
+- **Knowledge Graph**: Tag-based retrieval instead of loading everything
+- **Strategy Evolution**: Orchestrator learns from execution feedback
+- **Structured Handoffs**: YAML schema replaces freeform notes
 
 ### Separation of Concerns
 

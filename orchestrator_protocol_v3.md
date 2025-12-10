@@ -233,31 +233,50 @@ FUNCTION selectModel(task):
 
 Reference: `orchestrator/skills/agent_model_selection.md`
 
-### 3.4 Gather Context
+### 3.4 Gather Context (Computed)
+
+> **See**: [computed_context.md](computed_context.md) for full algorithm specification.
+
+Context is **computed fresh** for each agent call, not accumulated:
 
 ```
 FUNCTION gatherContext(task):
-    context = {}
+    # Step 1: Extract task signals
+    signals = extractTaskSignals(task)
+        → keywords, domains, file mentions
 
-    # Relevant prior tasks (summaries only)
-    context.prior_tasks = task.dependencies.map(dep =>
-        summarize(journal.tasks[dep])
-    )
+    # Step 2: Query knowledge graph
+    knowledge = queryRelevantKnowledge(signals)
+        → patterns, gotchas, decisions, related tasks
 
-    # Code references from context map
-    context.code_refs = journal.index.context_map.filter(
-        relevant_to(task.keywords)
-    )
+    # Step 3: Extract dependency context (structured handoffs)
+    dependencies = extractDependencyContext(task)
+        → summaries, files_to_read, inherited patterns/gotchas
 
-    # Handoff notes from immediate dependencies
-    context.handoff = task.dependencies.map(dep =>
-        journal.tasks[dep].handoff_notes
-    )
+    # Step 4: Filter context map by relevance
+    code_refs = filterContextMap(signals, journal.context_map)
+        → scored by keyword match, top N by complexity
+
+    # Step 5: Apply limits by complexity
+    context = applyContextLimits(computed, task.complexity)
+        → Easy: 5 refs, Normal: 10 refs, Complex: 20 refs
 
     RETURN context
 ```
 
-### 3.5 Construct Agent Prompt
+Key differences from v1:
+- Query knowledge graph by tags, don't load everything
+- Parse structured YAML handoffs, not freeform text
+- Score and filter context map by relevance
+- Enforce limits based on model capacity
+
+### 3.5 Construct Agent Prompt (Cache-Optimized)
+
+> **See**: [prompt_caching.md](prompt_caching.md) for caching strategy.
+
+Prompts are structured for optimal cache utilization:
+- **Stable Prefix**: Identity, rules, format, skills (~70% of prompt)
+- **Variable Suffix**: Task details, computed context (~30% of prompt)
 
 ```
 FUNCTION constructPrompt(task, skills, context, model):
@@ -332,24 +351,42 @@ Task(
 
 ### 3.7 Process Agent Result
 
+> **See**: [handoff_schema.md](handoff_schema.md) for structured handoff format.
+> **See**: [strategy_evolution.md](strategy_evolution.md) for feedback processing.
+
 ```
 AFTER agent completes:
     # Read updated task file
     result = READ task.file_path
 
+    # Parse structured handoff (YAML)
+    handoff = PARSE_YAML(result.handoff)
+
     # Update journal index
-    IF result.outcome == 'completed':
+    IF handoff.outcome == 'completed':
         journal.index.tasks[task.id].status = 'completed'
-        journal.index.context_map.append(result.files_modified)
-    ELSE IF result.outcome == 'failed':
+        FOR file IN handoff.files_created + handoff.files_modified:
+            journal.index.context_map.UPDATE_OR_ADD(file)
+    ELSE IF handoff.outcome == 'failed':
         journal.index.tasks[task.id].status = 'failed'
-        journal.index.active_blockers.append(result.errors)
+        journal.index.active_blockers.append(handoff.blockers)
+
+    # Update knowledge graph
+    FOR pattern IN handoff.patterns_discovered:
+        knowledge_graph.addNode({type: "pattern", ...pattern})
+    FOR gotcha IN handoff.gotchas:
+        knowledge_graph.addNode({type: "gotcha", ...gotcha})
+
+    # Collect feedback for strategy evolution
+    feedback = collectExecutionFeedback(task, handoff)
+    IF feedback.signals.any():
+        updateStrategies(feedback)
 
     # Update TodoWrite
     TodoWrite: mark task complete or failed
 
     # Check for iteration needed
-    IF result.outcome == 'partial' AND iterations < 3:
+    IF handoff.outcome == 'partial' AND iterations < 3:
         Re-queue task with additional context from failure
 ```
 
@@ -463,14 +500,29 @@ IF no tasks executable (all have unmet dependencies):
 project/
 ├── PRD.md                          # Project requirements
 ├── .claude/
+│   ├── session_state.md            # HOT: Working memory
+│   ├── orchestrator_memory.md      # COLD: Long-term memory
+│   ├── knowledge_graph.json        # Tag-based retrieval index
+│   ├── strategies.md               # Evolved strategies
+│   ├── config.md                   # User preferences
+│   ├── memories/                   # Episodic memory entries
+│   │   └── YYYY-MM-DD-topic.md
 │   └── journal/
 │       ├── index.md                # Project state + task registry
-│       ├── task-001-name.md        # Individual task logs
+│       ├── task-001-name.md        # Individual task logs (YAML handoffs)
 │       ├── task-002-name.md
 │       └── archive/                # Completed sessions
 │
 orchestrator/
 ├── orchestrator_protocol_v3.md     # This file
+├── orchestrator_constraints.md     # Role boundaries
+├── # Memory & State (v2)
+├── state_management.md             # Hot/cold separation
+├── knowledge_graph.md              # Tag-based retrieval
+├── computed_context.md             # Dynamic context computation
+├── handoff_schema.md               # Structured handoff format
+├── strategy_evolution.md           # Adaptive learning
+├── prompt_caching.md               # Cache optimization
 ├── skills/
 │   ├── skill_manifest.md           # Skill index
 │   ├── skill_template.md           # Template for new skills
@@ -480,9 +532,14 @@ orchestrator/
 │   ├── quality/                    # QA/review skills
 │   └── support/                    # Supporting skills
 ├── templates/
-│   ├── journal_index.md            # Template for journal index
-│   ├── task_entry.md               # Template for task files
-│   └── agent_prompt.md             # Base agent prompt template
+│   ├── session_state.md            # Hot state template
+│   ├── orchestrator_memory.md      # Cold state template
+│   ├── knowledge_graph.json        # Knowledge graph template
+│   ├── strategies.md               # Strategy file template
+│   ├── memory_entry.md             # Episodic memory template
+│   ├── journal_index.md            # Journal index template
+│   ├── task_entry.md               # Task file template (YAML handoff)
+│   └── agent_prompt.md             # Cache-optimized prompt template
 └── docs/
     └── user_guide.md               # How to use this system
 ```
@@ -510,11 +567,11 @@ orchestrator/
 
 ### Model Selection Quick Reference
 
-| Complexity | Model | Max Skills |
-|------------|-------|------------|
-| Easy | Haiku | 1 |
-| Normal | Sonnet | 2 |
-| Complex | Opus | 3 |
+| Complexity | Model | Max Skills | Max Context |
+|------------|-------|------------|-------------|
+| Easy | Haiku | 3 | 5 code refs |
+| Normal | Sonnet | 7 | 10 code refs |
+| Complex | Opus | 15 | 20 code refs |
 
 ### Task Types
 
@@ -530,5 +587,23 @@ orchestrator/
 
 ---
 
-*Protocol Version: 3.0*
-*Created: December 2024*
+## Related Documentation
+
+### Memory & State (v2)
+- [State Management](state_management.md) - Hot/cold state separation
+- [Knowledge Graph](knowledge_graph.md) - Tag-based retrieval system
+- [Computed Context](computed_context.md) - Dynamic context computation
+- [Handoff Schema](handoff_schema.md) - Structured handoff format
+- [Strategy Evolution](strategy_evolution.md) - Adaptive learning system
+- [Prompt Caching](prompt_caching.md) - Cache-optimized prompt structure
+
+### Core
+- [Orchestrator Constraints](orchestrator_constraints.md) - Role boundaries
+- [Skill Loader](skill_loader.md) - Dynamic skill discovery
+- [Initialization Flow](initialization_flow.md) - First-run scripts
+
+---
+
+*Protocol Version: 3.1*
+*Updated: December 2024*
+*Memory Architecture v2 based on research from Anthropic, Google Cloud ADK, and A-MEM*

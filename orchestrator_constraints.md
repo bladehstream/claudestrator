@@ -241,4 +241,60 @@ Before each action, orchestrator should verify:
 
 ---
 
-*Constraints Version: 1.0*
+## Runtime Environment Limitations
+
+### Subagent Sandbox Restrictions
+
+**Critical**: Agents spawned via the `Task` tool operate in a sandboxed environment with restricted permissions.
+
+| Capability | Main Context | Subagent (Task tool) |
+|------------|--------------|----------------------|
+| Read files | ✅ Yes | ✅ Yes |
+| Write files | ✅ Yes | ❌ No |
+| Edit files | ✅ Yes | ❌ No |
+| Run Bash commands | ✅ Yes | ⚠️ Limited |
+| Web access | ✅ Yes | ✅ Yes |
+
+### Implications for Orchestration
+
+This sandbox limitation means:
+
+1. **Implementation tasks cannot be fully delegated** - Subagents can analyze, plan, and propose changes, but cannot directly write code to files.
+
+2. **Two-phase implementation pattern required**:
+   - Phase 1: Subagent analyzes task and returns proposed implementation (code in response text)
+   - Phase 2: Orchestrator or main context applies the proposed changes
+
+3. **Research/review tasks work normally** - Agents doing code review, security analysis, or design work function as expected since they only need read access.
+
+### Workaround Patterns
+
+**Pattern A: Analysis + Apply**
+```
+1. Orchestrator spawns agent for implementation task
+2. Agent analyzes codebase, writes proposed code in response
+3. Orchestrator receives response with code blocks
+4. Orchestrator applies changes using Write/Edit tools
+5. Orchestrator spawns QA agent to verify
+```
+
+**Pattern B: Main Context Implementation**
+```
+1. Orchestrator uses subagent for design/planning only
+2. Implementation executes in main context (not orchestrator mode)
+3. Orchestrator resumes for coordination after implementation
+```
+
+### What This Means for Users
+
+- **Complex implementations may require hybrid approach** - Orchestrator plans and coordinates, but some implementation may need to exit orchestrator mode temporarily
+- **Simple changes work via Pattern A** - Agent proposes, orchestrator applies
+- **Read-only operations (review, audit, analysis) are unaffected**
+
+### Future Considerations
+
+This limitation exists in the current Claude Code Task tool implementation. If future versions provide write-capable subagents, this section should be updated and the orchestrator can fully delegate implementation.
+
+---
+
+*Constraints Version: 1.1*

@@ -405,7 +405,7 @@ Orchestrator learns from execution feedback:
 
 See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 
-## Available Skills (22 total)
+## Available Skills (36 total)
 
 ### Implementation
 | Skill | Description |
@@ -413,6 +413,10 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 | `html5_canvas` | HTML5 Canvas games and 2D graphics |
 | `game_feel` | Polish, "juice", and game effects |
 | `data_visualization` | Charts, graphs, D3.js, Chart.js, dashboards |
+| `algorithmic_art` | Generative art and creative coding |
+| `mcp_builder` | Model Context Protocol server development |
+| `slack_gif_creator` | Slack-compatible GIF generation |
+| `web_artifacts_builder` | Interactive web artifact creation |
 
 ### Design
 | Skill | Description |
@@ -421,6 +425,8 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 | `api_designer` | REST/GraphQL API design |
 | `database_designer` | Schema design, indexing, migrations |
 | `frontend_design` | UI/UX, CSS, responsive design |
+| `canvas_design` | HTML5 Canvas design patterns |
+| `theme_factory` | Theme and styling system generation |
 
 ### Quality
 | Skill | Description |
@@ -437,12 +443,20 @@ See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 | `refactoring` | Code restructuring |
 | `documentation` | Technical writing |
 | `prd_generator` | Interactive requirements elicitation |
+| `brand_guidelines` | Brand identity documentation |
+| `doc_coauthoring` | Collaborative document writing |
+| `docx` | Microsoft Word document generation |
+| `internal_comms` | Internal communication drafting |
+| `pdf` | PDF document handling |
+| `pptx` | PowerPoint presentation generation |
+| `xlsx` | Excel spreadsheet generation |
 
 ### Maintenance
 | Skill | Description |
 |-------|-------------|
 | `skill_auditor` | Skill library health auditing |
 | `skill_enhancer` | Web research and skill updates |
+| `skill_creator` | Creating new Claudestrator skills |
 
 ### Security
 | Skill | Description |

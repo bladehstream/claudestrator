@@ -16,61 +16,68 @@ This approach keeps the primary agent (orchestrator) focused on coordination whi
 
 ## Quick Start
 
+### Dual Terminal Workflow
+
+Claudestrator is designed for a **dual terminal workflow**:
+
+```
+┌─────────────────────────────────┐  ┌─────────────────────────────────┐
+│ TERMINAL 1: Orchestrator        │  │ TERMINAL 2: Support Tasks       │
+│─────────────────────────────────│  │─────────────────────────────────│
+│ /orchestrate                    │  │ /prdgen        (before T1)      │
+│   ├─► Executing tasks...        │  │ /issue         (report bugs)    │
+│   ├─► Auto-polling issues       │  │ /issues        (view queue)     │
+│   └─► Auto-committing           │  │ /refresh prd   (queue restart)  │
+│                                 │  │ /ingest-skill  (add skills)     │
+│ /status agents                  │  │ /abort         (emergency stop) │
+│ /deorchestrate                  │  │                                 │
+└─────────────────────────────────┘  └─────────────────────────────────┘
+```
+
 ### Starting a New Project
-
-**Recommended workflow:**
-
-```
-1. /prdgen                    # Generate project requirements (required)
-2. /clear                     # Clear context window
-3. /audit-skills              # Check skill library health
-4. /ingest-skill <source>     # Import any missing skills (if needed)
-5. /clear                     # Clear context before orchestration
-6. /orchestrate               # Start with clean context
-```
 
 **Step-by-step:**
 
-1. **Generate a PRD** (required):
+1. **Terminal 2: Generate a PRD** (required):
    ```
    /prdgen
    ```
-   Interactive interview that creates `PRD.md`. Uses clickable options for structured choices (template selection, platform choices, etc.).
+   - Interactive interview creates `PRD.md`
+   - Review the **skill gap analysis** at the end
+   - Address critical gaps with `/ingest-skill` if needed
 
-2. **Clear context** after PRD generation:
+2. **Terminal 2: Clear context**:
    ```
    /clear
    ```
 
-3. **Audit and enhance skills** (recommended):
+3. **Terminal 2: Audit skills** (optional):
    ```
-   /audit-skills              # Check for issues, missing coverage
+   /audit-skills              # Check for issues
    /ingest-skill <url>        # Import any needed skills
    ```
 
-4. **Clear context** before orchestration:
-   ```
-   /clear
-   ```
-
-5. **Start orchestration**:
+4. **Terminal 1: Start orchestration**:
    ```
    /orchestrate
    ```
+   - Checks for git repository (prompts to init if missing)
+   - Shows skill gap warning if applicable
+   - Decomposes work into tasks
+   - Executes using specialized agents
+   - Auto-commits after each task
 
-6. **Claude (as orchestrator) will:**
-   - Check for git repository (prompt to initialize if missing)
-   - Load your PRD (stops if not found, prompts for `/prdgen`)
-   - Decompose the work into tasks
-   - Initialize a journal to track progress
-   - Begin executing tasks using specialized agents
-   - **Auto-commit** after each task completes (if git enabled)
+5. **Terminal 2: Support tasks** (while orchestrator runs):
+   ```
+   /issue                    # Report bugs as you find them
+   /refresh prd              # Queue restart if PRD changes
+   /ingest-skill <url>       # Add skills, then /refresh skills
+   ```
 
-7. **Git integration:**
-   - If `.git` exists, orchestrator enables auto-commits
-   - If not, you'll be prompted: "Initialize git?"
-   - Each completed task creates a commit with task details
-   - This allows easy review and rollback of agent changes
+**Git integration:**
+- If `.git` exists, orchestrator enables auto-commits
+- If not, you'll be prompted: "Initialize git?"
+- Each completed task creates a commit with task details
 
 ### Resuming Work
 
@@ -560,9 +567,9 @@ Report bugs, enhancements, and other issues asynchronously - even while the orch
 | Command | Purpose |
 |---------|---------|
 | `/issue` | Report a new issue (spawns Issue Reporter) |
+| `/issue reject <id> <reason>` | Mark issue as won't fix |
 | `/issues` | View issue queue status |
 | `/issues <issue-id>` | View specific issue details |
-| `/reject <id> <reason>` | Mark issue as won't fix |
 
 ### Reporting an Issue
 
@@ -647,7 +654,7 @@ IN PROGRESS
 
 Mark an issue as "won't fix":
 ```
-/reject ISSUE-20241211-001 "Out of scope for v1"
+/issue reject ISSUE-20241211-001 "Out of scope for v1"
 ```
 
 Only pending or accepted issues can be rejected.
@@ -745,8 +752,8 @@ Terminal 1:
 
 | Terminal 1 (Orchestrator) | Terminal 2 (Support) |
 |---------------------------|----------------------|
-| `/orchestrate` | `/issue` |
-| `/status`, `/status agents` | `/issues`, `/reject` |
+| `/orchestrate` | `/issue`, `/issue reject` |
+| `/status`, `/status agents` | `/issues` |
 | `/checkpoint` | `/refresh issues\|skills\|prd\|cancel` |
 | `/deorchestrate` | `/abort` |
 | `/tasks`, `/skills` | `/ingest-skill`, `/audit-skills` |
@@ -1055,6 +1062,163 @@ Claude: Creating project journal and decomposing into tasks...
 
 ---
 
+## Command Reference
+
+Detailed documentation for all Claudestrator commands.
+
+### PRD Generation (`/prdgen`)
+
+Standalone agent that interviews you and generates `PRD.md`.
+
+**Usage:**
+```
+/prdgen                      # Start interactive interview
+/prdgen --template cli       # Pre-select template
+/prdgen --output ./docs/PRD.md  # Custom output path
+```
+
+**Available Templates:**
+| Template | Best For |
+|----------|----------|
+| `web` | SaaS, dashboards, CRUD apps |
+| `cli` | Command-line utilities |
+| `api` | REST/GraphQL backends |
+| `game` | Browser/mobile games |
+| `mobile` | iOS/Android applications |
+| `library` | Packages, SDKs, libraries |
+| `minimal` | Quick projects, prototypes |
+
+**Features:**
+- Web access for researching competitors
+- Skill gap analysis after generation
+- Saves gap analysis to `.claude/skill_gaps.json`
+
+### Skill Ingestion (`/ingest-skill`)
+
+Import external skills from multiple sources.
+
+**Usage:**
+```bash
+# Single skill from GitHub
+/ingest-skill https://github.com/user/repo/blob/main/skills/my-skill.md
+
+# Multiple skills
+/ingest-skill ./local-skill.md https://raw.githubusercontent.com/user/repo/main/skill.md
+
+# Directory with helper scripts
+/ingest-skill https://github.com/user/repo/tree/main/skills/complex-skill/
+```
+
+**Features:**
+- Auto-detects metadata (category, keywords, complexity) with user approval
+- Security analysis on helper scripts (detects obfuscation, suspicious patterns)
+- Parses and merges existing frontmatter
+- Double confirmation before overwriting existing skills
+- Handles skills with helper scripts (`.js`, `.py`, etc.)
+- Prompts before running `npm install` for dependencies
+
+### Skill Maintenance (`/audit-skills`, `/skill-enhance`)
+
+**`/audit-skills`** - Analyzes skill library health:
+```
+/audit-skills                # Generate health report
+```
+- Identifies issues (missing fields, outdated references)
+- Reports coverage gaps against common task types
+- Suggests improvements
+
+**`/skill-enhance [id]`** - Research and update a skill:
+```
+/skill-enhance frontend_design   # Research and propose updates
+```
+- Web research for best practices
+- Proposes changes with human approval
+- Never auto-commits changes
+
+### Issue Reporting (`/issue`, `/issues`)
+
+**`/issue`** - Report or reject issues:
+```
+/issue                           # Start interactive reporting
+/issue <brief description>       # Start with context
+/issue reject <id> <reason>      # Mark issue as won't fix
+```
+
+**`/issues`** - View issue queue:
+```
+/issues                  # Full queue summary
+/issues pending          # Only pending issues
+/issues <issue-id>       # Details of specific issue
+```
+
+**Issue Types:** bug, performance, enhancement, ux, security, refactor
+
+**Priority Levels:**
+| Priority | Orchestrator Behavior |
+|----------|----------------------|
+| `critical` | Interrupts queue - becomes next task |
+| `high` | Top of pending tasks |
+| `medium` | Normal queue order |
+| `low` | End of queue |
+
+### Refresh Commands (`/refresh`)
+
+Signal the orchestrator to reload resources.
+
+```
+/refresh issues      # Poll issue queue immediately
+/refresh skills      # Reload skill directory
+/refresh prd         # Queue restart after current run completes
+/refresh cancel      # Cancel queued restart
+```
+
+**Important:** `/refresh prd` is queued, not immediate. The orchestrator:
+1. Completes all tasks in the current run
+2. Archives the completed run
+3. Analyzes PRD differences
+4. Creates tasks only for changes
+5. Starts new run automatically
+
+### Emergency Stop (`/abort`)
+
+Stop orchestration immediately.
+
+```
+/abort               # Shows confirmation prompt
+/abort confirm       # Executes abort
+```
+
+**What `/abort` does:**
+- Stops any running agents
+- Purges all pending tasks
+- Archives completed work for reference
+- Marks current run as aborted
+
+**Safeguards:**
+- Requires explicit `/abort confirm` to execute
+- Shows count of tasks that will be purged
+- Archives completed work before purging
+
+### Status Commands (`/status`)
+
+```
+/status              # Project overview
+/status agents       # List running and recent agents
+/status <agent-id>   # Last output from specific agent
+```
+
+### Other Commands
+
+| Command | Description |
+|---------|-------------|
+| `/orchestrate` | Initialize or resume orchestrator |
+| `/checkpoint` | Save current state (continue working) |
+| `/tasks` | Show task list with progress |
+| `/skills` | Show loaded skills |
+| `/deorchestrate` | Clean exit with full save |
+
+---
+
 ## Reference
 
 ### Model Selection Criteria
@@ -1098,5 +1262,6 @@ Claude: Creating project journal and decomposing into tasks...
 
 ---
 
-*User Guide Version: 1.4*
+*User Guide Version: 1.5*
 *Last Updated: December 2025*
+*Added: Dual Terminal Workflow, Command Reference section*

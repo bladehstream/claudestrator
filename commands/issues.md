@@ -39,7 +39,7 @@ IN PROGRESS
   ISSUE-20241208-001  high      bug          → task-011 (agent-abc123)
 
 ═══════════════════════════════════════════════════════════
-Commands: /issue (new) | /issues <id> (detail) | /reject <id>
+Commands: /issue (new) | /issues <id> (detail) | /issue reject <id> <reason>
 ═══════════════════════════════════════════════════════════
 ```
 
@@ -104,7 +104,7 @@ Consider implementing virtualization or pagination for the
 transaction list.
 
 ═══════════════════════════════════════════════════════════
-Actions: /reject ISSUE-20241211-002 "reason"
+Actions: /issue reject ISSUE-20241211-002 "reason"
 ═══════════════════════════════════════════════════════════
 ```
 
@@ -175,6 +175,6 @@ Run /issue to report your first issue.
 | Command | Purpose |
 |---------|---------|
 | `/issue` | Report a new issue |
-| `/reject <id> <reason>` | Mark issue as won't fix |
+| `/issue reject <id> <reason>` | Mark issue as won't fix |
 | `/status` | Orchestrator status |
 | `/status <agent-id>` | View agent working on issue |

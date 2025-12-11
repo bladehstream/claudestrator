@@ -80,127 +80,62 @@ All implementation work is delegated to agents via the Task tool. See [Orchestra
 
 ## Commands
 
-Claudestrator commands are split into two phases to optimize context window usage.
+Claudestrator uses a **dual terminal workflow** for maximum efficiency:
 
-### Phase 1: Pre-Orchestration Commands
+```
+┌─────────────────────────────────┐  ┌─────────────────────────────────┐
+│ TERMINAL 1: Orchestrator        │  │ TERMINAL 2: Support Tasks       │
+│─────────────────────────────────│  │─────────────────────────────────│
+│ /orchestrate                    │  │ /prdgen        (before T1)      │
+│   ├─► Executing tasks...        │  │ /issue         (report bugs)    │
+│   ├─► Auto-polling issues       │  │ /issues        (view queue)     │
+│   └─► Auto-committing           │  │ /refresh prd   (queue restart)  │
+│                                 │  │ /ingest-skill  (add skills)     │
+│ /status agents                  │  │ /abort         (emergency stop) │
+│ /deorchestrate                  │  │                                 │
+└─────────────────────────────────┘  └─────────────────────────────────┘
+```
 
-Run these commands **before** starting orchestration. They handle project setup and skill management. After completing these, run `/clear` to start orchestration with a clean context.
+### Pre-Orchestration (Terminal 2)
+
+Run these **before** starting orchestration in Terminal 1:
 
 | Command | Model | Action |
 |---------|-------|--------|
-| `/prdgen` | Sonnet | Generate PRD through interactive interview |
+| `/prdgen` | Sonnet | Generate PRD with skill gap analysis |
 | `/audit-skills` | Sonnet | Generate skill library health report |
 | `/skill-enhance [id]` | Opus | Research and propose updates to a skill |
-| `/ingest-skill <source>` | (main) | Import external skills from URLs or local paths |
+| `/ingest-skill <source>` | (main) | Import external skills |
 
-> **Model transparency:** Commands spawn agents using the specified model. "(main)" means the command runs in your current context without spawning a sub-agent.
-
-**Recommended workflow:**
-```
-/prdgen                    # Generate project requirements
-/clear                     # Clear context window
-/audit-skills              # Verify skill library health
-/ingest-skill <url>        # Import any needed skills
-/clear                     # Clear context before orchestration
-/orchestrate               # Start with clean context
-```
-
-> **Why clear between phases?** PRD generation, skill auditing, and skill ingestion consume context with their interview/analysis history. Clearing before `/orchestrate` ensures maximum context capacity for actual project work.
-
-### Phase 2: Orchestration Commands
-
-Run these commands **during** active orchestration to manage the session.
+### Orchestration (Terminal 1)
 
 | Command | Model | Action |
 |---------|-------|--------|
-| `/orchestrate` | (main) + dynamic | Initialize or resume orchestrator mode |
-| `/checkpoint` | (main) | Save current state (can continue working) |
-| `/status` | (main) | Show project and task status |
-| `/status agents` | (main) | List all running and recent agents |
-| `/status <agent-id>` | (main) | Show last output from specific agent |
-| `/tasks` | (main) | Show task list with progress |
+| `/orchestrate` | (main) + dynamic | Initialize or resume orchestrator |
+| `/status` | (main) | Show project/task status |
+| `/status agents` | (main) | List running and recent agents |
+| `/status <agent-id>` | (main) | Show agent's last output |
+| `/tasks` | (main) | Show task list |
 | `/skills` | (main) | Show loaded skills |
-| `/deorchestrate` | (main) | Clean exit with full state save |
+| `/checkpoint` | (main) | Save state (continue working) |
+| `/deorchestrate` | (main) | Clean exit with full save |
 
-> **Dynamic model selection:** `/orchestrate` runs in your main context but spawns sub-agents with models selected by task complexity: Easy→Haiku, Normal→Sonnet, Complex→Opus.
-
-### Issue Reporting Commands
-
-Report issues asynchronously - even while the orchestrator is running in another session.
+### Support Tasks (Terminal 2, while orchestrator runs)
 
 | Command | Model | Action |
 |---------|-------|--------|
-| `/issue` | Sonnet | Report bug, enhancement, or other issue |
-| `/issues` | (main) | View issue queue status |
-| `/issues <issue-id>` | (main) | View specific issue details |
-| `/reject <id> <reason>` | (main) | Mark issue as won't fix |
+| `/issue` | Sonnet | Report bug/enhancement |
+| `/issue reject <id> <reason>` | (main) | Mark issue as won't fix |
+| `/issues` | (main) | View issue queue |
+| `/refresh issues` | (main) | Poll issue queue now |
+| `/refresh skills` | (main) | Reload skill directory |
+| `/refresh prd` | (main) | Queue restart after run completes |
+| `/refresh cancel` | (main) | Cancel queued restart |
+| `/abort` | (main) | Emergency stop (requires confirm) |
 
-> **Async workflow:** `/issue` spawns a dedicated Issue Reporter agent that interviews you and writes to a queue. The orchestrator polls this queue every 10 minutes and after each task completion, automatically creating tasks from pending issues.
+> **Model notes:** "(main)" runs in your current context. Sonnet/Opus spawn dedicated agents. `/orchestrate` spawns sub-agents dynamically: Easy→Haiku, Normal→Sonnet, Complex→Opus.
 
-### Support Commands (Terminal 2)
-
-Signal the orchestrator to reload resources or control run lifecycle.
-
-| Command | Model | Action |
-|---------|-------|--------|
-| `/refresh issues` | (main) | Poll issue queue immediately |
-| `/refresh skills` | (main) | Reload skill directory immediately |
-| `/refresh prd` | (main) | Queue restart with new PRD after current run completes |
-| `/refresh cancel` | (main) | Cancel a queued PRD restart |
-| `/abort` | (main) | Emergency stop - purge pending tasks (requires confirmation) |
-
-> **Dual terminal workflow:** Run the orchestrator in Terminal 1, use Terminal 2 for `/issue`, `/refresh`, `/ingest-skill`, and other support tasks.
-
-> **PRD changes are queued, not immediate:** `/refresh prd` waits for the current run to complete, then analyzes PRD differences and creates tasks for the changes. This prevents architectural conflicts from mixing old and new requirements mid-run.
-
-### Command Details
-
-#### PRD Generation (`/prdgen`)
-
-Standalone agent that interviews you and generates `PRD.md`. Supports 7 project templates:
-- Web application, CLI tool, API service, Game, Mobile app, Library, Minimal
-
-**Features:**
-- Web access for researching competitors and validating requirements
-- **Skill gap analysis** after PRD generation - identifies requirements without skill coverage
-- Saves analysis to `.claude/skill_gaps.json` for orchestrator reference
-
-**Skill Gap Analysis:**
-After generating the PRD, the agent analyzes your requirements against available skills:
-- Shows coverage percentage and matched skills
-- Warns about critical gaps (core features without skill coverage)
-- Notes partial coverage warnings
-- Recommends actions (e.g., `/ingest-skill` to fill gaps)
-
-The orchestrator also displays this summary at startup if gaps were identified.
-
-#### Skill Ingestion (`/ingest-skill`)
-
-Import external skills from multiple sources:
-
-```bash
-# Single skill from GitHub
-/ingest-skill https://github.com/user/repo/blob/main/skills/my-skill.md
-
-# Multiple skills
-/ingest-skill ./local-skill.md https://raw.githubusercontent.com/user/repo/main/skill.md
-
-# Directory with helper scripts
-/ingest-skill https://github.com/user/repo/tree/main/skills/complex-skill/
-```
-
-Features:
-- Auto-detects metadata (category, keywords, complexity) with user approval
-- Security analysis on helper scripts (detects obfuscation, suspicious patterns)
-- Parses and merges existing frontmatter
-- Double confirmation before overwriting existing skills
-- Handles skills with helper scripts (`.js`, `.py`, etc.)
-- Prompts before running `npm install` for dependencies
-
-#### Skill Maintenance (`/audit-skills`, `/skill-enhance`)
-
-- `/audit-skills` - Analyzes skill library health, identifies issues, suggests improvements
-- `/skill-enhance [id]` - Researches web for updates, proposes changes with human approval
+See [User Guide: Command Reference](docs/user_guide.md#command-reference) for detailed examples and options.
 
 ## Quick Start
 
@@ -313,56 +248,58 @@ PRD templates: ~/.claude/claudestrator/prd_generator/templates/
 
 ### After Installation
 
-**Recommended workflow:**
+**Dual Terminal Workflow:**
 
 ```
-1. /prdgen                    # Generate project requirements (required)
-2. /clear                     # Clear context window
-3. /audit-skills              # Check skill library health
-4. /ingest-skill <source>     # Import any missing skills (if needed)
-5. /clear                     # Clear context before orchestration
-6. /orchestrate               # Start with clean context
+TERMINAL 2 (Setup)              TERMINAL 1 (Orchestration)
+──────────────────              ─────────────────────────
+1. /prdgen                      (wait for setup)
+   → Review skill gap analysis
+   → Address critical gaps
+
+2. /audit-skills (optional)
+   /ingest-skill <url>
+
+3. /clear                       4. /orchestrate
+                                   → Tasks execute
+                                   → Auto-commits
+
+(Support while running)
+/issue                          /status agents
+/refresh prd                    /deorchestrate
 ```
 
 **Step-by-step:**
 
-1. **Start Claude Code** in your project directory
-
-2. **Generate a PRD** (required):
+1. **Terminal 2: Generate a PRD** (required):
    ```
    /prdgen
    ```
-   Interactive interview that creates `PRD.md`. Uses clickable options for structured choices.
+   - Interactive interview creates `PRD.md`
+   - Review the skill gap analysis at the end
+   - Address critical gaps with `/ingest-skill` if needed
 
-3. **Clear context** after PRD generation:
+2. **Terminal 2: Clear context**:
    ```
    /clear
    ```
 
-4. **Audit and enhance skills** (recommended):
-   ```
-   /audit-skills              # Check for issues
-   /ingest-skill <url>        # Import any needed skills
-   ```
-
-5. **Clear context** before orchestration:
-   ```
-   /clear
-   ```
-
-6. **Start orchestration**:
+3. **Terminal 1: Start orchestration**:
    ```
    /orchestrate
    ```
+   - Checks for git repository (prompts to init if missing)
+   - Shows skill gap warning if applicable
+   - Decomposes work into tasks
+   - Executes using specialized agents
+   - Auto-commits after each task
 
-7. **Claude (as orchestrator) will:**
-   - Check for git repository (prompt to initialize if missing)
-   - Load your PRD (stops if not found, prompts for `/prdgen`)
-   - Decompose work into tasks
-   - Execute using specialized agents
-   - Auto-commit after each task completion
-   - Track progress in `.claude/journal/`
-   - Learn and adapt from feedback
+4. **Terminal 2: Support tasks** (while orchestrator runs):
+   ```
+   /issue                    # Report bugs as you find them
+   /refresh prd              # Queue restart if PRD changes
+   /ingest-skill <url>       # Add skills, then /refresh skills
+   ```
 
 ### Verifying Installation
 

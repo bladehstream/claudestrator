@@ -1,12 +1,13 @@
-# /issue - Report an Issue
+# /issue - Report or Reject an Issue
 
-Spawn the Issue Reporter agent to capture and standardize a project issue. Issues are written to a queue that the orchestrator polls asynchronously.
+Report new issues or reject existing ones. Issues are written to a queue that the orchestrator polls asynchronously.
 
 ## Usage
 
 ```
-/issue                      Start interactive issue reporting
-/issue <brief description>  Start with initial context
+/issue                           Start interactive issue reporting
+/issue <brief description>       Start with initial context
+/issue reject <id> <reason>      Mark issue as won't fix
 ```
 
 ## Behavior
@@ -154,12 +155,89 @@ Issues are written to: `.claude/issue_queue.md`
 
 This file is project-specific and created from template if missing.
 
+## Rejecting Issues
+
+Use `/issue reject` to mark an issue as "won't fix":
+
+```
+/issue reject <issue-id> <reason>
+```
+
+### Examples
+
+```
+/issue reject ISSUE-20241211-001 "Out of scope for this project"
+
+/issue reject ISSUE-20241211-002 "Duplicate of task-005 which is already complete"
+
+/issue reject ISSUE-20241210-003 "Not reproducible - works as expected"
+```
+
+### Rejection Behavior
+
+```
+FUNCTION rejectIssue(issue_id, reason):
+    READ .claude/issue_queue.md
+
+    issue = issues.find(i => i.id == issue_id)
+
+    IF NOT issue:
+        OUTPUT: "Issue not found: {issue_id}"
+        RETURN
+
+    IF issue.status NOT IN ['pending', 'accepted']:
+        OUTPUT: "Cannot reject issue in '{issue.status}' state.
+                 Only pending or accepted issues can be rejected."
+        RETURN
+
+    # Update issue
+    issue.status = "wont_fix"
+    issue.rejected_at = NOW()
+    issue.rejection_reason = reason
+
+    # If task was created, mark it cancelled
+    IF issue.task_ref:
+        UPDATE journal task to cancelled
+        issue.notes += "\nLinked task {issue.task_ref} cancelled."
+
+    WRITE .claude/issue_queue.md
+
+    OUTPUT:
+        "═══════════════════════════════════════════════════════════
+        ISSUE REJECTED
+        ═══════════════════════════════════════════════════════════
+
+        ID:     {issue_id}
+        Status: won't fix
+        Reason: {reason}
+
+        ═══════════════════════════════════════════════════════════"
+```
+
+### Rejection Validation
+
+| Condition | Result |
+|-----------|--------|
+| Issue not found | Error message |
+| Issue already complete | Error: "Cannot reject completed issue" |
+| Issue in_progress | Error: "Cannot reject issue with active task" |
+| Issue already rejected | Error: "Issue already rejected" |
+| No reason provided | Error: "Rejection reason required" |
+
+### Reversing Rejection
+
+To un-reject an issue (reopen), manually edit `.claude/issue_queue.md`:
+- Change `status: wont_fix` back to `status: pending`
+- Remove `rejected_at` and `rejection_reason` fields
+
+Or report it again via `/issue` if the queue entry is unclear.
+
 ## Related Commands
 
 | Command | Purpose |
 |---------|---------|
 | `/issues` | View issue queue status |
-| `/reject <id> <reason>` | Mark issue as won't fix |
+| `/issues <id>` | View specific issue details |
 | `/status` | Orchestrator status (includes pending issue count) |
 
 ---

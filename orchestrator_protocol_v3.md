@@ -294,6 +294,34 @@ Mark first executable task as in_progress
 
 ## Phase 3: Task Execution
 
+**CRITICAL: This phase runs in a loop until all tasks are complete.**
+
+```
+# MAIN EXECUTION LOOP - REPEAT FOR EACH TASK
+WHILE hasPendingTasks():
+
+    # Step 1: Check for refresh signals (Terminal 2 communication)
+    checkRefreshSignals()
+
+    # Step 2: Poll issue queue for new issues (MANDATORY)
+    pollIssueQueue()
+
+    # Step 3: Select next executable task
+    task = selectNextTask()
+    IF task == null:
+        BREAK  # No more tasks
+
+    # Step 4: Execute the task (match skills, spawn agent, process result)
+    executeTask(task)
+
+    # Step 5: Update progress tracking
+    updateProgress()
+
+# END LOOP - proceed to Phase 4 or Phase 5
+```
+
+**The orchestrator MUST poll the issue queue after EVERY task completion.** This is how issues reported in Terminal 2 get converted into tasks.
+
 ### 3.0 Check Refresh Signals
 
 Before selecting the next task, check for refresh signals from a support session (Terminal 2).
@@ -349,15 +377,18 @@ FUNCTION reloadSkillDirectory():
     REPORT: "Loaded {skills.length} skills from {skill_path}"
 ```
 
-### 3.0.1 Poll Issue Queue
+### 3.0.1 Poll Issue Queue (MANDATORY)
 
-Before selecting the next task, check for new issues from the async Issue Reporter.
+**This step is CRITICAL and must NOT be skipped.** Poll the issue queue on every iteration of the main execution loop.
 
 **Poll Triggers:**
-- On `/orchestrate` start
-- After each agent completes a task
-- Every 10 minutes during active orchestration
+- On `/orchestrate` start (during Phase 1 initialization)
+- **After EVERY task completion** (in the main execution loop)
 - When `/refresh issues` signal received
+- Every 10 minutes during active orchestration (if supported)
+
+**Why This Matters:**
+Users report issues in Terminal 2 while orchestration runs in Terminal 1. If the orchestrator doesn't poll the queue, those issues are never converted to tasks and sit ignored until the next `/orchestrate` run.
 
 ```
 FUNCTION pollIssueQueue():
@@ -797,6 +828,12 @@ AFTER agent completes:
     # Check for iteration needed
     IF handoff.outcome == 'partial' AND iterations < 3:
         Re-queue task with additional context from failure
+
+    # RETURN TO MAIN LOOP - this triggers:
+    #   1. checkRefreshSignals()
+    #   2. pollIssueQueue()  ← CRITICAL: picks up issues from Terminal 2
+    #   3. selectNextTask()
+    # DO NOT skip back to selectNextTask() directly!
 ```
 
 ### 3.8 Performance Metrics Collection

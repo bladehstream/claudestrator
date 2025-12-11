@@ -2,6 +2,23 @@
 
 A multi-agent orchestration framework for Claude Code that enables complex, multi-step project development through intelligent task decomposition, skill-based agent construction, and persistent state management.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Orchestrator Role](#orchestrator-role)
+- [Commands](#commands)
+- [Quick Start](#quick-start)
+- [Directory Structure](#directory-structure)
+- [Available Skills](#available-skills)
+- [How It Works](#how-it-works)
+- [Model Selection](#model-selection)
+- [Documentation](#documentation)
+- [v2 Improvements](#new-in-v2-research-based-improvements)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Overview
 
 Claudestrator transforms Claude Code from a single assistant into a coordinated team of specialized agents. Instead of handling all implementation details directly, it:
@@ -365,70 +382,6 @@ claudestrator/
 └── commands/                      # Slash command definitions
 ```
 
-## New in v2: Research-Based Improvements
-
-### Knowledge Graph
-
-Tag-based retrieval of project knowledge. Query by keywords instead of loading everything:
-
-```json
-{
-  "nodes": [
-    {"id": "task-001", "type": "task", "tags": ["auth", "jwt"], "summary": "..."},
-    {"id": "gotcha-001", "type": "gotcha", "tags": ["api", "rate-limit"], "summary": "..."}
-  ],
-  "tag_index": {"auth": ["task-001"], "api": ["gotcha-001"]}
-}
-```
-
-See [Knowledge Graph](knowledge_graph.md) for full specification.
-
-### Hot/Cold State Separation
-
-- **Hot (session_state.md)**: Working memory, scratchpad, current task focus. Read/write constantly.
-- **Cold (orchestrator_memory.md)**: Project understanding, decisions, patterns. Read at start, append-only.
-
-See [State Management](state_management.md) for lifecycle details.
-
-### Structured Handoffs
-
-YAML schema replaces freeform handoff notes:
-
-```yaml
-outcome: completed
-patterns_discovered:
-  - pattern: "Use AuthContext for user state"
-    applies_to: [auth, react-context]
-gotchas:
-  - issue: "API rate limit is 100/min"
-    severity: high
-```
-
-See [Handoff Schema](handoff_schema.md) for full specification.
-
-### Computed Context
-
-Context is computed fresh per-agent call:
-1. Extract task keywords
-2. Query knowledge graph by tags
-3. Filter context map by relevance
-4. Apply complexity-based limits
-
-See [Computed Context](computed_context.md) for algorithm details.
-
-### Strategy Evolution
-
-Orchestrator learns from execution feedback:
-
-```markdown
-### Pairing Rules
-| When Using | Also Include | Reason | Learned From |
-|------------|--------------|--------|--------------|
-| html5_canvas | security_reviewer | Missed XSS vulnerability | task-015 |
-```
-
-See [Strategy Evolution](strategy_evolution.md) for feedback processing.
-
 ## Available Skills
 
 **36 skills** across 8 categories: Implementation, Design, Quality, Support, Maintenance, Security, Domain, and Orchestrator.
@@ -540,6 +493,70 @@ When a run completes, `/orchestrate` offers three options:
 
 ### Guides
 - [User Guide](docs/user_guide.md) - Comprehensive usage documentation
+
+## New in v2: Research-Based Improvements
+
+### Knowledge Graph
+
+Tag-based retrieval of project knowledge. Query by keywords instead of loading everything:
+
+```json
+{
+  "nodes": [
+    {"id": "task-001", "type": "task", "tags": ["auth", "jwt"], "summary": "..."},
+    {"id": "gotcha-001", "type": "gotcha", "tags": ["api", "rate-limit"], "summary": "..."}
+  ],
+  "tag_index": {"auth": ["task-001"], "api": ["gotcha-001"]}
+}
+```
+
+See [Knowledge Graph](knowledge_graph.md) for full specification.
+
+### Hot/Cold State Separation
+
+- **Hot (session_state.md)**: Working memory, scratchpad, current task focus. Read/write constantly.
+- **Cold (orchestrator_memory.md)**: Project understanding, decisions, patterns. Read at start, append-only.
+
+See [State Management](state_management.md) for lifecycle details.
+
+### Structured Handoffs
+
+YAML schema replaces freeform handoff notes:
+
+```yaml
+outcome: completed
+patterns_discovered:
+  - pattern: "Use AuthContext for user state"
+    applies_to: [auth, react-context]
+gotchas:
+  - issue: "API rate limit is 100/min"
+    severity: high
+```
+
+See [Handoff Schema](handoff_schema.md) for full specification.
+
+### Computed Context
+
+Context is computed fresh per-agent call:
+1. Extract task keywords
+2. Query knowledge graph by tags
+3. Filter context map by relevance
+4. Apply complexity-based limits
+
+See [Computed Context](computed_context.md) for algorithm details.
+
+### Strategy Evolution
+
+Orchestrator learns from execution feedback:
+
+```markdown
+### Pairing Rules
+| When Using | Also Include | Reason | Learned From |
+|------------|--------------|--------|--------------|
+| html5_canvas | security_reviewer | Missed XSS vulnerability | task-015 |
+```
+
+See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 
 ## Contributing
 

@@ -294,7 +294,57 @@ Mark first executable task as in_progress
 
 ## Phase 3: Task Execution
 
-### 3.0 Poll Issue Queue
+### 3.0 Check Refresh Signals
+
+Before selecting the next task, check for refresh signals from a support session (Terminal 2).
+
+**Check Triggers:**
+- Before selecting next task
+- After each agent completes a task
+
+```
+FUNCTION checkRefreshSignals():
+    IF NOT EXISTS .claude/refresh_signal.md:
+        RETURN
+
+    signal = PARSE .claude/refresh_signal.md
+
+    MATCH signal.type:
+        'issues':
+            REPORT: "🔄 Refresh signal received: polling issue queue"
+            pollIssueQueue()
+
+        'skills':
+            REPORT: "🔄 Refresh signal received: reloading skills"
+            reloadSkillDirectory()
+
+        'prd':
+            REPORT: "🔄 Refresh signal received: re-reading PRD"
+            reloadPRD()
+
+    # Delete signal file after processing
+    DELETE .claude/refresh_signal.md
+
+
+FUNCTION reloadSkillDirectory():
+    # Re-scan skill directory and rebuild runtime index
+    skills = scanSkillDirectory(skill_path)
+    skill_index = buildSkillIndex(skills)
+    REPORT: "Loaded {skills.length} skills from {skill_path}"
+
+
+FUNCTION reloadPRD():
+    # Re-read PRD and update project understanding
+    IF EXISTS PRD.md:
+        prd = READ PRD.md
+        session_state.project_understanding = extractProjectUnderstanding(prd)
+        REPORT: "PRD reloaded - project understanding updated"
+        REPORT: "⚠️  Note: Existing tasks unchanged. Changes affect future planning."
+    ELSE:
+        WARN: "PRD.md not found"
+```
+
+### 3.0.1 Poll Issue Queue
 
 Before selecting the next task, check for new issues from the async Issue Reporter.
 
@@ -302,6 +352,7 @@ Before selecting the next task, check for new issues from the async Issue Report
 - On `/orchestrate` start
 - After each agent completes a task
 - Every 10 minutes during active orchestration
+- When `/refresh issues` signal received
 
 ```
 FUNCTION pollIssueQueue():
@@ -401,7 +452,7 @@ FUNCTION deriveAcceptanceCriteria(issue):
     RETURN criteria
 ```
 
-### 3.0.1 Update Issue Status on Task Completion
+### 3.0.2 Update Issue Status on Task Completion
 
 When a task sourced from an issue completes:
 
@@ -1152,6 +1203,6 @@ orchestrator/
 ---
 
 *Protocol Version: 3.3*
-*Updated: December 2024*
+*Updated: December 2025*
 *Added: Phase 6 Iteration Support, Enhanced State Detection, Autonomy Levels*
 *Memory Architecture v2 based on research from Anthropic, Google Cloud ADK, and A-MEM*

@@ -136,6 +136,18 @@ Report issues asynchronously - even while the orchestrator is running in another
 
 > **Async workflow:** `/issue` spawns a dedicated Issue Reporter agent that interviews you and writes to a queue. The orchestrator polls this queue every 10 minutes and after each task completion, automatically creating tasks from pending issues.
 
+### Support Commands (Terminal 2)
+
+Signal the orchestrator to reload resources immediately.
+
+| Command | Model | Action |
+|---------|-------|--------|
+| `/refresh issues` | (main) | Signal orchestrator to poll issue queue now |
+| `/refresh skills` | (main) | Signal orchestrator to reload skill directory |
+| `/refresh prd` | (main) | Signal orchestrator to re-read PRD.md |
+
+> **Dual terminal workflow:** Run the orchestrator in Terminal 1, use Terminal 2 for `/issue`, `/refresh`, `/ingest-skill`, and other support tasks. The `/refresh` command writes a signal file that the orchestrator detects before its next task.
+
 ### Command Details
 
 #### PRD Generation (`/prdgen`)

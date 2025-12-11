@@ -573,6 +573,76 @@ Only pending or accepted issues can be rejected.
 
 ---
 
+## Dual Terminal Workflow
+
+Run the orchestrator in one terminal while using another for support tasks.
+
+### Terminal Layout
+
+```
+┌─────────────────────────────────┐  ┌─────────────────────────────────┐
+│ TERMINAL 1: Orchestrator        │  │ TERMINAL 2: Support Tasks       │
+│─────────────────────────────────│  │─────────────────────────────────│
+│ /orchestrate                    │  │ /issue "bug in login"           │
+│   ├─► Task 004 executing...     │  │ /refresh issues                 │
+│   ├─► [detects refresh signal]  │  │                                 │
+│   ├─► Polling issue queue...    │  │ /ingest-skill <url>             │
+│   └─► Created task from issue   │  │ /refresh skills                 │
+└─────────────────────────────────┘  └─────────────────────────────────┘
+```
+
+### The /refresh Command
+
+Signal the orchestrator to immediately reload a resource:
+
+| Command | Action |
+|---------|--------|
+| `/refresh issues` | Poll issue queue now (don't wait for 10min timer) |
+| `/refresh skills` | Reload skill directory |
+| `/refresh prd` | Re-read PRD.md |
+
+**Important:** `/refresh` requires an argument. Running `/refresh` alone does nothing.
+
+### Example: Urgent Bug Report
+
+```
+Terminal 2:
+  /issue "Production login failing for all users"
+  [Issue Reporter interviews, sets priority: critical]
+
+  /refresh issues
+  "Refresh signal sent: issues
+   The orchestrator will poll the issue queue before its next task."
+
+Terminal 1:
+  [Task 005 completes]
+  "🔄 Refresh signal received: polling issue queue"
+  "⚠️  Critical issue detected: Production login failing for all users"
+  "Creating urgent task 012"
+  [Task 012 becomes next task]
+```
+
+### What Each Terminal Does
+
+| Terminal 1 (Orchestrator) | Terminal 2 (Support) |
+|---------------------------|----------------------|
+| `/orchestrate` | `/issue` |
+| `/status`, `/status agents` | `/issues`, `/reject` |
+| `/checkpoint` | `/refresh issues\|skills\|prd` |
+| `/deorchestrate` | `/ingest-skill` |
+| `/tasks`, `/skills` | `/audit-skills`, `/skill-enhance` |
+
+### Cautions
+
+**PRD Refresh:**
+- Won't affect tasks already in the journal
+- Won't affect agents currently executing
+- Will affect future iteration/extension cycles
+
+For substantial PRD changes, consider waiting for the current run to complete.
+
+---
+
 ## The Journal System
 
 ### Why Journals?
@@ -893,5 +963,5 @@ Claude: Creating project journal and decomposing into tasks...
 
 ---
 
-*User Guide Version: 1.3*
-*Last Updated: December 2024*
+*User Guide Version: 1.4*
+*Last Updated: December 2025*

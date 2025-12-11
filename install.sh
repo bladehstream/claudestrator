@@ -201,36 +201,9 @@ set_paths() {
     fi
 }
 
-# Generate the CLAUDE.md content that will be appended
-generate_claude_md_content() {
-    if [ "$INSTALL_MODE" = "global" ]; then
-        local protocol_path="~/.claude/claudestrator/orchestrator_protocol_v3.md"
-        local skills_path="~/.claude/skills/"
-        local templates_path="~/.claude/claudestrator/prd_generator/templates/"
-    else
-        local protocol_path=".claudestrator/orchestrator_protocol_v3.md"
-        local skills_path=".claude/skills/"
-        local templates_path=".claudestrator/prd_generator/templates/"
-    fi
-
-    cat << EOF
-
-## Claudestrator
-
-> ⚠️ **DO NOT run /init** - it will overwrite this configuration file.
-
-Multi-agent orchestration framework. Start with:
-1. \`/prdgen\` - Generate a PRD (run in Terminal 2)
-2. \`/orchestrate\` - Begin orchestration (run in Terminal 1)
-
-**Resources:**
-- Protocol: $protocol_path
-- Skills: $skills_path
-- PRD Templates: $templates_path
-- State: .claude/ (session_state.md, orchestrator_memory.md, knowledge_graph.json)
-
-**All Commands:** /orchestrate, /prdgen, /status, /tasks, /skills, /checkpoint, /deorchestrate, /issue, /issues, /refresh, /abort, /audit-skills, /skill-enhance, /ingest-skill
-EOF
+# Get path to CLAUDE.md template
+get_claude_md_template() {
+    echo "$REPO_DIR/templates/CLAUDE.md"
 }
 
 # Show diff between two files (or show new file content)
@@ -345,29 +318,27 @@ preview_changes() {
     echo ""
     echo -e "${BOLD}1. CLAUDE.md Configuration${NC}"
 
-    local claude_md_addition=$(generate_claude_md_content)
+    local claude_md_template="$TEMP_DIR/claudestrator/templates/CLAUDE.md"
 
     if [ -f "$CLAUDE_MD" ]; then
         if grep -q "## Claudestrator" "$CLAUDE_MD"; then
-            echo -e "   ${YELLOW}Already contains Claudestrator section${NC}"
-            echo -e "   ${DIM}Will append new section (manual cleanup of old section needed)${NC}"
+            echo -e "   ${YELLOW}Already contains Claudestrator section - will be replaced${NC}"
         else
-            echo -e "   ${GREEN}Will append Claudestrator configuration${NC}"
+            echo -e "   ${YELLOW}Existing CLAUDE.md will be backed up and replaced${NC}"
         fi
         has_changes=true
-        changes_summary+=("Append to $CLAUDE_MD")
-
-        echo ""
-        echo -e "${DIM}Content to be appended:${NC}"
-        echo -e "${GREEN}$claude_md_addition${NC}"
+        changes_summary+=("Replace $CLAUDE_MD (backup created)")
     else
         echo -e "   ${GREEN}Will create new file: $CLAUDE_MD${NC}"
         has_changes=true
         changes_summary+=("Create $CLAUDE_MD")
+    fi
 
+    if [ -f "$claude_md_template" ]; then
         echo ""
-        echo -e "${DIM}Content:${NC}"
-        echo -e "${GREEN}$claude_md_addition${NC}"
+        echo -e "${DIM}Template content (first 30 lines):${NC}"
+        head -30 "$claude_md_template" | sed 's/^/   /'
+        echo -e "${DIM}   ...${NC}"
     fi
 
     # 2. Preview command symlinks
@@ -674,15 +645,22 @@ configure_claude_md() {
     log_info "Configuring CLAUDE.md..."
     log_verbose "Target file: $CLAUDE_MD"
 
+    local template="$REPO_DIR/templates/CLAUDE.md"
+
+    if [ ! -f "$template" ]; then
+        log_error "CLAUDE.md template not found: $template"
+        return 1
+    fi
+
     backup_claude_md
 
     # Create directory if needed
     mkdir -p "$(dirname "$CLAUDE_MD")"
     log_verbose "Ensured directory exists: $(dirname "$CLAUDE_MD")"
 
-    # Append configuration
-    generate_claude_md_content >> "$CLAUDE_MD"
-    log_verbose "Appended Claudestrator configuration to $CLAUDE_MD"
+    # Copy template (replaces existing file)
+    cp "$template" "$CLAUDE_MD"
+    log_verbose "Copied CLAUDE.md template to $CLAUDE_MD"
 
     log_success "CLAUDE.md configured"
 }

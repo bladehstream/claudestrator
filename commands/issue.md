@@ -93,6 +93,16 @@ User: "Page goes blank and console shows TypeError"
 ...continues through interview...
 
 Issue Reporter:
+    "How urgent is this issue?
+
+    1. Critical - System unusable, data loss, or security breach
+    2. High - Major feature broken, significant user impact
+    3. Medium - Degraded experience, but workaround exists
+    4. Low - Minor inconvenience, nice-to-have fix"
+
+User: [Selects High]
+
+Issue Reporter:
     "═══════════════════════════════════════════════════════════
     ISSUE SUBMITTED
     ═══════════════════════════════════════════════════════════
@@ -102,8 +112,13 @@ Issue Reporter:
     Priority: high
     Summary:  Dashboard crashes when filtering by date range
 
-    The orchestrator will pick this up automatically.
+    The orchestrator will pick this up:
+    - Every 10 minutes during active orchestration
+    - After each agent completes a task
+    - When /orchestrate is next run
+
     Run /issues to check queue status.
+    Use /refresh issues to signal orchestrator to poll now.
 
     ═══════════════════════════════════════════════════════════"
 ```

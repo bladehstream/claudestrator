@@ -67,6 +67,14 @@ Does it significantly impact user experience?
 
 ## Interview Flow
 
+**Required phases (do not skip):**
+1. Initial Triage (issue type)
+2. Summary Capture
+3. Type-Specific Questions
+4. **Priority Assessment** ← MUST ask user explicitly
+5. Component Identification (optional)
+6. Suggested Fix (optional)
+
 ### Phase 1: Initial Triage
 
 ```
@@ -206,18 +214,26 @@ QUESTIONS:
    [Freeform]
 ```
 
-### Phase 4: Priority Assessment
+### Phase 4: Priority Assessment (REQUIRED)
+
+**This step is MANDATORY. Always ask the user to set priority.**
 
 ```
 PROMPT (using AskUserQuestion):
-    "How urgent is this issue?"
-
-    Options:
-    - Critical - System unusable, data loss, or security breach
-    - High - Major feature broken, significant user impact
-    - Medium - Degraded experience, but workaround exists
-    - Low - Minor inconvenience, nice-to-have fix
+    question: "How urgent is this issue?"
+    header: "Priority"
+    options:
+    - label: "Critical"
+      description: "System unusable, data loss, or security breach"
+    - label: "High"
+      description: "Major feature broken, significant user impact"
+    - label: "Medium"
+      description: "Degraded experience, but workaround exists"
+    - label: "Low"
+      description: "Minor inconvenience, nice-to-have fix"
 ```
+
+**Do NOT skip this step or auto-assign priority. The user must explicitly choose.**
 
 ### Phase 5: Component Identification (Optional)
 
@@ -454,17 +470,31 @@ OUTPUT:
     Priority: {issue.priority}
     Summary:  {issue.summary}
 
-    The orchestrator will check the queue:
-    - Every 10 minutes during active orchestration
-    - After each agent completes a task
-    - When /orchestrate is next run
+    ───────────────────────────────────────────────────────────
+    WHAT HAPPENS NEXT
+    ───────────────────────────────────────────────────────────
 
-    Commands:
-    - /issues        View queue status
-    - /issue         Report another issue
+    If orchestrator is running (Terminal 1):
+      • Issue will be picked up automatically
+      • Polls every 10 min or after each task completes
+      • Use /refresh issues to trigger immediate poll
+
+    If orchestrator is not running:
+      • Issue waits in queue until next /orchestrate
+
+    ───────────────────────────────────────────────────────────
+    COMMANDS (Terminal 2)
+    ───────────────────────────────────────────────────────────
+
+    /issues              View queue status
+    /issues {issue.id}   View this issue's details
+    /refresh issues      Signal orchestrator to poll now
+    /issue               Report another issue
 
     ═══════════════════════════════════════════════════════════"
 ```
+
+**IMPORTANT**: Do NOT tell the user to "run /orchestrate" - that command runs in Terminal 1 and the user is in Terminal 2. The issue will be picked up automatically.
 
 ---
 

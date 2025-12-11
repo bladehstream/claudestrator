@@ -429,74 +429,24 @@ Orchestrator learns from execution feedback:
 
 See [Strategy Evolution](strategy_evolution.md) for feedback processing.
 
-## Available Skills (36 total)
+## Available Skills
 
-### Implementation
-| Skill | Description |
-|-------|-------------|
-| `html5_canvas` | HTML5 Canvas games and 2D graphics |
-| `game_feel` | Polish, "juice", and game effects |
-| `data_visualization` | Charts, graphs, D3.js, Chart.js, dashboards |
-| `algorithmic_art` | Generative art and creative coding |
-| `mcp_builder` | Model Context Protocol server development |
-| `slack_gif_creator` | Slack-compatible GIF generation |
-| `web_artifacts_builder` | Interactive web artifact creation |
+**36 skills** across 8 categories: Implementation, Design, Quality, Support, Maintenance, Security, Domain, and Orchestrator.
 
-### Design
-| Skill | Description |
-|-------|-------------|
-| `game_designer` | Game mechanics, progression, balance |
-| `api_designer` | REST/GraphQL API design |
-| `database_designer` | Schema design, indexing, migrations |
-| `frontend_design` | UI/UX, CSS, responsive design |
-| `canvas_design` | HTML5 Canvas design patterns |
-| `theme_factory` | Theme and styling system generation |
+Browse skills by category: [`skills/`](skills/)
 
-### Quality
-| Skill | Description |
-|-------|-------------|
-| `qa_agent` | Testing and verification |
-| `user_persona_reviewer` | UX review and accessibility |
-| `security_reviewer` | Post-implementation security audits |
-| `webapp_testing` | Playwright, E2E testing, browser automation |
+| Category | Skills | Examples |
+|----------|--------|----------|
+| Implementation | 7 | `html5_canvas`, `data_visualization`, `mcp_builder` |
+| Design | 6 | `api_designer`, `database_designer`, `frontend_design` |
+| Quality | 4 | `qa_agent`, `security_reviewer`, `webapp_testing` |
+| Support | 11 | `documentation`, `prd_generator`, `xlsx`, `pdf` |
+| Maintenance | 3 | `skill_auditor`, `skill_enhancer`, `skill_creator` |
+| Security | 2 | `authentication`, `software_security` |
+| Domain | 1 | `financial_app` |
+| Orchestrator | 1 | `agent_construction` |
 
-### Support
-| Skill | Description |
-|-------|-------------|
-| `svg_asset_generator` | SVG graphics creation |
-| `refactoring` | Code restructuring |
-| `documentation` | Technical writing |
-| `prd_generator` | Interactive requirements elicitation |
-| `brand_guidelines` | Brand identity documentation |
-| `doc_coauthoring` | Collaborative document writing |
-| `docx` | Microsoft Word document generation |
-| `internal_comms` | Internal communication drafting |
-| `pdf` | PDF document handling |
-| `pptx` | PowerPoint presentation generation |
-| `xlsx` | Excel spreadsheet generation |
-
-### Maintenance
-| Skill | Description |
-|-------|-------------|
-| `skill_auditor` | Skill library health auditing |
-| `skill_enhancer` | Web research and skill updates |
-| `skill_creator` | Creating new Claudestrator skills |
-
-### Security
-| Skill | Description |
-|-------|-------------|
-| `authentication` | OAuth2, JWT, sessions, password security |
-| `software_security` | Secure coding, OWASP, injection prevention |
-
-### Domain
-| Skill | Description |
-|-------|-------------|
-| `financial_app` | Personal finance, budgeting, transactions |
-
-### Orchestrator
-| Skill | Description |
-|-------|-------------|
-| `agent_construction` | Model selection, skill composition, context budgeting (self-use) |
+See [User Guide: Available Skills](docs/user_guide.md#available-skills) for full descriptions.
 
 ## How It Works
 

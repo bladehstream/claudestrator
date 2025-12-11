@@ -8,6 +8,7 @@ Display the current orchestrator and project state without modifying anything.
 /status                 Show orchestrator overview
 /status agents          List all running and recent agents
 /status <agent-id>      Show last output from a specific agent
+/status metrics         Show performance metrics and token usage
 ```
 
 ---
@@ -163,6 +164,99 @@ Run /orchestrate to initialize.
 
 ═══════════════════════════════════════════════════════════
 ```
+
+---
+
+## /status metrics
+
+Show performance metrics, token usage, and cost estimates.
+
+Read from `.claude/metrics.json`.
+
+```
+═══════════════════════════════════════════════════════════
+PERFORMANCE METRICS
+═══════════════════════════════════════════════════════════
+
+SESSION
+  ID:       2025-12-11-001
+  Started:  2h 15m ago
+  Project:  Personal Finance Dashboard
+
+───────────────────────────────────────────────────────────
+BY MODEL
+───────────────────────────────────────────────────────────
+
+  Model    Tasks  Success  Avg Time   Tokens (in/out)
+  ───────────────────────────────────────────────────────
+  Haiku      5    100%      42s        15K / 10K
+  Sonnet    10     90%      85s        80K / 40K
+  Opus       0      -        -          -
+
+───────────────────────────────────────────────────────────
+BY SKILL (top 5 by usage)
+───────────────────────────────────────────────────────────
+
+  Skill               Used  Success Rate
+  ───────────────────────────────────────────────────────
+  frontend_design       4     100% (4/4)
+  authentication        2      50% (1/2)
+  data_visualization    2     100% (2/2)
+  database_designer     2     100% (2/2)
+  qa_agent              1     100% (1/1)
+
+───────────────────────────────────────────────────────────
+BY TASK TYPE
+───────────────────────────────────────────────────────────
+
+  Type            Count  Success  Avg Time
+  ───────────────────────────────────────────────────────
+  implementation     8     88%     1m 12s
+  design             3    100%       48s
+  testing            2    100%     2m 05s
+  documentation      2    100%       35s
+
+───────────────────────────────────────────────────────────
+TOTALS
+───────────────────────────────────────────────────────────
+
+  Tasks Completed:    14/15 (93%)
+  Tasks Retried:      1 (1 retry total)
+  Total Duration:     2h 15m
+
+  Tokens Used:        145,000
+    Input:            95,000
+    Output:           50,000
+
+  Estimated Cost:     ~$2.47
+    Haiku:            $0.04
+    Sonnet:           $1.93
+    Opus:             $0.50
+
+═══════════════════════════════════════════════════════════
+```
+
+**Implementation:**
+1. Read `.claude/metrics.json`
+2. Format aggregates into tables
+3. Calculate derived values (avg time, success rate)
+4. Sort skills by usage count
+
+**If No Metrics:**
+```
+═══════════════════════════════════════════════════════════
+NO METRICS AVAILABLE
+═══════════════════════════════════════════════════════════
+
+No performance metrics recorded yet.
+Metrics are collected after tasks complete.
+
+Run /orchestrate to begin and metrics will accumulate.
+
+═══════════════════════════════════════════════════════════
+```
+
+---
 
 ## If Agent Not Found
 

@@ -50,6 +50,9 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **Autonomy Levels** | Supervised, Trust Agents, or Full Autonomy with safety guardrails |
 | **Async Issue Reporting** | Report issues in separate session; orchestrator polls and creates tasks |
 | **Skill Gap Analysis** | Analyze PRD requirements against available skills; warn before orchestration |
+| **Dry-Run Mode** | Preview task decomposition, estimates, and dependency graph before executing |
+| **Performance Metrics** | Track token usage, costs, success rates by model/skill; view with `/status metrics` |
+| **Dependency Visualization** | ASCII dependency graph in `/tasks` showing critical path and parallelization |
 
 ## Architecture
 
@@ -129,10 +132,12 @@ Run these **before** starting orchestration in Terminal 1:
 | Command | Model | Action |
 |---------|-------|--------|
 | `/orchestrate` | (main) + dynamic | Initialize or resume orchestrator |
+| `/orchestrate --dry-run` | (main) | Preview tasks, estimates, and dependencies |
 | `/status` | (main) | Show project/task status |
 | `/status agents` | (main) | List running and recent agents |
+| `/status metrics` | (main) | Show performance metrics and token usage |
 | `/status <agent-id>` | (main) | Show agent's last output |
-| `/tasks` | (main) | Show task list |
+| `/tasks` | (main) | Show task list with dependency graph |
 | `/skills` | (main) | Show loaded skills |
 | `/checkpoint` | (main) | Save state (continue working) |
 | `/deorchestrate` | (main) | Clean exit with full save |

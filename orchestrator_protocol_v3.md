@@ -767,6 +767,9 @@ AFTER agent completes:
     IF feedback.signals.any():
         updateStrategies(feedback)
 
+    # Update performance metrics
+    updateMetrics(task, agent, handoff)
+
     # Update TodoWrite
     TodoWrite: mark task complete or failed
 
@@ -786,6 +789,132 @@ AFTER agent completes:
     # Check for iteration needed
     IF handoff.outcome == 'partial' AND iterations < 3:
         Re-queue task with additional context from failure
+```
+
+### 3.8 Performance Metrics Collection
+
+Track agent performance, token usage, and costs for analysis and estimation.
+
+**Metrics File:** `.claude/metrics.json`
+
+```
+FUNCTION updateMetrics(task, agent, handoff):
+    metrics = READ .claude/metrics.json OR CREATE_FROM_TEMPLATE
+
+    # Calculate duration
+    duration_ms = agent.completed_at - agent.started_at
+
+    # Record task metrics
+    metrics.tasks[task.id] = {
+        model: task.model,
+        skills: task.matched_skills,
+        task_type: task.type,
+        complexity: task.complexity,
+        started_at: agent.started_at,
+        completed_at: agent.completed_at,
+        duration_ms: duration_ms,
+        tokens: {
+            input: agent.usage.input_tokens OR estimateInputTokens(task),
+            output: agent.usage.output_tokens OR estimateOutputTokens(task)
+        },
+        outcome: handoff.outcome,
+        retries: task.retry_count OR 0
+    }
+
+    # Update model aggregates
+    model = task.model
+    metrics.aggregates.by_model[model].count += 1
+    IF handoff.outcome == 'completed':
+        metrics.aggregates.by_model[model].success += 1
+    ELSE:
+        metrics.aggregates.by_model[model].failed += 1
+    metrics.aggregates.by_model[model].total_duration_ms += duration_ms
+    metrics.aggregates.by_model[model].tokens.input += metrics.tasks[task.id].tokens.input
+    metrics.aggregates.by_model[model].tokens.output += metrics.tasks[task.id].tokens.output
+
+    # Update skill aggregates
+    FOR skill IN task.matched_skills:
+        IF NOT metrics.aggregates.by_skill[skill]:
+            metrics.aggregates.by_skill[skill] = { count: 0, success: 0, failed: 0 }
+        metrics.aggregates.by_skill[skill].count += 1
+        IF handoff.outcome == 'completed':
+            metrics.aggregates.by_skill[skill].success += 1
+        ELSE:
+            metrics.aggregates.by_skill[skill].failed += 1
+
+    # Update task type aggregates
+    IF NOT metrics.aggregates.by_task_type[task.type]:
+        metrics.aggregates.by_task_type[task.type] = { count: 0, success: 0, failed: 0, total_duration_ms: 0 }
+    metrics.aggregates.by_task_type[task.type].count += 1
+    IF handoff.outcome == 'completed':
+        metrics.aggregates.by_task_type[task.type].success += 1
+    ELSE:
+        metrics.aggregates.by_task_type[task.type].failed += 1
+    metrics.aggregates.by_task_type[task.type].total_duration_ms += duration_ms
+
+    # Update totals
+    metrics.aggregates.totals.tasks_total += 1
+    IF handoff.outcome == 'completed':
+        metrics.aggregates.totals.tasks_completed += 1
+    ELSE:
+        metrics.aggregates.totals.tasks_failed += 1
+    IF task.retry_count > 0:
+        metrics.aggregates.totals.tasks_retried += 1
+        metrics.aggregates.totals.total_retries += task.retry_count
+    metrics.aggregates.totals.total_duration_ms += duration_ms
+    metrics.aggregates.totals.tokens.input += metrics.tasks[task.id].tokens.input
+    metrics.aggregates.totals.tokens.output += metrics.tasks[task.id].tokens.output
+
+    # Calculate estimated cost
+    metrics.aggregates.totals.estimated_cost_usd = calculateCost(metrics.aggregates.by_model)
+
+    metrics.last_updated = NOW()
+    WRITE .claude/metrics.json
+
+
+FUNCTION calculateCost(by_model):
+    # Approximate pricing per 1M tokens (as of Dec 2025)
+    RATES = {
+        haiku:  { input: 0.25,  output: 1.25 },
+        sonnet: { input: 3.00,  output: 15.00 },
+        opus:   { input: 15.00, output: 75.00 }
+    }
+
+    total = 0
+    FOR model, data IN by_model:
+        input_cost = (data.tokens.input / 1_000_000) * RATES[model].input
+        output_cost = (data.tokens.output / 1_000_000) * RATES[model].output
+        total += input_cost + output_cost
+
+    RETURN ROUND(total, 2)
+
+
+FUNCTION estimateInputTokens(task):
+    # Fallback estimation if usage not available
+    base = CASE task.model:
+        'haiku': 2000
+        'sonnet': 5000
+        'opus': 10000
+
+    skill_tokens = task.matched_skills.length * 500
+    context_tokens = CASE task.complexity:
+        'easy': 1000
+        'normal': 2500
+        'complex': 5000
+
+    RETURN base + skill_tokens + context_tokens
+
+
+FUNCTION estimateOutputTokens(task):
+    input_estimate = estimateInputTokens(task)
+    ratio = CASE task.type:
+        'implementation': 0.6
+        'design': 0.4
+        'testing': 0.3
+        'documentation': 0.5
+        DEFAULT: 0.4
+
+    RETURN ROUND(input_estimate * ratio)
 ```
 
 ---

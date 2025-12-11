@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "session_id": "",
+  "project_name": "",
+  "started_at": "",
+  "last_updated": "",
+  "tasks": {},
+  "aggregates": {
+    "by_model": {
+      "haiku": {
+        "count": 0,
+        "success": 0,
+        "failed": 0,
+        "total_duration_ms": 0,
+        "tokens": { "input": 0, "output": 0 }
+      },
+      "sonnet": {
+        "count": 0,
+        "success": 0,
+        "failed": 0,
+        "total_duration_ms": 0,
+        "tokens": { "input": 0, "output": 0 }
+      },
+      "opus": {
+        "count": 0,
+        "success": 0,
+        "failed": 0,
+        "total_duration_ms": 0,
+        "tokens": { "input": 0, "output": 0 }
+      }
+    },
+    "by_skill": {},
+    "by_task_type": {},
+    "totals": {
+      "tasks_total": 0,
+      "tasks_completed": 0,
+      "tasks_failed": 0,
+      "tasks_retried": 0,
+      "total_duration_ms": 0,
+      "total_retries": 0,
+      "tokens": { "input": 0, "output": 0 },
+      "estimated_cost_usd": 0
+    }
+  }
+}

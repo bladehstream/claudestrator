@@ -1205,7 +1205,38 @@ Stop orchestration immediately.
 /status              # Project overview
 /status agents       # List running and recent agents
 /status <agent-id>   # Last output from specific agent
+/status metrics      # Performance metrics and token usage
 ```
+
+### Task List (`/tasks`)
+
+```
+/tasks               # Show task list with dependency graph
+/tasks --list        # Task list only (no graph)
+/tasks --graph       # Dependency graph only
+```
+
+The dependency graph shows:
+- Task status icons: ✓ done, ◐ active, ○ pending, ✗ blocked
+- Dependency arrows showing execution order
+- Critical path analysis
+- Parallelization opportunities
+
+### Dry-Run Mode (`/orchestrate --dry-run`)
+
+Preview task decomposition without executing:
+
+```
+/orchestrate --dry-run
+```
+
+Shows:
+- Complete task list with types, complexity, and models
+- Skill matching per task
+- Token estimates (input/output) per task
+- Dependency graph visualization
+- Total cost estimates by model
+- Warnings about skill gaps or complex tasks
 
 ### Other Commands
 
@@ -1213,7 +1244,6 @@ Stop orchestration immediately.
 |---------|-------------|
 | `/orchestrate` | Initialize or resume orchestrator |
 | `/checkpoint` | Save current state (continue working) |
-| `/tasks` | Show task list with progress |
 | `/skills` | Show loaded skills |
 | `/deorchestrate` | Clean exit with full save |
 
@@ -1262,6 +1292,6 @@ Stop orchestration immediately.
 
 ---
 
-*User Guide Version: 1.5*
+*User Guide Version: 1.6*
 *Last Updated: December 2025*
-*Added: Dual Terminal Workflow, Command Reference section*
+*Added: Dry-run mode, performance metrics, dependency visualization*

@@ -32,6 +32,8 @@ See `skill_loader.md` for the dynamic discovery system.
 | prd_generator | PRD Generator | requirements | product, planning | discovery, documentation | normal, complex |
 | skill_auditor | Skill Auditor | skill-maintenance | orchestrator | audit, review | normal |
 | skill_enhancer | Skill Enhancer | skill-maintenance | orchestrator | enhancement, update | complex |
+| device_hardware | Device Hardware | implementation | react-native, expo, mobile | impl, feature | normal |
+| ui_generator | UI Generator | support | ui, frontend, react-native | impl, design | normal |
 
 > **Note**: Only one skill per category is selected for each agent. This ensures diverse expertise without redundancy.
 
@@ -256,6 +258,40 @@ orchestrator/skills/
     ├── skill_auditor.md
     └── skill_enhancer.md
 ```
+
+---
+
+### device_hardware
+
+| Field | Value |
+|-------|-------|
+| **Name** | Device Hardware |
+| **ID** | device_hardware |
+| **Category** | implementation |
+| **Path** | skills/implementation/device-hardware.md |
+| **Domain** | react-native, expo, mobile, hardware, fintech |
+| **Task Types** | implementation, feature |
+| **Keywords** | biometrics, face id, touch id, fido2, passkeys, camera, nfc, bluetooth, ble, sensors, haptics, location, secure storage |
+| **Complexity** | normal |
+| **Pairs With** | software_security, frontend_design |
+| **Description** | React Native/Expo hardware integration including biometrics, FIDO2, camera, NFC, BLE, sensors |
+
+---
+
+### ui_generator
+
+| Field | Value |
+|-------|-------|
+| **Name** | UI Generator |
+| **ID** | ui_generator |
+| **Category** | support |
+| **Path** | skills/support/ui-generator.md |
+| **Domain** | ui, frontend, react-native, react, html, design |
+| **Task Types** | implementation, design |
+| **Keywords** | ui generation, mockup, wireframe, gemini, nano banana, code generation, react native, tailwind, component |
+| **Complexity** | normal |
+| **Pairs With** | frontend_design, brand_guidelines |
+| **Description** | AI-powered UI asset and code generation using Google Gemini API |
 
 ---
 

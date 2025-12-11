@@ -1,7 +1,7 @@
 ---
 name: Security Reviewer
 id: security_reviewer
-version: 1.1
+version: 1.2
 category: quality
 domain: [any]
 task_types: [review, audit, verification]
@@ -25,9 +25,9 @@ You review existing code and systems for security vulnerabilities. You perform p
 - Secure coding practice evaluation
 - Threat modeling basics
 
-## OWASP Top 10 Checklist
+## OWASP Top 10:2025 Checklist
 
-### 1. Injection (SQL, NoSQL, Command, etc.)
+### 5. Injection (A05:2025)
 **Look for:**
 - String concatenation in queries
 - Unsanitized user input in commands
@@ -62,14 +62,17 @@ db.query(query, [userId]);
 - XML parsing without disabling external entities
 - Accepting XML from untrusted sources
 
-### 5. Broken Access Control
+### 1. Broken Access Control (A01:2025)
 **Look for:**
 - Missing authorization checks
 - Direct object references without validation
 - Privilege escalation paths
 - CORS misconfigurations
+- Server-Side Request Forgery (SSRF) patterns
+- Unvalidated redirects to internal resources
+- User-controlled URLs in server requests
 
-### 6. Security Misconfiguration
+### 2. Security Misconfiguration (A02:2025)
 **Look for:**
 - Default credentials
 - Verbose error messages in production
@@ -103,11 +106,83 @@ element.textContent = userInput;
 - Unpatched libraries
 - Abandoned packages
 
-### 10. Insufficient Logging & Monitoring
+### 9. Logging & Alerting Failures (A09:2025)
 **Look for:**
 - Missing audit logs for sensitive actions
 - No alerting on suspicious activity
 - Logs containing sensitive data
+
+### 10. Mishandling of Exceptional Conditions (A10:2025)
+**Look for:**
+- Improper input validation leading to crashes
+- Incomplete error recovery
+- Inconsistent exception handling across code paths
+- Resource exhaustion without graceful degradation
+- Unhandled edge cases in critical flows
+- Missing fallback mechanisms
+
+**Example vulnerability:**
+```javascript
+// BAD: Unhandled exception exposes system state
+try {
+    await processPayment(order);
+} catch (e) {
+    console.log(e.stack); // Leaks internal info
+    throw e; // Crashes service
+}
+
+// GOOD: Graceful handling
+try {
+    await processPayment(order);
+} catch (e) {
+    logger.error('Payment failed', { orderId: order.id, errorType: e.name });
+    await markOrderPending(order.id);
+    throw new PaymentError('Payment processing unavailable');
+}
+```
+
+## API-Specific Vulnerabilities
+
+### Broken Object Level Authorization (BOLA)
+**Look for:**
+- Direct object references in API endpoints (`/api/users/123`)
+- Missing ownership validation before data access
+- ID enumeration vulnerabilities
+
+```javascript
+// BAD: BOLA - no ownership check
+app.get('/api/orders/:id', auth, async (req, res) => {
+    const order = await db.getOrder(req.params.id);
+    res.json(order); // Any user can access any order
+});
+
+// GOOD: Ownership validated
+app.get('/api/orders/:id', auth, async (req, res) => {
+    const order = await db.getOrder(req.params.id);
+    if (order.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+    res.json(order);
+});
+```
+
+### Broken Function Level Authorization (BFLA)
+**Look for:**
+- Admin endpoints accessible by regular users
+- Missing role checks on sensitive operations
+- Horizontal privilege escalation
+
+```javascript
+// BAD: BFLA - no role check
+app.delete('/api/admin/users/:id', auth, (req, res) => {
+    db.deleteUser(req.params.id); // Any authenticated user can delete
+});
+
+// GOOD: Role-based access control
+app.delete('/api/admin/users/:id', auth, requireRole('admin'), (req, res) => {
+    db.deleteUser(req.params.id);
+});
+```
 
 ## Review Report Format
 
@@ -117,12 +192,17 @@ element.textContent = userInput;
 ## Summary
 | Category | Status |
 |----------|--------|
-| Injection | [Pass/Fail/Warning] |
-| Authentication | [Pass/Fail/Warning] |
-| Data Exposure | [Pass/Fail/Warning] |
 | Access Control | [Pass/Fail/Warning] |
+| Security Misconfiguration | [Pass/Fail/Warning] |
+| Cryptographic Failures | [Pass/Fail/Warning] |
+| Injection | [Pass/Fail/Warning] |
+| Insecure Design | [Pass/Fail/Warning] |
+| Authentication | [Pass/Fail/Warning] |
+| Integrity Failures | [Pass/Fail/Warning] |
+| Logging & Alerting | [Pass/Fail/Warning] |
+| Exception Handling | [Pass/Fail/Warning] |
 | XSS | [Pass/Fail/Warning] |
-| Configuration | [Pass/Fail/Warning] |
+| API Security (BOLA/BFLA) | [Pass/Fail/Warning] |
 
 **Overall Risk Level**: [Critical/High/Medium/Low]
 
@@ -236,4 +316,4 @@ When this skill is applied, the agent should:
 
 ---
 
-*Skill Version: 1.1*
+*Skill Version: 1.2*

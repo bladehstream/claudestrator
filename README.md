@@ -32,6 +32,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **PRD Versioning** | Automatic PRD history for audit trail across iterations |
 | **Autonomy Levels** | Supervised, Trust Agents, or Full Autonomy with safety guardrails |
 | **Async Issue Reporting** | Report issues in separate session; orchestrator polls and creates tasks |
+| **Skill Gap Analysis** | Analyze PRD requirements against available skills; warn before orchestration |
 
 ## Architecture
 
@@ -159,7 +160,19 @@ Signal the orchestrator to reload resources or control run lifecycle.
 Standalone agent that interviews you and generates `PRD.md`. Supports 7 project templates:
 - Web application, CLI tool, API service, Game, Mobile app, Library, Minimal
 
-Has web access for researching competitors and validating requirements.
+**Features:**
+- Web access for researching competitors and validating requirements
+- **Skill gap analysis** after PRD generation - identifies requirements without skill coverage
+- Saves analysis to `.claude/skill_gaps.json` for orchestrator reference
+
+**Skill Gap Analysis:**
+After generating the PRD, the agent analyzes your requirements against available skills:
+- Shows coverage percentage and matched skills
+- Warns about critical gaps (core features without skill coverage)
+- Notes partial coverage warnings
+- Recommends actions (e.g., `/ingest-skill` to fill gaps)
+
+The orchestrator also displays this summary at startup if gaps were identified.
 
 #### Skill Ingestion (`/ingest-skill`)
 

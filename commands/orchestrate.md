@@ -49,7 +49,43 @@ Scan for skills in order:
 
 Report loaded skills by category.
 
-### Step 3: Report Ready State
+### Step 3: Check Skill Coverage (New Projects)
+
+For new projects or when PRD.md has changed since last run:
+
+```
+IF PRD.md exists AND (new_project OR prd_modified):
+    # Check if /prdgen saved a skill gap analysis
+    IF .claude/skill_gaps.json exists:
+        gaps = READ .claude/skill_gaps.json
+
+        IF gaps.critical.length > 0:
+            REPORT: "⚠️ Skill Gap Warning"
+            REPORT: "────────────────────────────────────────────"
+            REPORT: "Your PRD has {gaps.critical.length} critical requirement(s)"
+            REPORT: "without matching skills:"
+            FOR gap IN gaps.critical:
+                REPORT: "  • {gap.requirement}"
+                REPORT: "    Recommendation: {gap.recommendation}"
+            REPORT: "────────────────────────────────────────────"
+            REPORT: "Consider using /ingest-skill before proceeding."
+            REPORT: "Proceeding without these skills may require more"
+            REPORT: "manual guidance during implementation."
+            REPORT: ""
+
+        IF gaps.warning.length > 0:
+            REPORT: "ℹ️ {gaps.warning.length} requirement(s) have partial coverage"
+
+        REPORT: "Coverage: {gaps.coverage_percent}%"
+        REPORT: ""
+
+    ELSE:
+        # No gap analysis - /prdgen wasn't used or older version
+        # Run quick analysis now
+        performQuickSkillAnalysis(PRD.md, loaded_skills)
+```
+
+### Step 4: Report Ready State
 
 ```
 ═══════════════════════════════════════════════════════════

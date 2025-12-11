@@ -449,6 +449,284 @@ IF user wants to restart section:
 
 ---
 
+## Skill Gap Analysis
+
+After PRD generation, analyze available skills against requirements to identify coverage gaps.
+
+### When to Run
+
+Always run after PRD is saved, before presenting next steps.
+
+### Analysis Flow
+
+```
+AFTER PRD saved:
+    # 1. Extract requirements from PRD
+    requirements = extractPRDRequirements(PRD.md)
+
+    # 2. Load available skills
+    skills = scanSkillDirectory(skill_path)
+
+    # 3. Match requirements to skills
+    coverage = []
+    gaps = []
+
+    FOR req IN requirements:
+        matched = matchRequirementToSkills(req, skills)
+
+        IF matched.score >= HIGH_THRESHOLD:
+            coverage.append({
+                requirement: req,
+                skill: matched.skill,
+                confidence: 'full'
+            })
+        ELSE IF matched.score >= PARTIAL_THRESHOLD:
+            gaps.append({
+                requirement: req,
+                skill: matched.skill,
+                severity: 'warning',
+                note: "Partial coverage"
+            })
+        ELSE:
+            gaps.append({
+                requirement: req,
+                skill: null,
+                severity: 'critical',
+                note: "No matching skill"
+            })
+
+    # 4. Display analysis
+    displaySkillCoverageReport(coverage, gaps)
+
+    # 5. Persist analysis for orchestrator
+    saveSkillGapAnalysis(coverage, gaps)
+```
+
+### Persist Analysis
+
+Save the analysis so the orchestrator can display a summary at startup:
+
+```
+FUNCTION saveSkillGapAnalysis(coverage, gaps):
+    analysis = {
+        generated_at: NOW(),
+        prd_hash: hash(PRD.md),  # To detect PRD changes
+        coverage_percent: coverage.length / (coverage.length + gaps.length) * 100,
+        covered: coverage.map(c => ({
+            requirement: c.requirement.name,
+            skill: c.skill.id
+        })),
+        critical: gaps.filter(g => g.severity == 'critical').map(g => ({
+            requirement: g.requirement.name,
+            recommendation: deriveRecommendation(g)
+        })),
+        warning: gaps.filter(g => g.severity == 'warning').map(g => ({
+            requirement: g.requirement.name,
+            partial_skill: g.skill?.id,
+            note: g.note
+        }))
+    }
+
+    # Ensure .claude directory exists
+    IF NOT EXISTS .claude/:
+        MKDIR .claude/
+
+    WRITE .claude/skill_gaps.json = analysis
+```
+
+### Requirement Extraction
+
+```
+FUNCTION extractPRDRequirements(prd):
+    requirements = []
+
+    # Extract from Tech Stack section
+    FOR tech IN prd.tech_stack:
+        requirements.append({
+            type: 'technology',
+            name: tech,
+            keywords: [tech, synonyms(tech)]
+        })
+
+    # Extract from Features section
+    FOR feature IN prd.features:
+        requirements.append({
+            type: 'feature',
+            name: feature.name,
+            keywords: extractKeywords(feature.description)
+        })
+
+    # Extract from domain/industry mentions
+    IF prd.domain:
+        requirements.append({
+            type: 'domain',
+            name: prd.domain,
+            keywords: domainKeywords(prd.domain)
+        })
+
+    # Extract from non-functional requirements
+    FOR nfr IN prd.non_functional:
+        requirements.append({
+            type: 'quality',
+            name: nfr.category,
+            keywords: [nfr.category, nfr.details]
+        })
+
+    RETURN requirements
+```
+
+### Skill Matching
+
+```
+FUNCTION matchRequirementToSkills(requirement, skills):
+    best_match = null
+    best_score = 0
+
+    FOR skill IN skills:
+        score = 0
+
+        # Keyword match (weight: 1 per match)
+        keyword_overlap = requirement.keywords INTERSECT skill.keywords
+        score += keyword_overlap.length
+
+        # Domain match (weight: 3)
+        IF requirement.type == 'domain' AND skill.domain == requirement.name:
+            score += 3
+
+        # Task type match (weight: 2)
+        IF skill.task_types.includes(requirement.type):
+            score += 2
+
+        # Category relevance (weight: 1)
+        IF categoryRelevant(skill.category, requirement):
+            score += 1
+
+        IF score > best_score:
+            best_score = score
+            best_match = skill
+
+    RETURN {
+        skill: best_match,
+        score: best_score,
+        normalized: best_score / MAX_POSSIBLE_SCORE
+    }
+```
+
+### Gap Severity
+
+| Severity | Condition | Meaning |
+|----------|-----------|---------|
+| **Critical** | No skill matches (score = 0) | Core requirement without coverage |
+| **Warning** | Partial match (0 < score < threshold) | Skill exists but not specialized |
+| **Covered** | Strong match (score >= threshold) | Good skill coverage |
+
+### Report Format
+
+```
+═══════════════════════════════════════════════════════════
+SKILL COVERAGE ANALYSIS
+═══════════════════════════════════════════════════════════
+
+REQUIREMENTS DETECTED:
+  • [Technology/feature/domain from PRD]
+  • [Technology/feature/domain from PRD]
+  ...
+
+SKILL COVERAGE:
+  ✓ [skill_id]              → [requirement]
+  ✓ [skill_id]              → [requirement]
+  ...
+
+GAPS IDENTIFIED:
+  ⚠ [requirement]           → [severity: warning/critical]
+                              [explanation]
+  ...
+
+COVERAGE SUMMARY:
+  [X]% of requirements have full skill coverage
+  [Y] critical gaps | [Z] warnings
+
+RECOMMENDATIONS:
+  [Context-specific advice based on gaps]
+
+───────────────────────────────────────────────────────────
+Next: /orchestrate to begin, or /ingest-skill to fill gaps
+═══════════════════════════════════════════════════════════
+```
+
+### Example Output
+
+```
+═══════════════════════════════════════════════════════════
+SKILL COVERAGE ANALYSIS
+═══════════════════════════════════════════════════════════
+
+REQUIREMENTS DETECTED:
+  • React frontend with charts
+  • User authentication (JWT)
+  • PostgreSQL database
+  • CSV import/export
+  • Mobile-responsive design
+  • Financial calculations
+
+SKILL COVERAGE:
+  ✓ frontend_design         → React frontend
+  ✓ data_visualization      → Charts
+  ✓ authentication          → User authentication
+  ✓ database_designer       → PostgreSQL
+  ✓ financial_app           → Financial calculations
+
+GAPS IDENTIFIED:
+  ⚠ CSV import/export       → Warning (partial)
+                              data_visualization has basic CSV support
+                              Consider dedicated ETL skill for complex transforms
+
+  ⚠ Mobile-responsive       → Warning (partial)
+                              frontend_design covers responsive basics
+                              No dedicated mobile/responsive specialist
+
+COVERAGE SUMMARY:
+  83% of requirements have full skill coverage
+  0 critical gaps | 2 warnings
+
+RECOMMENDATIONS:
+  Current skill library provides good coverage for this PRD.
+  Warnings are minor - existing skills have partial capabilities.
+  You can proceed with /orchestrate confidently.
+
+───────────────────────────────────────────────────────────
+Next: /orchestrate to begin, or /ingest-skill to fill gaps
+═══════════════════════════════════════════════════════════
+```
+
+### Critical Gap Example
+
+```
+GAPS IDENTIFIED:
+  ✗ Kubernetes deployment   → Critical (no coverage)
+                              No skill handles container orchestration
+                              Recommend: /ingest-skill for k8s expertise
+
+  ✗ GraphQL API             → Critical (no coverage)
+                              api_designer covers REST only
+                              Recommend: /ingest-skill for GraphQL
+
+COVERAGE SUMMARY:
+  60% of requirements have full skill coverage
+  2 critical gaps | 1 warning
+
+RECOMMENDATIONS:
+  ⚠️  Critical gaps detected. The orchestrator can proceed but may
+  struggle with Kubernetes and GraphQL tasks.
+
+  Options:
+  1. /ingest-skill <url> to add missing skills (recommended)
+  2. /orchestrate anyway (agents will attempt with general knowledge)
+  3. Revise PRD to use technologies with skill coverage
+```
+
+---
+
 ## Quality Checklist
 
 Before finalizing PRD, verify:
@@ -478,4 +756,6 @@ Before finalizing PRD, verify:
 
 ---
 
-*Protocol Version: 1.0*
+*Protocol Version: 1.1*
+*Updated: December 2025*
+*Added: Skill Gap Analysis after PRD generation*

@@ -25,7 +25,9 @@ Spawn a PRD Generator agent to conduct a requirements interview and produce a st
 4. **Researches** via web to validate and enrich requirements
 5. **Generates** PRD document from template
 6. **Saves** document to file
-7. **Provides** next steps for orchestration
+7. **Analyzes** skill coverage against PRD requirements
+8. **Reports** gaps and recommendations
+9. **Provides** next steps for orchestration
 
 ## Agent Configuration
 
@@ -92,8 +94,23 @@ user_interaction: heavy
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  AGENT: Save & Next Steps                                   │
+│  AGENT: Save PRD                                            │
 │  ✓ PRD saved to ./PRD.md                                   │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  AGENT: Skill Gap Analysis                                  │
+│  • Scan available skills                                   │
+│  • Match requirements to skills                            │
+│  • Report coverage and gaps                                │
+│  • Recommend actions for gaps                              │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  AGENT: Next Steps                                          │
+│  ✓ Coverage report shown                                   │
 │  "To begin implementation, run: /orchestrate"              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -180,9 +197,63 @@ Key Requirements:
 
 Saved to: ./PRD.md
 
+───────────────────────────────────────────────────────────
+SKILL COVERAGE ANALYSIS
+───────────────────────────────────────────────────────────
+
+✅ Covered (8 requirements):
+   • CLI argument parsing → cli_tool skill
+   • File operations → standard library
+   • JSON output → data_visualization skill
+   • Error handling → built-in patterns
+   ...
+
+⚠️ Gaps Identified (2 requirements):
+
+   [WARNING] Cloud sync feature
+   • No skill available for AWS S3 integration
+   • Recommendation: Create custom skill or use /ingest-skill
+   • Impact: May require manual implementation guidance
+
+   [CRITICAL] OAuth authentication
+   • No skill covers OAuth 2.0 flows
+   • Recommendation: Use /ingest-skill to import auth skill
+   • Impact: Core feature - orchestrator may struggle without guidance
+
+───────────────────────────────────────────────────────────
+COVERAGE: 80% (8/10 requirements)
+───────────────────────────────────────────────────────────
+
+⚠️ 1 critical gap identified - consider adding skills before orchestration
+
 Next step: /orchestrate
 ═══════════════════════════════════════════════════════════
 ```
+
+### Skill Gap Analysis
+
+After saving the PRD, the agent automatically analyzes skill coverage:
+
+**Coverage Levels:**
+
+| Level | Score | Description |
+|-------|-------|-------------|
+| ✅ High | ≥0.7 | Strong skill match - confident implementation |
+| ⚠️ Partial | 0.4-0.69 | Partial coverage - may need guidance |
+| ❌ None | <0.4 | No skill coverage - manual implementation likely |
+
+**Gap Severity:**
+
+| Severity | Meaning | Recommendation |
+|----------|---------|----------------|
+| `warning` | Nice-to-have or secondary feature | Can proceed, note in tasks |
+| `critical` | Core feature lacking coverage | Consider adding skill first |
+
+**Addressing Gaps:**
+
+1. **Use `/ingest-skill`** to import a skill from URL or local file
+2. **Create custom skill** in `skills/` directory
+3. **Proceed anyway** - orchestrator will use general-purpose agents
 
 ## Example Sessions
 
@@ -289,4 +360,6 @@ The orchestrator will:
 
 ---
 
-*Command Version: 1.0*
+*Command Version: 1.1*
+*Updated: December 2025*
+*Added: Skill Gap Analysis*

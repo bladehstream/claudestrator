@@ -83,6 +83,87 @@ Claude will read the journal and resume from where work left off.
 
 ---
 
+## Skill Gap Analysis
+
+After generating a PRD with `/prdgen`, the system automatically analyzes your requirements against available skills to identify coverage gaps.
+
+### What It Does
+
+1. Extracts requirements from your PRD (tech stack, features, domain expertise)
+2. Matches each requirement against the skill library
+3. Reports coverage and identifies gaps
+4. Saves analysis to `.claude/skill_gaps.json`
+
+### Coverage Levels
+
+| Level | Score | Meaning |
+|-------|-------|---------|
+| **Covered** | High match | Skill library has strong expertise |
+| **Partial** | Medium match | Basic support, may need guidance |
+| **Gap** | Low/no match | No specialized skill available |
+
+### Gap Severity
+
+| Severity | Description | Recommendation |
+|----------|-------------|----------------|
+| `critical` | Core feature without coverage | Consider adding skill first |
+| `warning` | Secondary feature, partial coverage | Can proceed, note in tasks |
+
+### Example Output
+
+After `/prdgen` completes:
+
+```
+SKILL COVERAGE ANALYSIS
+───────────────────────────────────────────────────────────
+
+REQUIREMENTS DETECTED:
+  • React frontend with charts
+  • User authentication (JWT)
+  • PostgreSQL database
+  • CSV import/export
+
+SKILL COVERAGE:
+  ✓ frontend_design         → React frontend
+  ✓ data_visualization      → Charts
+  ✓ authentication          → User authentication
+  ✓ database_designer       → PostgreSQL
+
+GAPS IDENTIFIED:
+  ⚠ CSV import/export       → Warning (partial)
+                              data_visualization has basic CSV support
+
+COVERAGE: 90% (4/4.5 requirements)
+
+───────────────────────────────────────────────────────────
+```
+
+### Orchestrator Integration
+
+When you run `/orchestrate`, it checks for the saved gap analysis:
+
+```
+⚠️ Skill Gap Warning
+────────────────────────────────────────────
+Your PRD has 2 critical requirement(s) without matching skills:
+  • Kubernetes deployment
+    Recommendation: Use /ingest-skill to import k8s expertise
+  • GraphQL API
+    Recommendation: Use /ingest-skill to import GraphQL skill
+────────────────────────────────────────────
+Coverage: 60%
+```
+
+### Addressing Gaps
+
+1. **Use `/ingest-skill`** to import skills from URLs or local files
+2. **Create a custom skill** in `skills/` directory (see skill template)
+3. **Proceed anyway** - agents will use general knowledge (may be slower, less optimal)
+
+Gaps are warnings, not blockers. The orchestrator will attempt all tasks regardless of skill coverage.
+
+---
+
 ## Autonomy Levels
 
 When you run `/orchestrate`, you'll be asked to choose an autonomy level:
@@ -816,12 +897,13 @@ Add entry to `skill_manifest.md`:
 
 1. **Generate a PRD first** (required)
    - Use `/prdgen` for interactive generation
-   - Provides clear reference throughout execution
-   - Can be refined before orchestration begins
+   - Review the **skill gap analysis** at the end
+   - Address critical gaps with `/ingest-skill` before proceeding
    - Run `/clear` after PRD generation
 
-2. **Audit skills before orchestration**
-   - Run `/audit-skills` to check library health
+2. **Review skill coverage**
+   - `/prdgen` shows skill coverage automatically
+   - `/orchestrate` will also warn about gaps
    - Use `/ingest-skill` to import missing capabilities
    - Run `/clear` before starting orchestration
 

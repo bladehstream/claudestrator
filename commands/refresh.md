@@ -1,6 +1,6 @@
 # /refresh - Signal Orchestrator to Reload
 
-Signal the orchestrator (running in another session) to reload a specific resource.
+Signal the orchestrator (running in Terminal 1) to reload a specific resource. This command runs in Terminal 2 and communicates with the orchestrator via a signal file.
 
 ## Usage
 
@@ -12,6 +12,30 @@ Signal the orchestrator (running in another session) to reload a specific resour
 ```
 
 **Important:** `/refresh` without an argument does nothing. You must specify what to refresh.
+
+## How It Works
+
+This command does NOT spawn an agent. It directly writes a signal file that the orchestrator reads on its next loop iteration.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  TERMINAL 2: User runs /refresh issues                      │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  WRITE: .claude/refresh_signal.md                           │
+│  Content: { type: "issues", action: "immediate" }           │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  TERMINAL 1: Orchestrator (on next loop iteration)          │
+│  1. Reads .claude/refresh_signal.md                         │
+│  2. Processes signal (polls issue queue)                    │
+│  3. Deletes signal file                                     │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Behavior by Target
 

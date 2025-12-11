@@ -217,14 +217,19 @@ generate_claude_md_content() {
 
 ## Claudestrator
 
-Multi-agent orchestration framework. When orchestrating:
+> ⚠️ **DO NOT run /init** - it will overwrite this configuration file.
 
-- **Protocol**: Read and follow $protocol_path
-- **Skills**: $skills_path
-- **PRD Templates**: $templates_path
-- **State Files**: .claude/ (session_state.md, orchestrator_memory.md, knowledge_graph.json)
+Multi-agent orchestration framework. Start with:
+1. \`/prdgen\` - Generate a PRD (run in Terminal 2)
+2. \`/orchestrate\` - Begin orchestration (run in Terminal 1)
 
-Commands: /orchestrate, /prdgen, /checkpoint, /status, /tasks, /skills, /deorchestrate, /audit-skills, /skill-enhance, /ingest-skill
+**Resources:**
+- Protocol: $protocol_path
+- Skills: $skills_path
+- PRD Templates: $templates_path
+- State: .claude/ (session_state.md, orchestrator_memory.md, knowledge_graph.json)
+
+**All Commands:** /orchestrate, /prdgen, /status, /tasks, /skills, /checkpoint, /deorchestrate, /issue, /issues, /refresh, /abort, /audit-skills, /skill-enhance, /ingest-skill
 EOF
 }
 
@@ -821,9 +826,13 @@ print_summary() {
     echo ""
     echo "Installation location: $REPO_DIR"
     echo ""
+    echo -e "${YELLOW}${BOLD}⚠️  IMPORTANT: Do NOT run /init${NC}"
+    echo -e "${YELLOW}   Claude Code may suggest running /init - ignore this!${NC}"
+    echo -e "${YELLOW}   It will overwrite your Claudestrator configuration.${NC}"
+    echo ""
     echo "Next steps:"
     echo "  1. Start Claude Code in your project directory"
-    echo -e "  2. Run ${BOLD}/prdgen${NC} to generate a PRD (optional)"
+    echo -e "  2. Run ${BOLD}/prdgen${NC} to generate a PRD"
     echo -e "  3. Run ${BOLD}/orchestrate${NC} to start orchestration"
     echo ""
     echo -e "Verify installation with ${BOLD}/help${NC} - you should see Claudestrator commands."

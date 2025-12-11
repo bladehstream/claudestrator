@@ -1,4 +1,9 @@
 {
+  "companyAnnouncements": [
+    "🎭 Claudestrator installed. Run /prdgen to create a PRD, then /orchestrate to begin. Do NOT run /init.",
+    "🎭 Ready for orchestration. Use /prdgen (Terminal 2) then /orchestrate (Terminal 1). Avoid /init.",
+    "🎭 Claudestrator active. Start with /prdgen to generate requirements, then /orchestrate to execute."
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -6,7 +11,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f CLAUDE.md ] || [ -f .claude/CLAUDE.md ]; then echo '⚠️  Claudestrator detected. Do NOT run /init - it will overwrite your configuration.'; fi"
+            "command": "echo '🎭 Claudestrator ready. Run /prdgen first, then /orchestrate. Do NOT run /init - it overwrites configuration.'"
           }
         ]
       }

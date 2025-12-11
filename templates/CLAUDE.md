@@ -23,7 +23,7 @@ Multi-agent orchestration framework for complex, multi-step projects.
 │   ├─► Auto-polling issues       │  │ /issues        (view queue)     │
 │   └─► Auto-committing           │  │ /refresh prd   (queue restart)  │
 │                                 │  │ /ingest-skill  (add skills)     │
-│ /status                         │  │ /abort         (emergency stop) │
+│ /progress                       │  │ /abort         (emergency stop) │
 │ /deorchestrate                  │  │                                 │
 └─────────────────────────────────┘  └─────────────────────────────────┘
 ```
@@ -38,9 +38,9 @@ Run `/claudestrator-help` for full command reference.
 - `/orchestrate --dry-run` - Preview tasks and cost estimates
 
 **Monitoring:**
-- `/status` - Show project overview
-- `/status metrics` - Token usage, costs, success rates
-- `/tasks` - Task list with dependency graph
+- `/progress` - Show project overview
+- `/progress tasks` - Task list with dependency graph
+- `/progress metrics` - Token usage, costs, success rates
 - `/skills` - Loaded skills by category
 
 **Issue Tracking:**

@@ -60,7 +60,7 @@ restart_reason: null
 
 ## Running Agents
 
-Active sub-agents spawned this session. Use `/status agents` to view or `/status <agent-id>` for details.
+Active sub-agents spawned this session. Use `/progress agents` to view or `/progress <agent-id>` for details.
 
 ```yaml
 running_agents: []
@@ -75,7 +75,7 @@ running_agents: []
 
 ## Completed Agents
 
-Sub-agents that finished this session. Stored for `/status <agent-id>` lookups.
+Sub-agents that finished this session. Stored for `/progress <agent-id>` lookups.
 
 ```yaml
 completed_agents: []

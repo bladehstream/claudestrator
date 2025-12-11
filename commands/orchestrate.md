@@ -372,7 +372,9 @@ While in orchestrator mode:
 ## Available Commands
 
 - `/checkpoint` - Save current state
-- `/status` - Show current state
+- `/progress` - Show project overview
+- `/progress tasks` - Show task list with dependency graph
+- `/progress agents` - Show running/recent agents
+- `/progress metrics` - Show performance metrics
 - `/deorchestrate` - Clean exit with save
 - `/skills` - Show loaded skills
-- `/tasks` - Show task list

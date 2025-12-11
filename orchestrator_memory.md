@@ -174,7 +174,7 @@ Explicit save without exiting:
    "Checkpoint saved. You can safely pause or continue."
 ```
 
-### `/status` - Show Current State
+### `/progress` - Show Current State
 
 Display without modifying:
 
@@ -313,10 +313,10 @@ The "Resume Context" section is critical for session continuity:
 |---------|--------|
 | `/orchestrate` | Initialize or resume orchestrator mode |
 | `/checkpoint` | Save current state without exiting |
-| `/status` | Display current state summary |
+| `/progress` | Display current state summary |
 | `/deorchestrate` | Clean exit with full save |
 | `/skills` | Show loaded skills |
-| `/tasks` | Show task list and status |
+| `/progress tasks` | Show task list and status |
 | `/decision [text]` | Log a key decision |
 | `/note [text]` | Add orchestrator note |
 

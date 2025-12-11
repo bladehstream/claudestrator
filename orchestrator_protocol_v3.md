@@ -647,6 +647,13 @@ FUNCTION constructPrompt(task, skills, context, model):
         - {ref.file}:{ref.lines} — {ref.description}
         {END FOR}
 
+        ## Working Directory
+        Your working directory is the PROJECT ROOT: {project_root}
+        All paths are relative to this directory:
+        - PRD: ./PRD.md (in project root, NOT in .claude/)
+        - Journal: .claude/journal/
+        - State: .claude/session_state.md
+
         ## Instructions
         1. Read any referenced files you need for context
         2. Execute your task according to your skills and standards
@@ -659,6 +666,7 @@ FUNCTION constructPrompt(task, skills, context, model):
         - Document ALL actions taken
         - If blocked, document the blocker and stop
         - Update acceptance criteria checkboxes in your outcome
+        - All file paths are relative to project root, NOT to .claude/ or other subdirectories
     """)
 
     RETURN prompt
@@ -680,7 +688,7 @@ Task(
     description: task.name
 )
 
-# Track agent in session state for /status monitoring
+# Track agent in session state for /progress monitoring
 session_state.running_agents.append({
     id: agent_id,
     task_id: task.id,
@@ -711,7 +719,7 @@ FOR task IN independent_tasks.slice(0, MAX_PARALLEL):
 # All agents run concurrently, orchestrator waits for all to complete
 ```
 
-**Checking Agent Status (for /status command):**
+**Checking Agent Status (for /progress command):**
 
 ```
 FUNCTION getAgentStatus(agent_id):
@@ -737,7 +745,7 @@ AFTER agent completes:
         completed_at: NOW(),
         duration: NOW() - agent.started_at,
         outcome: handoff.outcome,
-        final_output: result.slice(-500)  # Store last 500 chars for /status
+        final_output: result.slice(-500)  # Store last 500 chars for /progress
     })
     WRITE session_state.md
 

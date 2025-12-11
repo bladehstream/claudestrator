@@ -238,7 +238,7 @@ Or report it again via `/issue` if the queue entry is unclear.
 |---------|---------|
 | `/issues` | View issue queue status |
 | `/issues <id>` | View specific issue details |
-| `/status` | Orchestrator status (includes pending issue count) |
+| `/progress` | Orchestrator status (includes pending issue count) |
 
 ---
 

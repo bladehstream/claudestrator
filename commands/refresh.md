@@ -275,7 +275,7 @@ Phase 5 Completion:
 
 ---
 
-## Display in /status
+## Display in /progress
 
 When a PRD restart is queued:
 
@@ -296,5 +296,5 @@ CURRENT STATE
 | `/abort` | Stop current run immediately (destructive) |
 | `/issue` | Report new issue |
 | `/issues` | View issue queue |
-| `/status` | View orchestrator state (shows if restart queued) |
+| `/progress` | View orchestrator state (shows if restart queued) |
 | `/ingest-skill` | Import new skill |

@@ -227,6 +227,16 @@ Explore the codebase as needed.
 {{/each}}
 {{/if}}
 
+## Working Directory
+
+Your working directory is the **PROJECT ROOT**.
+All paths are relative to the project root:
+- PRD: `./PRD.md` (in project root, NOT in `.claude/`)
+- Journal: `.claude/journal/`
+- Task files: `.claude/journal/task-*.md`
+
+**IMPORTANT**: Do NOT look for `PRD.md` inside `.claude/` or `.claudestrator/` directories. The PRD is always at the project root.
+
 ## Instructions
 
 1. Review the code references above for context

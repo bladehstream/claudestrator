@@ -29,7 +29,7 @@ Claudestrator is designed for a **dual terminal workflow**:
 │   ├─► Auto-polling issues       │  │ /issues        (view queue)     │
 │   └─► Auto-committing           │  │ /refresh prd   (queue restart)  │
 │                                 │  │ /ingest-skill  (add skills)     │
-│ /status agents                  │  │ /abort         (emergency stop) │
+│ /progress agents                │  │ /abort         (emergency stop) │
 │ /deorchestrate                  │  │                                 │
 └─────────────────────────────────┘  └─────────────────────────────────┘
 ```
@@ -482,14 +482,15 @@ During orchestration, sub-agents execute tasks in the background. You can monito
 
 | Command | Description |
 |---------|-------------|
-| `/status` | Overview including running agent count |
-| `/status agents` | List all running and recently completed agents |
-| `/status <agent-id>` | View last output from a specific agent |
+| `/progress` | Overview including running agent count |
+| `/progress tasks` | Show task list with dependency graph |
+| `/progress agents` | List all running and recently completed agents |
+| `/progress <agent-id>` | View last output from a specific agent |
 
 ### Example: Listing Agents
 
 ```
-/status agents
+/progress agents
 
 ═══════════════════════════════════════════════════════════
 AGENT STATUS
@@ -505,14 +506,14 @@ COMPLETED THIS SESSION (3)
   agent-rst654  Task 001: Initialize structure    ✓    0m 38s
 
 ═══════════════════════════════════════════════════════════
-Usage: /status <agent-id> to see last agent output
+Usage: /progress <agent-id> to see last agent output
 ═══════════════════════════════════════════════════════════
 ```
 
 ### Example: Agent Details
 
 ```
-/status agent-abc123
+/progress agent-abc123
 
 ═══════════════════════════════════════════════════════════
 AGENT: agent-abc123
@@ -544,8 +545,8 @@ Reading src/config/auth.config.ts for token expiry settings.
 
 ### Tips
 
-- Use `/status agents` to see "what's happening right now"
-- Use `/status <agent-id>` when an agent seems to be taking long
+- Use `/progress agents` to see "what's happening right now"
+- Use `/progress <agent-id>` when an agent seems to be taking long
 - Agent output is truncated to ~500 characters for readability
 - Full task details are always in `journal/task-*.md`
 
@@ -753,10 +754,10 @@ Terminal 1:
 | Terminal 1 (Orchestrator) | Terminal 2 (Support) |
 |---------------------------|----------------------|
 | `/orchestrate` | `/issue`, `/issue reject` |
-| `/status`, `/status agents` | `/issues` |
+| `/progress`, `/progress agents` | `/issues` |
 | `/checkpoint` | `/refresh issues\|skills\|prd\|cancel` |
 | `/deorchestrate` | `/abort` |
-| `/tasks`, `/skills` | `/ingest-skill`, `/audit-skills` |
+| `/progress tasks`, `/skills` | `/ingest-skill`, `/audit-skills` |
 
 ### Emergency Stop: /abort
 
@@ -926,11 +927,12 @@ Add entry to `skill_manifest.md`:
    - Trust the skill matching
    - Review journal if curious
 
-2. **Monitor agent progress** with `/status`:
+2. **Monitor agent progress** with `/progress`:
    ```
-   /status              # Overview - shows running agent count
-   /status agents       # List all running and recent agents
-   /status agent-abc123 # See last output from specific agent
+   /progress              # Overview - shows running agent count
+   /progress tasks        # Task list with dependency graph
+   /progress agents       # List all running and recent agents
+   /progress agent-abc123 # See last output from specific agent
    ```
 
 3. **Provide feedback when asked**
@@ -1199,21 +1201,14 @@ Stop orchestration immediately.
 - Shows count of tasks that will be purged
 - Archives completed work before purging
 
-### Status Commands (`/status`)
+### Progress Commands (`/progress`)
 
 ```
-/status              # Project overview
-/status agents       # List running and recent agents
-/status <agent-id>   # Last output from specific agent
-/status metrics      # Performance metrics and token usage
-```
-
-### Task List (`/tasks`)
-
-```
-/tasks               # Show task list with dependency graph
-/tasks --list        # Task list only (no graph)
-/tasks --graph       # Dependency graph only
+/progress              # Project overview
+/progress tasks        # Show task list with dependency graph
+/progress agents       # List running and recent agents
+/progress <agent-id>   # Last output from specific agent
+/progress metrics      # Performance metrics and token usage
 ```
 
 The dependency graph shows:

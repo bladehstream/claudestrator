@@ -33,8 +33,8 @@ WORKFLOW: Use two terminals
   TERMINAL 1 (Orchestrator)     TERMINAL 2 (Support)
   ─────────────────────────     ────────────────────
   /orchestrate                  /prdgen (before T1)
-  /status                       /issue
-  /tasks                        /issues
+  /progress                     /issue
+  /progress tasks               /issues
   /skills                       /ingest-skill
   /checkpoint                   /refresh
   /deorchestrate                /abort
@@ -62,22 +62,22 @@ GETTING STARTED
 MONITORING (Terminal 1)
 ───────────────────────────────────────────────────────────
 
-  /status                 Show project overview
+  /progress               Show project overview
                           Phase, progress, current task
 
-  /status agents          List running and recent agents
-                          Shows agent IDs for inspection
-
-  /status <agent-id>      Show specific agent's last output
-                          Useful for debugging stuck agents
-
-  /status metrics         Show performance metrics
-                          Token usage, costs, success rates
-                          Breakdown by model and skill
-
-  /tasks                  Show task list with status
+  /progress tasks         Show task list with status
                           Dependency graph visualization
                           Critical path analysis
+
+  /progress agents        List running and recent agents
+                          Shows agent IDs for inspection
+
+  /progress <agent-id>    Show specific agent's last output
+                          Useful for debugging stuck agents
+
+  /progress metrics       Show performance metrics
+                          Token usage, costs, success rates
+                          Breakdown by model and skill
 
   /skills                 Show loaded skills by category
                           Skill match statistics

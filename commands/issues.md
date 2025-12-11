@@ -129,7 +129,7 @@ LINKED TASK
   Agent:    agent-abc123
   Started:  5 minutes ago
 
-Run /status agent-abc123 for agent output.
+Run /progress agent-abc123 for agent output.
 
 ═══════════════════════════════════════════════════════════
 ```
@@ -176,5 +176,5 @@ Run /issue to report your first issue.
 |---------|---------|
 | `/issue` | Report a new issue |
 | `/issue reject <id> <reason>` | Mark issue as won't fix |
-| `/status` | Orchestrator status |
-| `/status <agent-id>` | View agent working on issue |
+| `/progress` | Orchestrator status |
+| `/progress <agent-id>` | View agent working on issue |

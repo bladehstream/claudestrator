@@ -8,6 +8,7 @@ task_types: [design, planning, specification]
 keywords: [api, rest, graphql, endpoint, schema, request, response, http, service, route]
 complexity: [normal, complex]
 pairs_with: [security_reviewer, documentation]
+source: original
 ---
 
 # API Designer

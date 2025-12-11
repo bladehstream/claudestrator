@@ -8,6 +8,7 @@ task_types: [enhancement, update, research]
 keywords: [skill, enhance, update, research, web, current, modern, improve, metadata]
 complexity: [complex]
 pairs_with: [skill_auditor]
+source: original
 ---
 
 # Skill Enhancer

@@ -295,5 +295,141 @@ orchestrator/skills/
 
 ---
 
-*Manifest Version: 1.0*
+### api_development
+
+| Field | Value |
+|-------|-------|
+| **Name** | API Development |
+| **ID** | api_development |
+| **Category** | implementation |
+| **Path** | skills/implementation/api_development.md |
+| **Domain** | api, backend, typescript, web |
+| **Task Types** | design, implementation, documentation |
+| **Keywords** | api, rest, graphql, trpc, hono, endpoint, validation, zod, openapi, http, request, response, pagination, rate-limiting, versioning |
+| **Complexity** | normal, complex |
+| **Pairs With** | database_designer, security_reviewer, authentication |
+| **Description** | Build production-ready APIs with modern TypeScript patterns, REST/GraphQL/tRPC |
+
+---
+
+### databases
+
+| Field | Value |
+|-------|-------|
+| **Name** | Databases |
+| **ID** | databases |
+| **Category** | implementation |
+| **Path** | skills/implementation/databases.md |
+| **Domain** | database, orm, sql, backend |
+| **Task Types** | design, implementation, optimization |
+| **Keywords** | database, postgresql, prisma, drizzle, orm, sql, migration, query, index, transaction, d1, connection pooling |
+| **Complexity** | normal, complex |
+| **Pairs With** | api_development, backend_security |
+| **Description** | Database management with PostgreSQL, Prisma/Drizzle ORMs, migrations, query optimization |
+
+---
+
+### web_auth_security
+
+| Field | Value |
+|-------|-------|
+| **Name** | Web Auth Security |
+| **ID** | web_auth_security |
+| **Category** | security |
+| **Path** | skills/security/web_auth_security.md |
+| **Domain** | backend, web, api |
+| **Task Types** | implementation, security, design |
+| **Keywords** | auth, login, logout, session, jwt, oauth, password, mfa, csrf, xss, owasp, express |
+| **Complexity** | normal, complex |
+| **Pairs With** | api_designer, security_reviewer, database_designer |
+| **Description** | Server-side authentication with OWASP guidelines, JWT, OAuth2, session management |
+
+---
+
+### react_native_mobile_auth
+
+| Field | Value |
+|-------|-------|
+| **Name** | React Native Auth |
+| **ID** | react_native_mobile_auth |
+| **Category** | security |
+| **Path** | skills/security/react_native_mobile_auth.md |
+| **Domain** | mobile, react-native, expo, api |
+| **Task Types** | implementation, security, design |
+| **Keywords** | auth, biometrics, face id, touch id, passkeys, webauthn, expo, react native, secure storage, oauth, pkce, hono |
+| **Complexity** | normal, complex |
+| **Pairs With** | web_auth_security, api_development, device_hardware |
+| **Description** | Mobile authentication with React Native/Expo biometrics, passkeys, OAuth PKCE |
+
+---
+
+### serverless_infrastructure
+
+| Field | Value |
+|-------|-------|
+| **Name** | Serverless Infrastructure |
+| **ID** | serverless_infrastructure |
+| **Category** | implementation |
+| **Path** | skills/implementation/serverless_infrastructure.md |
+| **Domain** | cloudflare, serverless, backend, typescript |
+| **Task Types** | implementation, deployment, design |
+| **Keywords** | cloudflare, workers, serverless, hono, kv, d1, r2, durable objects, wrangler, edge, cron |
+| **Complexity** | normal, complex |
+| **Pairs With** | api_development, databases, backend_security |
+| **Description** | Cloudflare Workers deployment with Hono, KV, D1, R2, Durable Objects |
+
+---
+
+### backend_security
+
+| Field | Value |
+|-------|-------|
+| **Name** | Backend Security |
+| **ID** | backend_security |
+| **Category** | security |
+| **Path** | skills/security/backend_security.md |
+| **Domain** | security, api, backend |
+| **Task Types** | implementation, security, review |
+| **Keywords** | security, owasp, injection, xss, csrf, validation, zod, headers, secrets, cors, rate limiting, sql injection |
+| **Complexity** | normal, complex |
+| **Pairs With** | api_development, web_auth_security, databases |
+| **Description** | Secure APIs against OWASP Top 10, injection attacks, misconfigurations |
+
+---
+
+### observability
+
+| Field | Value |
+|-------|-------|
+| **Name** | Observability |
+| **ID** | observability |
+| **Category** | support |
+| **Path** | skills/support/observability.md |
+| **Domain** | monitoring, logging, backend, cloudflare |
+| **Task Types** | implementation, debugging, optimization |
+| **Keywords** | logging, monitoring, metrics, tracing, sentry, error tracking, cloudflare, workers, health checks |
+| **Complexity** | normal, complex |
+| **Pairs With** | serverless_infrastructure, api_development, backend_security |
+| **Description** | Logging, metrics, tracing, error tracking for Cloudflare Workers |
+
+---
+
+### service_integrations
+
+| Field | Value |
+|-------|-------|
+| **Name** | Service Integrations |
+| **ID** | service_integrations |
+| **Category** | implementation |
+| **Path** | skills/implementation/service_integrations.md |
+| **Domain** | api, backend, payments, webhooks |
+| **Task Types** | implementation, integration |
+| **Keywords** | api client, webhooks, retry, circuit breaker, rate limiting, airwallex, stripe, sendgrid, http, fetch |
+| **Complexity** | normal, complex |
+| **Pairs With** | api_development, backend_security, observability |
+| **Description** | External API integration with retry, circuit breaker, webhooks, payment providers |
+
+---
+
+*Manifest Version: 1.1*
 *Last Updated: December 2025*

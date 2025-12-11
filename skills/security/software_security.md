@@ -7,7 +7,7 @@ domain: [backend, frontend, api, web, mobile]
 task_types: [implementation, security]
 keywords: [secure coding, input validation, parameterized query, output encoding, encryption, hashing, secrets management, defense in depth, least privilege]
 complexity: [normal, complex]
-pairs_with: [authentication, api_designer, security_reviewer]
+pairs_with: [web_auth_security, api_designer, security_reviewer]
 source: Adapted from Project CodeGuard software-security framework
 ---
 

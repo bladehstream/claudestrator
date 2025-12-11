@@ -1,7 +1,7 @@
 ---
 name: device-hardware
 id: device_hardware
-version: "1.0"
+version: 1.0
 category: implementation
 description: Comprehensive guide for React Native/Expo hardware integration including biometrics (Face ID, Touch ID, fingerprint), FIDO2/Passkeys (YubiKey, security keys), camera (photos, video, barcode/QR scanning), document scanning with OCR, NFC tag reading/writing, Bluetooth Low Energy (BLE), sensors (accelerometer, gyroscope, magnetometer, barometer), haptic feedback, audio recording, speech recognition, GPS/location tracking, and secure storage. Use when building mobile apps that need device hardware access, authentication features, scanning capabilities, or sensor data.
 domain:

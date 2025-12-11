@@ -7,7 +7,7 @@ domain: [web, frontend, ui]
 task_types: [design, implementation, feature]
 keywords: [ui, ux, frontend, css, tailwind, design, layout, responsive, component, interface, styling, typography, color, theme]
 complexity: [normal, complex]
-pairs_with: [data_visualization, html5_canvas, authentication]
+pairs_with: [data_visualization, html5_canvas, web_auth_security]
 source: Adapted from Anthropic frontend-design skill
 ---
 

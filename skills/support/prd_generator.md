@@ -8,6 +8,7 @@ task_types: [discovery, documentation, planning]
 keywords: [prd, requirements, product, specification, scope, interview, discovery, planning]
 complexity: [normal, complex]
 pairs_with: []
+source: original
 ---
 
 # PRD Generator

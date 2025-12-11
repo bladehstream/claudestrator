@@ -8,6 +8,7 @@ task_types: [implementation, feature, bugfix]
 keywords: [canvas, html5, javascript, game, animation, rendering, sprite, 2d, graphics, gameloop, collision, input]
 complexity: [normal, complex]
 pairs_with: [svg_asset_gen, game_feel]
+source: original
 ---
 
 # HTML5 Canvas Developer

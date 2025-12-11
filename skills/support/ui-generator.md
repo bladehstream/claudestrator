@@ -1,7 +1,7 @@
 ---
 name: ui-generator
 id: ui_generator
-version: "1.0"
+version: 1.0
 category: support
 description: AI-powered UI asset and code generation using Google Gemini API (Nano Banana for images, Gemini for code). Use when the user wants to generate UI mockups, component designs, wireframes, or production-ready frontend code (React Native, HTML/CSS, React) from text descriptions or reference images. Supports FinTech, mobile apps, web dashboards, and general UI/UX design workflows.
 domain:

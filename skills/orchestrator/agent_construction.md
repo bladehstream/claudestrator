@@ -9,6 +9,7 @@ task_types: [planning, delegation, coordination]
 keywords: [model selection, skill composition, agent spawning, task delegation, context budgeting, prompt construction]
 complexity: [normal]
 pairs_with: []
+source: original
 ---
 
 # Agent Construction Expert

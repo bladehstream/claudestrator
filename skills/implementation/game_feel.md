@@ -8,6 +8,7 @@ task_types: [polish, feature, implementation]
 keywords: [juice, polish, animation, feedback, shake, particle, easing, effect, feel, vfx, satisfaction]
 complexity: [normal]
 pairs_with: [html5_canvas, game_designer]
+source: original
 ---
 
 # Game Feel Developer

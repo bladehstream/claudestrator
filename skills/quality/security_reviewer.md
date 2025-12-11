@@ -8,6 +8,7 @@ task_types: [review, audit, verification]
 keywords: [security review, code audit, vulnerability scan, penetration test, security assessment, threat model, risk assessment, compliance check]
 complexity: [complex]
 pairs_with: [qa_agent, software_security]
+source: original
 ---
 
 # Security Reviewer

@@ -8,6 +8,7 @@ task_types: [testing, review, evaluation]
 keywords: [user, player, experience, ux, accessibility, friction, usability, persona, feedback]
 complexity: [normal]
 pairs_with: [qa_agent, game_designer]
+source: original
 ---
 
 # User Persona Reviewer

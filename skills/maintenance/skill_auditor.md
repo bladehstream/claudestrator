@@ -8,6 +8,7 @@ task_types: [audit, review, analysis]
 keywords: [skill, metadata, audit, validate, stale, outdated, review, health, maintenance]
 complexity: [normal]
 pairs_with: [skill_enhancer]
+source: original
 ---
 
 # Skill Auditor

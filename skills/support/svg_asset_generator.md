@@ -8,6 +8,7 @@ task_types: [asset, implementation]
 keywords: [svg, sprite, icon, graphic, vector, animation, visual, art, image, asset]
 complexity: [easy, normal]
 pairs_with: [html5_canvas, game_designer]
+source: original
 ---
 
 # SVG Asset Generator

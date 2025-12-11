@@ -1,16 +1,17 @@
 ---
-name: Authentication Expert
-id: authentication
-version: 1.0
+name: Web Auth Security
+id: web_auth_security
+version: 1.1
 category: security
-domain: [backend, web, mobile, api]
+domain: [backend, web, api]
 task_types: [implementation, security, design]
-keywords: [auth, login, logout, session, jwt, oauth, password, registration, signup, signin, token, credential, mfa, 2fa, authentication, authorization, oidc, sso]
+keywords: [auth, login, logout, session, jwt, oauth, password, registration, signup, signin, token, credential, mfa, 2fa, authentication, authorization, oidc, sso, csrf, xss, owasp, express]
 complexity: [normal, complex]
-pairs_with: [api_designer, security_reviewer, database_designer]
+pairs_with: [api_designer, security_reviewer, database_designer, api_development]
+source: original
 ---
 
-# Authentication Expert
+# Web Auth Security
 
 ## Role
 

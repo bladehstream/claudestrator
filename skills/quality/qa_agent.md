@@ -8,6 +8,7 @@ task_types: [testing, verification, validation]
 keywords: [test, qa, quality, bug, verify, check, validate, acceptance, criteria, review]
 complexity: [normal]
 pairs_with: [any]
+source: original
 ---
 
 # QA Agent

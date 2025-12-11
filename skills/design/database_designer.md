@@ -7,7 +7,8 @@ domain: [backend, data, api]
 task_types: [design, planning, optimization]
 keywords: [database, schema, sql, postgres, postgresql, sqlite, mysql, table, relation, migration, index, query, data model, entity, foreign key, primary key, normalization, erd]
 complexity: [normal, complex]
-pairs_with: [api_designer, security_reviewer, authentication]
+pairs_with: [api_designer, security_reviewer, web_auth_security]
+source: original
 ---
 
 # Database Designer

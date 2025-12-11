@@ -8,6 +8,7 @@ task_types: [refactor, cleanup]
 keywords: [refactor, clean, restructure, extract, rename, simplify, pattern, technical debt, code smell]
 complexity: [normal, complex]
 pairs_with: [qa_agent]
+source: original
 ---
 
 # Refactoring Specialist

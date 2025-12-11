@@ -8,6 +8,7 @@ task_types: [implementation, design, feature]
 keywords: [chart, graph, visualization, d3, plot, dashboard, metrics, recharts, chart.js, bar chart, line chart, pie chart, data viz, analytics, scatter, area, heatmap, sparkline]
 complexity: [normal, complex]
 pairs_with: [html5_canvas, api_designer, frontend_design]
+source: original
 ---
 
 # Data Visualization Developer

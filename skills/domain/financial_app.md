@@ -8,6 +8,7 @@ task_types: [design, implementation, feature]
 keywords: [finance, budget, expense, transaction, money, currency, spending, income, account, bank, savings, investment, category, recurring, ledger, balance, payment]
 complexity: [normal, complex]
 pairs_with: [api_designer, database_designer, security_reviewer, data_visualization]
+source: original
 ---
 
 # Financial Application Domain Expert

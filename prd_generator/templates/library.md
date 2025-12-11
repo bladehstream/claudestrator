@@ -1,11 +1,36 @@
 # Product Requirements Document: Library/SDK
 
+```yaml
+# PRD Metadata (machine-readable for orchestrator)
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Library Name]"
+    type: library
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []  # TypeScript, Python, Go, Rust
+    frameworks: []
+    databases: []
+  library:
+    package_name: "[e.g., @org/library-name]"
+    module_system: "[ESM, CJS, Both]"
+    min_runtime: "[e.g., Node 18+, Python 3.9+]"
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 4 weeks]"
+  tags: []
+```
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | **Project Name** | [Library Name] |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Created** | [Date] |
 | **Last Updated** | [Date] |
 | **Author** | [Author] |
@@ -15,7 +40,10 @@
 
 ## 1. Executive Summary
 
-### 1.1 Problem Statement
+### 1.1 Vision Statement
+[One sentence describing what this library will enable]
+
+### 1.2 Problem Statement
 [What problem does this library solve? What repetitive task or complex functionality does it abstract?]
 
 ### 1.2 Proposed Solution

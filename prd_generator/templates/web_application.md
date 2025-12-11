@@ -1,11 +1,33 @@
 # Product Requirements Document: Web Application
 
+```yaml
+# PRD Metadata (machine-readable for orchestrator)
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Project Name]"
+    type: web_application
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []
+    frameworks: []
+    databases: []
+    infrastructure: []
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 4 weeks]"
+  tags: []
+```
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | **Project Name** | [Project Name] |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Created** | [Date] |
 | **Last Updated** | [Date] |
 | **Author** | [Author] |
@@ -15,17 +37,21 @@
 
 ## 1. Executive Summary
 
-### 1.1 Problem Statement
+### 1.1 Vision Statement
+[One sentence describing what this product will become and the value it delivers]
+
+### 1.2 Problem Statement
 [What problem does this application solve? Who experiences this problem? What is the impact of not solving it?]
 
-### 1.2 Proposed Solution
+### 1.3 Proposed Solution
 [High-level description of the web application and how it addresses the problem]
 
-### 1.3 Success Metrics
-| Metric | Target | Measurement Method |
-|--------|--------|-------------------|
-| [e.g., User adoption] | [e.g., 1000 users in 3 months] | [e.g., Analytics dashboard] |
-| [e.g., Task completion rate] | [e.g., 85%] | [e.g., User flow tracking] |
+### 1.4 Success Metrics (SMART Goals)
+
+| ID | Metric | Target | Timeline | Measurement Method |
+|----|--------|--------|----------|-------------------|
+| G-001 | [e.g., User adoption] | [e.g., 1000 users] | [e.g., 3 months] | [e.g., Analytics] |
+| G-002 | [e.g., Task completion] | [e.g., 85%] | [e.g., Launch + 1 month] | [e.g., User flow tracking] |
 
 ---
 
@@ -38,97 +64,155 @@
 |-----------|-------------|
 | **Name** | [Persona name] |
 | **Role** | [Job title / Role] |
+| **Demographics** | [Age range, location, context] |
 | **Goals** | [What they want to achieve] |
 | **Pain Points** | [Current frustrations] |
 | **Technical Proficiency** | Low / Medium / High |
+| **Context of Use** | [Desktop at work? Mobile on the go?] |
 
 #### Secondary Persona(s)
 [Repeat structure as needed]
 
-### 2.2 User Stories
-
-| ID | As a... | I want to... | So that... | Priority |
-|----|---------|--------------|------------|----------|
-| US-001 | [user type] | [action] | [benefit] | Must Have |
-| US-002 | [user type] | [action] | [benefit] | Should Have |
-| US-003 | [user type] | [action] | [benefit] | Nice to Have |
-
-### 2.3 User Journeys
-[Describe key user flows through the application]
+### 2.2 User Journeys
+[Describe key user flows through the application - what triggers them, steps involved, desired outcome]
 
 ---
 
-## 3. Functional Requirements
+## 3. MVP Feature List
 
-### 3.1 Authentication & Authorization
+### 3.1 Feature Summary Table
 
-| Requirement | Description | Priority |
-|-------------|-------------|----------|
-| AUTH-001 | [e.g., Email/password registration] | Must Have |
-| AUTH-002 | [e.g., OAuth integration (Google, GitHub)] | Should Have |
-| AUTH-003 | [e.g., Role-based access control] | Must Have |
+| ID | Feature | Priority | Complexity | Dependencies | Status |
+|----|---------|----------|------------|--------------|--------|
+| F-001 | [Feature Name] | Must Have | Easy/Normal/Complex | None | Planned |
+| F-002 | [Feature Name] | Must Have | Easy/Normal/Complex | F-001 | Planned |
+| F-003 | [Feature Name] | Should Have | Easy/Normal/Complex | F-001 | Planned |
+| F-004 | [Feature Name] | Could Have | Easy/Normal/Complex | F-002, F-003 | Planned |
 
-### 3.2 Core Features
+### 3.2 Priority Definitions
 
-#### Feature: [Feature Name]
-| Aspect | Description |
-|--------|-------------|
-| **Description** | [What the feature does] |
-| **User Story** | [Reference to user story] |
-| **Acceptance Criteria** | [Bullet list of criteria] |
-| **Dependencies** | [Other features this depends on] |
-| **Priority** | Must Have / Should Have / Nice to Have |
-
-[Repeat for each core feature]
-
-### 3.3 Data Management
-
-| Requirement | Description | Priority |
-|-------------|-------------|----------|
-| DATA-001 | [e.g., CRUD operations for resources] | Must Have |
-| DATA-002 | [e.g., Data export functionality] | Should Have |
-| DATA-003 | [e.g., Bulk import capability] | Nice to Have |
-
-### 3.4 Notifications & Communication
-
-| Requirement | Description | Priority |
-|-------------|-------------|----------|
-| NOTIF-001 | [e.g., Email notifications for key events] | Should Have |
-| NOTIF-002 | [e.g., In-app notification center] | Should Have |
+| Priority | Definition | MVP Inclusion |
+|----------|------------|---------------|
+| **Must Have** | Core functionality - product cannot ship without | Yes |
+| **Should Have** | Important but MVP can launch with workarounds | Partial |
+| **Could Have** | Nice to have, schedule permitting | No |
+| **Won't Have** | Explicitly out of scope for this release | No |
 
 ---
 
-## 4. Non-Functional Requirements
+## 4. Feature Specifications
 
-### 4.1 Performance
+### F-001: [Feature Name]
 
-| Metric | Requirement |
-|--------|-------------|
-| Page Load Time | < [X] seconds |
-| Time to Interactive | < [X] seconds |
-| API Response Time | < [X] ms (95th percentile) |
-| Concurrent Users | Support [X] simultaneous users |
+**Priority:** Must Have
+**Complexity:** Normal
+**Dependencies:** None
+**Estimated Tasks:** 3-5
 
-### 4.2 Security
+#### Description
+[What the feature does and why it matters]
 
-| Requirement | Description |
-|-------------|-------------|
-| SEC-001 | HTTPS enforced for all connections |
-| SEC-002 | [Authentication token handling] |
-| SEC-003 | [Input validation and sanitization] |
-| SEC-004 | [OWASP Top 10 compliance] |
-| SEC-005 | [Data encryption at rest and in transit] |
+#### User Stories
 
-### 4.3 Accessibility
+| ID | As a... | I want to... | So that... |
+|----|---------|--------------|------------|
+| US-001 | [user type] | [action] | [benefit] |
+| US-002 | [user type] | [action] | [benefit] |
 
-| Standard | Requirement |
-|----------|-------------|
-| WCAG Level | [AA / AAA] |
-| Screen Reader | Full compatibility |
-| Keyboard Navigation | All features accessible |
-| Color Contrast | Minimum [4.5:1 / 7:1] ratio |
+#### Acceptance Criteria
 
-### 4.4 Browser & Device Support
+| ID | Given | When | Then |
+|----|-------|------|------|
+| AC-001 | [initial context] | [action taken] | [expected outcome] |
+| AC-002 | [initial context] | [action taken] | [expected outcome] |
+| AC-003 | [initial context] | [action taken] | [expected outcome] |
+
+#### Technical Notes
+- [Implementation consideration]
+- [Performance consideration]
+- [Security consideration]
+
+#### Out of Scope
+- [What this feature explicitly does NOT include]
+
+---
+
+### F-002: [Feature Name]
+
+**Priority:** Must Have
+**Complexity:** Normal
+**Dependencies:** F-001
+**Estimated Tasks:** 2-4
+
+#### Description
+[What the feature does and why it matters]
+
+#### User Stories
+
+| ID | As a... | I want to... | So that... |
+|----|---------|--------------|------------|
+| US-003 | [user type] | [action] | [benefit] |
+
+#### Acceptance Criteria
+
+| ID | Given | When | Then |
+|----|-------|------|------|
+| AC-004 | [initial context] | [action taken] | [expected outcome] |
+| AC-005 | [initial context] | [action taken] | [expected outcome] |
+
+#### Technical Notes
+- [Notes]
+
+#### Out of Scope
+- [Exclusions]
+
+---
+
+[Repeat F-XXX structure for each feature]
+
+---
+
+## 5. Design Specifications
+
+### 5.1 Functional Requirements
+
+| ID | Requirement | Feature | Verification Method |
+|----|-------------|---------|---------------------|
+| FR-001 | System shall [capability] | F-001 | Unit test |
+| FR-002 | System shall [capability] | F-002 | Integration test |
+| FR-003 | System shall [capability] | F-003 | Manual test |
+
+### 5.2 Non-Functional Requirements
+
+#### Performance
+
+| ID | Category | Requirement | Target | Measurement |
+|----|----------|-------------|--------|-------------|
+| NFR-001 | Performance | Page load time | < 2 seconds | Lighthouse |
+| NFR-002 | Performance | API response time | < 200ms p95 | APM monitoring |
+| NFR-003 | Performance | Time to Interactive | < 3 seconds | Lighthouse |
+| NFR-004 | Scalability | Concurrent users | [X] users | Load test |
+
+#### Security
+
+| ID | Category | Requirement | Verification |
+|----|----------|-------------|--------------|
+| NFR-010 | Security | HTTPS enforced for all connections | Config review |
+| NFR-011 | Security | Password hashing with bcrypt (cost 12+) | Code review |
+| NFR-012 | Security | Input validation on all user inputs | Security scan |
+| NFR-013 | Security | OWASP Top 10 compliance | Penetration test |
+| NFR-014 | Security | XSS prevention via CSP headers | Security scan |
+
+#### Accessibility
+
+| ID | Category | Requirement | Target | Verification |
+|----|----------|-------------|--------|--------------|
+| NFR-020 | Accessibility | WCAG compliance | Level AA | Axe audit |
+| NFR-021 | Accessibility | Keyboard navigation | All features | Manual test |
+| NFR-022 | Accessibility | Screen reader support | Full | Manual test |
+| NFR-023 | Accessibility | Color contrast ratio | 4.5:1 minimum | Lighthouse |
+
+#### Compatibility
 
 | Browser/Device | Minimum Version |
 |----------------|-----------------|
@@ -139,125 +223,169 @@
 | Mobile (iOS Safari) | iOS 14+ |
 | Mobile (Chrome Android) | Android 10+ |
 
-### 4.5 Scalability
-
-| Aspect | Requirement |
-|--------|-------------|
-| Horizontal Scaling | [Requirements] |
-| Database Growth | [Expected data volume] |
-| Traffic Patterns | [Peak vs average expectations] |
-
 ---
 
-## 5. Technical Architecture
+## 6. Technical Architecture
 
-### 5.1 Technology Stack
+### 6.1 Technology Stack
 
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| Frontend | [e.g., React, Vue, Angular] | [Why this choice] |
-| Backend | [e.g., Node.js, Python, Go] | [Why this choice] |
-| Database | [e.g., PostgreSQL, MongoDB] | [Why this choice] |
-| Hosting | [e.g., AWS, GCP, Vercel] | [Why this choice] |
-| Authentication | [e.g., Auth0, Firebase Auth] | [Why this choice] |
+```yaml
+tech_stack:
+  frontend:
+    framework: "[e.g., React 18, Vue 3, Next.js 14]"
+    language: "[e.g., TypeScript 5.x]"
+    styling: "[e.g., Tailwind CSS, styled-components]"
+    state: "[e.g., Zustand, Redux Toolkit]"
+  backend:
+    framework: "[e.g., Node.js/Express, FastAPI, Go/Gin]"
+    language: "[e.g., TypeScript, Python 3.11+]"
+    api_style: "[REST, GraphQL]"
+  database:
+    primary: "[e.g., PostgreSQL 15]"
+    cache: "[e.g., Redis]"
+    orm: "[e.g., Prisma, SQLAlchemy]"
+  infrastructure:
+    hosting: "[e.g., Vercel, AWS, GCP]"
+    ci_cd: "[e.g., GitHub Actions]"
+    monitoring: "[e.g., Sentry, DataDog]"
+  authentication:
+    provider: "[e.g., Auth0, Firebase Auth, custom JWT]"
+    methods: "[e.g., email/password, OAuth (Google, GitHub)]"
+```
 
-### 5.2 System Architecture
-[High-level architecture diagram description or reference]
+### 6.2 System Architecture
+[High-level architecture description - frontend, backend, database, external services]
 
-### 5.3 Third-Party Integrations
+### 6.3 Third-Party Integrations
 
-| Service | Purpose | Priority |
-|---------|---------|----------|
-| [e.g., Stripe] | [Payment processing] | Must Have |
-| [e.g., SendGrid] | [Email delivery] | Should Have |
+| Service | Purpose | Priority | API/SDK |
+|---------|---------|----------|---------|
+| [e.g., Stripe] | [Payment processing] | Must Have | [REST API] |
+| [e.g., SendGrid] | [Email delivery] | Should Have | [Node SDK] |
 
-### 5.4 API Design
+### 6.4 Data Model
 
-| Endpoint Category | Description |
-|-------------------|-------------|
-| [e.g., /api/users] | [User management endpoints] |
-| [e.g., /api/resources] | [Core resource CRUD] |
-
----
-
-## 6. User Interface
-
-### 6.1 Design Principles
-- [e.g., Clean, minimal interface]
-- [e.g., Mobile-first responsive design]
-- [e.g., Consistent with brand guidelines]
-
-### 6.2 Key Screens
-
-| Screen | Purpose | Key Elements |
-|--------|---------|--------------|
-| Landing Page | [First impression, conversion] | [Hero, CTA, features] |
-| Dashboard | [Primary workspace] | [Widgets, navigation, quick actions] |
-| [Screen Name] | [Purpose] | [Elements] |
-
-### 6.3 Design System
-| Component | Specification |
-|-----------|---------------|
-| Color Palette | [Primary, secondary, accent colors] |
-| Typography | [Font families, sizes] |
-| Spacing | [Grid system, margins] |
-| Components | [Button styles, form elements, cards] |
-
----
-
-## 7. Data Model
-
-### 7.1 Core Entities
+#### Core Entities
 
 | Entity | Description | Key Attributes |
 |--------|-------------|----------------|
-| User | [Application users] | id, email, name, role, created_at |
+| User | Application users | id, email, name, role, created_at, updated_at |
 | [Entity] | [Description] | [Attributes] |
 
-### 7.2 Relationships
-[Describe relationships between entities]
-
-### 7.3 Data Retention
-| Data Type | Retention Period | Deletion Policy |
-|-----------|------------------|-----------------|
-| User Data | [Period] | [Policy] |
-| Logs | [Period] | [Policy] |
+#### Relationships
+[Describe relationships between entities - one-to-many, many-to-many, etc.]
 
 ---
 
-## 8. Release Planning
+## 7. User Interface
 
-### 8.1 MVP Scope
-[List features included in MVP - Must Have items only]
+### 7.1 Design Principles
+- [e.g., Clean, minimal interface prioritizing content]
+- [e.g., Mobile-first responsive design]
+- [e.g., Consistent with brand guidelines]
+- [e.g., Progressive disclosure - simple defaults, advanced options available]
 
-### 8.2 Phase 2 Scope
-[List features for second release - Should Have items]
+### 7.2 Key Screens
 
-### 8.3 Future Considerations
-[List Nice to Have items and potential future enhancements]
+| Screen | Purpose | Key Elements | Feature |
+|--------|---------|--------------|---------|
+| Landing Page | First impression, conversion | Hero, CTA, features | - |
+| Login/Register | Authentication | Form, OAuth buttons | F-001 |
+| Dashboard | Primary workspace | Widgets, navigation | F-002 |
+| [Screen] | [Purpose] | [Elements] | [Feature] |
 
----
+### 7.3 Design System
 
-## 9. Risks & Mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| [e.g., Third-party API changes] | Medium | High | [Abstract integration layer] |
-| [e.g., Scope creep] | High | Medium | [Strict MVP definition] |
-
----
-
-## 10. Open Questions
-
-| Question | Owner | Due Date | Resolution |
-|----------|-------|----------|------------|
-| [Unresolved question] | [Person] | [Date] | [Pending/Resolved] |
+| Component | Specification |
+|-----------|---------------|
+| Color Palette | Primary: [#XXX], Secondary: [#XXX], Accent: [#XXX] |
+| Typography | [Font family], sizes: 14/16/18/24/32px |
+| Spacing | 4px base unit, 8/16/24/32/48px scale |
+| Border Radius | 4px (buttons), 8px (cards) |
 
 ---
 
-## 11. Appendices
+## 8. Implementation Guidance
+
+### 8.1 Suggested Task Order
+
+1. Project setup and configuration (tooling, linting, CI/CD)
+2. Database schema and models
+3. Authentication system (F-001)
+4. Core UI layout and navigation (F-002)
+5. Feature implementation in priority order
+6. Testing and QA
+7. Documentation and deployment
+
+### 8.2 Parallelization Opportunities
+- [e.g., F-003 and F-004 can run in parallel after F-002 completes]
+- [e.g., Unit tests can be written alongside feature implementation]
+- [e.g., UI components can be built while API endpoints are developed]
+
+### 8.3 Risk Areas
+- [e.g., Third-party API rate limits may require caching strategy]
+- [e.g., Large data sets may need pagination/virtualization]
+- [e.g., Real-time features require WebSocket infrastructure]
+
+### 8.4 Definition of Done
+
+- [ ] All acceptance criteria passing
+- [ ] Unit test coverage > 80%
+- [ ] No critical/high security vulnerabilities
+- [ ] Accessibility audit passing (WCAG AA)
+- [ ] Performance targets met (Lighthouse > 90)
+- [ ] Documentation updated
+- [ ] Code reviewed and approved
+
+---
+
+## 9. Product Backlog
+
+### 9.1 MVP (Must Have)
+
+| ID | Item | Story Points | Dependencies | Feature |
+|----|------|--------------|--------------|---------|
+| B-001 | [Backlog item] | [1-8] | None | F-001 |
+| B-002 | [Backlog item] | [1-8] | B-001 | F-001 |
+| B-003 | [Backlog item] | [1-8] | B-002 | F-002 |
+
+### 9.2 Post-MVP (Should Have)
+
+| ID | Item | Story Points | Dependencies | Feature |
+|----|------|--------------|--------------|---------|
+| B-010 | [Backlog item] | [1-8] | B-003 | F-003 |
+
+### 9.3 Future (Could Have)
+
+| ID | Item | Story Points | Dependencies | Feature |
+|----|------|--------------|--------------|---------|
+| B-020 | [Backlog item] | [1-8] | B-010 | F-004 |
+
+---
+
+## 10. Risks & Mitigations
+
+| ID | Risk | Likelihood | Impact | Mitigation Strategy |
+|----|------|------------|--------|---------------------|
+| R-001 | [e.g., Third-party API changes] | Medium | High | Abstract integration layer |
+| R-002 | [e.g., Scope creep] | High | Medium | Strict MVP definition, change control |
+| R-003 | [e.g., Performance issues at scale] | Medium | High | Early load testing, monitoring |
+
+---
+
+## 11. Open Questions
+
+| ID | Question | Owner | Due Date | Status | Resolution |
+|----|----------|-------|----------|--------|------------|
+| Q-001 | [Unresolved question] | [Person/TBD] | [Date] | Open | - |
+| Q-002 | [Unresolved question] | [Person/TBD] | [Date] | Open | - |
+
+---
+
+## 12. Appendices
 
 ### A. Glossary
+
 | Term | Definition |
 |------|------------|
 | [Term] | [Definition] |
@@ -266,10 +394,12 @@
 - [Reference documents, research, competitor analysis]
 
 ### C. Change Log
+
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | [Date] | [Author] | Enhanced structure for AI agent workflows |
 | 1.0 | [Date] | [Author] | Initial draft |
 
 ---
 
-*Generated with Claudestrator PRD Generator*
+*Generated with Claudestrator PRD Generator v2.0*

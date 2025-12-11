@@ -1,11 +1,36 @@
 # Product Requirements Document: API Service
 
+```yaml
+# PRD Metadata (machine-readable for orchestrator)
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Project Name]"
+    type: api_service
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []
+    frameworks: []
+    databases: []
+    infrastructure: []
+  api:
+    style: REST | GraphQL | gRPC
+    versioning: url_path | header | query_param
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 4 weeks]"
+  tags: []
+```
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | **Project Name** | [Project Name] |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Created** | [Date] |
 | **Last Updated** | [Date] |
 | **Author** | [Author] |
@@ -15,7 +40,10 @@
 
 ## 1. Executive Summary
 
-### 1.1 Problem Statement
+### 1.1 Vision Statement
+[One sentence describing what this API will enable]
+
+### 1.2 Problem Statement
 [What problem does this API solve? What systems or applications will consume it?]
 
 ### 1.2 Proposed Solution
@@ -492,4 +520,44 @@ curl https://api.example.com/v1/resources \
 
 ---
 
-*Generated with Claudestrator PRD Generator*
+## 18. MVP Feature List
+
+### Feature Summary
+
+| ID | Feature/Resource | Priority | Complexity | Dependencies |
+|----|------------------|----------|------------|--------------|
+| F-001 | [Resource/Endpoint Group] | Must Have | Normal | None |
+| F-002 | [Resource/Endpoint Group] | Must Have | Normal | F-001 |
+| F-003 | [Resource/Endpoint Group] | Should Have | Normal | F-001 |
+
+---
+
+## 19. Implementation Guidance
+
+### Suggested Task Order
+1. Project setup (framework, linting, CI/CD)
+2. Database schema and migrations
+3. Authentication middleware
+4. Core resource endpoints (F-001)
+5. Additional resources (F-002, F-003)
+6. Rate limiting and caching
+7. API documentation (OpenAPI)
+8. Testing and QA
+
+### Parallelization Opportunities
+- Resource endpoints can be developed in parallel after auth is complete
+- Documentation can be written alongside implementation
+- Integration tests can be written as endpoints are completed
+
+### Definition of Done
+- [ ] All acceptance criteria passing
+- [ ] Unit test coverage > 80%
+- [ ] Integration tests for all endpoints
+- [ ] OpenAPI spec complete and valid
+- [ ] Security scan passing
+- [ ] Load test meeting SLAs
+- [ ] Documentation complete
+
+---
+
+*Generated with Claudestrator PRD Generator v2.0*

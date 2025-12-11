@@ -1,11 +1,32 @@
 # Product Requirements Document
 
+```yaml
+# PRD Metadata (machine-readable for orchestrator)
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Project Name]"
+    type: minimal
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []
+    frameworks: []
+    databases: []
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 2 weeks]"
+  tags: []
+```
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | **Project Name** | [Project Name] |
-| **Version** | 1.0 |
+| **Version** | 2.0 |
 | **Date** | [Date] |
 | **Author** | [Author] |
 
@@ -13,103 +34,142 @@
 
 ## 1. Overview
 
+### Vision
+[One sentence: what this will become]
+
 ### Problem
-[What problem are you solving? Keep it to 2-3 sentences.]
+[What problem are you solving? 2-3 sentences.]
 
 ### Solution
-[What are you building to solve it? 2-3 sentences.]
+[What are you building? 2-3 sentences.]
 
 ### Target Users
-[Who will use this? Be specific.]
+[Who will use this? Be specific about their context.]
 
 ---
 
-## 2. Goals & Success Metrics
+## 2. Success Metrics
 
-| Goal | Metric | Target |
-|------|--------|--------|
-| [Goal 1] | [How measured] | [Target value] |
-| [Goal 2] | [How measured] | [Target value] |
-
----
-
-## 3. Requirements
-
-### Must Have (MVP)
-
-| ID | Requirement | Acceptance Criteria |
-|----|-------------|---------------------|
-| R1 | [Requirement] | [How to verify it's done] |
-| R2 | [Requirement] | [How to verify it's done] |
-| R3 | [Requirement] | [How to verify it's done] |
-
-### Should Have
-
-| ID | Requirement | Acceptance Criteria |
-|----|-------------|---------------------|
-| R4 | [Requirement] | [How to verify it's done] |
-| R5 | [Requirement] | [How to verify it's done] |
-
-### Nice to Have
-
-| ID | Requirement | Notes |
-|----|-------------|-------|
-| R6 | [Requirement] | [Context] |
+| ID | Goal | Metric | Target |
+|----|------|--------|--------|
+| G-001 | [Goal] | [How measured] | [Target value] |
+| G-002 | [Goal] | [How measured] | [Target value] |
 
 ---
 
-## 4. Technical Constraints
+## 3. MVP Feature List
+
+| ID | Feature | Priority | Complexity | Dependencies |
+|----|---------|----------|------------|--------------|
+| F-001 | [Feature] | Must Have | Easy/Normal | None |
+| F-002 | [Feature] | Must Have | Easy/Normal | F-001 |
+| F-003 | [Feature] | Should Have | Easy/Normal | F-001 |
+| F-004 | [Feature] | Could Have | Easy/Normal | F-002 |
+
+---
+
+## 4. Feature Specifications
+
+### F-001: [Feature Name]
+
+**Priority:** Must Have
+**Complexity:** Normal
+**Dependencies:** None
+
+#### Description
+[What the feature does]
+
+#### Acceptance Criteria
+
+| ID | Given | When | Then |
+|----|-------|------|------|
+| AC-001 | [context] | [action] | [outcome] |
+| AC-002 | [context] | [action] | [outcome] |
+
+---
+
+### F-002: [Feature Name]
+
+**Priority:** Must Have
+**Complexity:** Normal
+**Dependencies:** F-001
+
+#### Description
+[What the feature does]
+
+#### Acceptance Criteria
+
+| ID | Given | When | Then |
+|----|-------|------|------|
+| AC-003 | [context] | [action] | [outcome] |
+| AC-004 | [context] | [action] | [outcome] |
+
+---
+
+[Add more F-XXX sections as needed]
+
+---
+
+## 5. Technical Constraints
+
+```yaml
+tech_stack:
+  language: "[e.g., TypeScript, Python]"
+  framework: "[e.g., React, FastAPI]"
+  database: "[e.g., PostgreSQL, SQLite]"
+  hosting: "[e.g., Vercel, local]"
+```
 
 | Constraint | Details |
 |------------|---------|
 | Platform | [Where it runs] |
-| Technology | [Required stack, if any] |
 | Performance | [Key performance requirements] |
 | Security | [Security requirements] |
 
 ---
 
-## 5. User Flows
+## 6. User Flow
 
 ### Primary Flow: [Flow Name]
 
 ```
 1. User [action]
-2. System [response]
-3. User [action]
-4. System [response]
-5. [Outcome]
+   → System [response]
+2. User [action]
+   → System [response]
+3. [Outcome]
 ```
-
-### Secondary Flow: [Flow Name]
-
-```
-1. User [action]
-2. ...
-```
-
----
-
-## 6. Data Requirements
-
-| Data | Source | Storage | Notes |
-|------|--------|---------|-------|
-| [Data type] | [Where from] | [Where stored] | [Notes] |
 
 ---
 
 ## 7. Non-Functional Requirements
 
-| Category | Requirement |
-|----------|-------------|
-| Performance | [Requirements] |
-| Security | [Requirements] |
-| Accessibility | [Requirements] |
-| Scalability | [Requirements] |
+| ID | Category | Requirement | Target |
+|----|----------|-------------|--------|
+| NFR-001 | Performance | [Requirement] | [Target] |
+| NFR-002 | Security | [Requirement] | [Target] |
+| NFR-003 | Accessibility | [Requirement] | [Target] |
 
 ---
 
-## 8. Out of Scope
+## 8. Implementation Guidance
+
+### Suggested Task Order
+1. Project setup
+2. [Core feature - F-001]
+3. [Next feature - F-002]
+4. Testing
+5. Documentation
+
+### Definition of Done
+- [ ] All acceptance criteria passing
+- [ ] Basic tests written
+- [ ] No critical bugs
+- [ ] Code reviewed
+
+---
+
+## 9. Out of Scope
 
 - [Explicitly excluded item 1]
 - [Explicitly excluded item 2]
@@ -117,42 +177,20 @@
 
 ---
 
-## 9. Open Questions
+## 10. Open Questions
 
-| Question | Owner | Status |
-|----------|-------|--------|
-| [Question] | [Who decides] | Open / Resolved |
-
----
-
-## 10. Dependencies & Risks
-
-### Dependencies
-
-| Dependency | Impact if Unavailable |
-|------------|----------------------|
-| [Dependency] | [Impact] |
-
-### Risks
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| [Risk] | Low/Med/High | Low/Med/High | [Plan] |
+| ID | Question | Status |
+|----|----------|--------|
+| Q-001 | [Question] | Open |
 
 ---
 
-## Appendix
+## 11. Risks
 
-### Glossary
-
-| Term | Definition |
-|------|------------|
-| [Term] | [Definition] |
-
-### References
-
-- [Reference links or documents]
+| ID | Risk | Likelihood | Impact | Mitigation |
+|----|------|------------|--------|------------|
+| R-001 | [Risk] | Low/Med/High | Low/Med/High | [Plan] |
 
 ---
 
-*Generated with Claudestrator PRD Generator*
+*Generated with Claudestrator PRD Generator v2.0*

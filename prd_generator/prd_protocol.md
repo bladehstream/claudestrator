@@ -148,21 +148,69 @@ AskUserQuestion:
 - Push back gently on "everything is a must-have"
 - Separate "nice to have" from "must have" early
 
-### Phase 3: Requirements Deep Dive (5-15 questions)
+### Phase 3: Feature Specification (5-15 questions per feature)
 
-**Goal**: Extract specific, testable requirements.
+**Goal**: Extract specific, testable requirements with structured acceptance criteria.
 
-**Key Questions** (vary by project type):
+**For Each Feature**, capture:
+1. **Feature ID and Name** (F-001: User Authentication)
+2. **Priority** - Use MoSCoW: Must Have / Should Have / Could Have / Won't Have
+3. **Complexity** - Easy (< 1 day) / Normal (1-3 days) / Complex (> 3 days)
+4. **Dependencies** - "What must exist before this can be built?"
+5. **Acceptance Criteria** - Given/When/Then format
 
-**For Features**:
-- "Walk me through how a user would [accomplish goal]"
-- "What happens when [edge case]?"
-- "What data does this need? Where does it come from?"
-- "How does this interact with [other feature]?"
+**Feature Interview Flow**:
+
+```
+Agent: "Let's define the [feature] in detail."
+
+# 1. Description
+Agent: "In one sentence, what does this feature do?"
+
+# 2. Priority
+AskUserQuestion:
+  question: "How critical is [feature] for MVP?"
+  options:
+    - label: "Must Have"
+      description: "Cannot launch without this"
+    - label: "Should Have"
+      description: "Important but can work around"
+    - label: "Could Have"
+      description: "Nice if time permits"
+
+# 3. Dependencies
+Agent: "Does this feature depend on any other features being complete first?"
+
+# 4. User Stories
+Agent: "Who uses this feature and what do they want to accomplish?"
+→ Record as: "As a [user], I want to [action] so that [benefit]"
+
+# 5. Acceptance Criteria (CRITICAL for AI agents)
+Agent: "Let's define when this feature is 'done'. I'll use Given/When/Then format."
+Agent: "Given [some context], when [action happens], what should the system do?"
+→ Record as structured table:
+  | ID | Given | When | Then |
+  |----|-------|------|------|
+  | AC-001 | [context] | [action] | [outcome] |
+
+# 6. Edge Cases
+Agent: "What happens when [edge case]?"
+Agent: "What if the user [unusual action]?"
+→ Add to acceptance criteria
+
+# 7. Technical Notes
+Agent: "Any specific implementation considerations? (performance, security, etc.)"
+```
+
+**Acceptance Criteria Best Practices**:
+- Aim for 3-7 criteria per feature
+- Each criterion should be independently testable
+- Cover happy path AND error cases
+- Use specific values, not vague terms ("< 2 seconds" not "fast")
 
 **For Technical Requirements**:
 - "What platforms/devices must this support?"
-- "What are the performance expectations?"
+- "What are the performance expectations?" (Be specific: "page load < 2s")
 - "Are there security or compliance requirements?"
 - "What existing systems does this integrate with?"
 
@@ -175,6 +223,7 @@ AskUserQuestion:
 - Use "5 Whys" to dig into root causes
 - Ask for examples and scenarios
 - Validate understanding by paraphrasing back
+- ALWAYS capture acceptance criteria in Given/When/Then format
 
 ### Phase 4: Validation & Gaps (2-4 questions)
 
@@ -756,6 +805,51 @@ Before finalizing PRD, verify:
 
 ---
 
-*Protocol Version: 1.1*
+## PRD Schema v2.0
+
+All PRD templates now include a machine-readable YAML metadata block:
+
+```yaml
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Project Name]"
+    type: web_application | api_service | mobile_app | cli_tool | game | library | minimal
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []
+    frameworks: []
+    databases: []
+    infrastructure: []
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 4 weeks]"
+  tags: []
+```
+
+### Key Structural Elements
+
+| Element | Purpose | AI Benefit |
+|---------|---------|------------|
+| Feature IDs (F-001) | Unique identifiers | Enables dependency tracking |
+| Given/When/Then AC | Structured acceptance criteria | Maps directly to test cases |
+| Priority (MoSCoW) | Clear prioritization | Informs task ordering |
+| Complexity rating | Difficulty estimate | Guides model selection |
+| Dependencies | Feature relationships | Enables DAG construction |
+| Implementation Guidance | Task suggestions | Accelerates decomposition |
+
+---
+
+*Protocol Version: 2.0*
 *Updated: December 2025*
-*Added: Skill Gap Analysis after PRD generation*
+*Changes: Enhanced PRD structure for AI agent workflows*
+*- Added YAML metadata block to all templates*
+*- Structured feature specifications with F-XXX IDs*
+*- Given/When/Then acceptance criteria format*
+*- MVP Feature List with dependencies*
+*- Implementation Guidance section*
+*- Design Specifications (FR/NFR tables)*
+*- Product Backlog format*

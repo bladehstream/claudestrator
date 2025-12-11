@@ -1,11 +1,37 @@
 # Product Requirements Document: Game
 
+```yaml
+# PRD Metadata (machine-readable for orchestrator)
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Game Title]"
+    type: game
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []
+    frameworks: []  # Phaser, Unity, Godot, custom
+    databases: []
+    infrastructure: []
+  game:
+    genre: "[Puzzle, Action, RPG, Strategy, Casual]"
+    platform: browser | mobile | desktop | cross-platform
+    session_length: "[e.g., 5-15 minutes]"
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 6 weeks]"
+  tags: []
+```
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | **Project Name** | [Game Title] |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Created** | [Date] |
 | **Last Updated** | [Date] |
 | **Author** | [Author] |

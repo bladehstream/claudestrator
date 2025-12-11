@@ -1,11 +1,38 @@
 # Product Requirements Document: Mobile App
 
+```yaml
+# PRD Metadata (machine-readable for orchestrator)
+metadata:
+  schema_version: "2.0"
+  project:
+    name: "[Project Name]"
+    type: mobile_app
+    complexity: simple | moderate | complex
+  mvp:
+    target_date: "[YYYY-MM-DD or TBD]"
+    feature_count: 0
+  tech_stack:
+    languages: []
+    frameworks: []  # React Native, Flutter, Swift, Kotlin
+    databases: []
+    infrastructure: []
+  platforms:
+    ios: true | false
+    android: true | false
+    min_ios: "14.0"
+    min_android: "10"
+  constraints:
+    team_size: 1
+    timeline: "[e.g., 8 weeks]"
+  tags: []
+```
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | **Project Name** | [Project Name] |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Created** | [Date] |
 | **Last Updated** | [Date] |
 | **Author** | [Author] |
@@ -15,7 +42,10 @@
 
 ## 1. Executive Summary
 
-### 1.1 Problem Statement
+### 1.1 Vision Statement
+[One sentence describing what this app will become]
+
+### 1.2 Problem Statement
 [What problem does this app solve? What user need does it address?]
 
 ### 1.2 Proposed Solution

@@ -480,12 +480,57 @@ FUNCTION constructPrompt(task, skills, context, model):
 > **Apply**: [skills/orchestrator/agent_construction.md](skills/orchestrator/agent_construction.md) for model selection, skill composition, and context budgeting.
 
 ```
+# Generate unique agent ID
+agent_id = "agent-" + generateShortId()
+
+# Spawn the agent
 Task(
     subagent_type: "general-purpose",
     model: selectModel(task),
     prompt: constructPrompt(task, skills, context, model),
     description: task.name
 )
+
+# Track agent in session state for /status monitoring
+session_state.running_agents.append({
+    id: agent_id,
+    task_id: task.id,
+    task_name: task.name,
+    model: selectModel(task),
+    skills: matched_skills.map(s => s.id),
+    started_at: NOW()
+})
+
+WRITE session_state.md
+```
+
+**Parallel Agent Spawning:**
+
+When multiple tasks have no interdependencies, spawn them in a single message:
+
+```
+independent_tasks = pending_tasks.filter(
+    t => t.dependencies.all(d => d.status == 'completed')
+)
+
+# Spawn up to MAX_PARALLEL agents in one message
+FOR task IN independent_tasks.slice(0, MAX_PARALLEL):
+    # Each Task() call in same message runs concurrently
+    Task(...)
+    session_state.running_agents.append(...)
+
+# All agents run concurrently, orchestrator waits for all to complete
+```
+
+**Checking Agent Status (for /status command):**
+
+```
+FUNCTION getAgentStatus(agent_id):
+    result = AgentOutputTool(agent_id, block=false)
+    RETURN {
+        status: result.status,  # running | completed | error
+        output: result.output.slice(-500)  # Last 500 chars
+    }
 ```
 
 ### 3.7 Process Agent Result
@@ -495,6 +540,18 @@ Task(
 
 ```
 AFTER agent completes:
+    # Move agent from running to completed in session state
+    agent = session_state.running_agents.find(a => a.task_id == task.id)
+    session_state.running_agents.remove(agent)
+    session_state.completed_agents.append({
+        ...agent,
+        completed_at: NOW(),
+        duration: NOW() - agent.started_at,
+        outcome: handoff.outcome,
+        final_output: result.slice(-500)  # Store last 500 chars for /status
+    })
+    WRITE session_state.md
+
     # Read updated task file
     result = READ task.file_path
 

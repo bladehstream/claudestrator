@@ -114,6 +114,8 @@ Run these commands **during** active orchestration to manage the session.
 | `/orchestrate` | (main) + dynamic | Initialize or resume orchestrator mode |
 | `/checkpoint` | (main) | Save current state (can continue working) |
 | `/status` | (main) | Show project and task status |
+| `/status agents` | (main) | List all running and recent agents |
+| `/status <agent-id>` | (main) | Show last output from specific agent |
 | `/tasks` | (main) | Show task list with progress |
 | `/skills` | (main) | Show loaded skills |
 | `/deorchestrate` | (main) | Clean exit with full state save |

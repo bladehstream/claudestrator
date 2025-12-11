@@ -46,6 +46,43 @@ Scratchpad for current task execution. Cleared after each task.
 |------|-------|----------|
 | [What we're waiting for] | [timestamp] | [when expected] |
 
+## Running Agents
+
+Active sub-agents spawned this session. Use `/status agents` to view or `/status <agent-id>` for details.
+
+```yaml
+running_agents: []
+# Example entry:
+# - id: agent-abc123
+#   task_id: "004"
+#   task_name: "Implement auth middleware"
+#   model: sonnet
+#   skills: [authentication, security]
+#   started_at: "2024-12-11T10:30:00Z"
+```
+
+## Completed Agents
+
+Sub-agents that finished this session. Stored for `/status <agent-id>` lookups.
+
+```yaml
+completed_agents: []
+# Example entry:
+# - id: agent-xyz789
+#   task_id: "003"
+#   task_name: "Design data models"
+#   model: sonnet
+#   skills: [database_designer]
+#   started_at: "2024-12-11T10:25:00Z"
+#   completed_at: "2024-12-11T10:28:12Z"
+#   duration: "3m 12s"
+#   outcome: completed
+#   final_output: |
+#     ✓ Created src/models/User.ts
+#     ✓ Created src/models/Transaction.ts
+#     All acceptance criteria met.
+```
+
 ## Quick Context
 
 Essential context for current work (refreshed per-task):

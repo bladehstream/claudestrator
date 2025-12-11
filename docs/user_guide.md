@@ -386,6 +386,83 @@ This provides an audit trail of how requirements evolved.
 
 ---
 
+## Agent Monitoring
+
+During orchestration, sub-agents execute tasks in the background. You can monitor their progress without interrupting execution.
+
+### Checking Agent Status
+
+| Command | Description |
+|---------|-------------|
+| `/status` | Overview including running agent count |
+| `/status agents` | List all running and recently completed agents |
+| `/status <agent-id>` | View last output from a specific agent |
+
+### Example: Listing Agents
+
+```
+/status agents
+
+═══════════════════════════════════════════════════════════
+AGENT STATUS
+═══════════════════════════════════════════════════════════
+
+RUNNING (2)
+  agent-abc123  Task 004: Implement auth middleware    2m 34s
+  agent-def456  Task 007: Write unit tests             45s
+
+COMPLETED THIS SESSION (3)
+  agent-xyz789  Task 003: Design data models      ✓    3m 12s
+  agent-uvw321  Task 002: Set up project          ✓    1m 45s
+  agent-rst654  Task 001: Initialize structure    ✓    0m 38s
+
+═══════════════════════════════════════════════════════════
+Usage: /status <agent-id> to see last agent output
+═══════════════════════════════════════════════════════════
+```
+
+### Example: Agent Details
+
+```
+/status agent-abc123
+
+═══════════════════════════════════════════════════════════
+AGENT: agent-abc123
+═══════════════════════════════════════════════════════════
+
+Task:     004 - Implement auth middleware
+Model:    sonnet
+Skills:   authentication, security
+Started:  2m 34s ago
+Status:   running
+
+LAST OUTPUT (12s ago)
+───────────────────────────────────────────────────────────
+Created src/middleware/auth.ts with JWT validation.
+Now implementing refresh token logic...
+
+Reading src/config/auth.config.ts for token expiry settings.
+───────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════
+```
+
+### How It Works
+
+- Orchestrator tracks agents in `session_state.md`
+- Running agents can be polled for latest output via `AgentOutputTool`
+- Completed agents store their final output for later inspection
+- Agent IDs persist for the session, allowing lookup after completion
+
+### Tips
+
+- Use `/status agents` to see "what's happening right now"
+- Use `/status <agent-id>` when an agent seems to be taking long
+- Agent output is truncated to ~500 characters for readability
+- Full task details are always in `journal/task-*.md`
+
+---
+
 ## The Journal System
 
 ### Why Journals?
@@ -527,12 +604,19 @@ Add entry to `skill_manifest.md`:
    - Trust the skill matching
    - Review journal if curious
 
-2. **Provide feedback when asked**
+2. **Monitor agent progress** with `/status`:
+   ```
+   /status              # Overview - shows running agent count
+   /status agents       # List all running and recent agents
+   /status agent-abc123 # See last output from specific agent
+   ```
+
+3. **Provide feedback when asked**
    - Clarify ambiguous requirements
    - Make design decisions when needed
    - Report issues you discover
 
-3. **Check the journal** if something seems wrong
+4. **Check the journal** if something seems wrong
    - Task files show detailed reasoning
    - Context map shows where code lives
 
@@ -699,5 +783,5 @@ Claude: Creating project journal and decomposing into tasks...
 
 ---
 
-*User Guide Version: 1.1*
+*User Guide Version: 1.2*
 *Last Updated: December 2024*

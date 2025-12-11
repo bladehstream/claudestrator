@@ -593,15 +593,31 @@ Run the orchestrator in one terminal while using another for support tasks.
 
 ### The /refresh Command
 
-Signal the orchestrator to immediately reload a resource:
+Signal the orchestrator to reload resources or queue lifecycle changes:
 
-| Command | Action |
-|---------|--------|
-| `/refresh issues` | Poll issue queue now (don't wait for 10min timer) |
-| `/refresh skills` | Reload skill directory |
-| `/refresh prd` | Re-read PRD.md |
+| Command | Timing | Action |
+|---------|--------|--------|
+| `/refresh issues` | Immediate | Poll issue queue now |
+| `/refresh skills` | Immediate | Reload skill directory |
+| `/refresh prd` | **Queued** | Restart with new PRD after current run completes |
+| `/refresh cancel` | Immediate | Cancel a queued PRD restart |
 
 **Important:** `/refresh` requires an argument. Running `/refresh` alone does nothing.
+
+### Why PRD Changes Are Queued
+
+PRD changes mid-run cause architectural conflicts:
+- Existing tasks were planned against the old PRD
+- New tasks would be planned against the new PRD
+- Dependencies between old and new tasks may not align
+
+Instead, `/refresh prd`:
+1. Flags the orchestrator to restart after the current run
+2. Current run completes normally (all tasks finish)
+3. Orchestrator archives the completed run
+4. Analyzes differences between old and new PRD
+5. Creates tasks only for the changes
+6. Begins new run automatically
 
 ### Example: Urgent Bug Report
 
@@ -611,15 +627,37 @@ Terminal 2:
   [Issue Reporter interviews, sets priority: critical]
 
   /refresh issues
-  "Refresh signal sent: issues
-   The orchestrator will poll the issue queue before its next task."
+  "Refresh signal sent: issues"
 
 Terminal 1:
   [Task 005 completes]
-  "🔄 Refresh signal received: polling issue queue"
+  "🔄 Refresh signal: polling issue queue"
   "⚠️  Critical issue detected: Production login failing for all users"
   "Creating urgent task 012"
   [Task 012 becomes next task]
+```
+
+### Example: PRD Update
+
+```
+Terminal 2:
+  [edits PRD.md with new requirements]
+  /refresh prd
+
+  "PRD restart queued.
+   Current run will complete (3 tasks remaining), then restart."
+
+Terminal 1:
+  "📋 PRD restart queued - current run will complete first"
+  [Task 006 completes]
+  [Task 007 completes]
+  [Task 008 completes]
+  "🔄 PRD restart was queued - initiating restart sequence..."
+  "📋 PRD Changes Detected:
+     - added: New user roles feature
+     - modified: Authentication flow
+     - removed: Legacy login support"
+  "✅ Restart complete - 5 tasks created from PRD changes"
 ```
 
 ### What Each Terminal Does
@@ -628,18 +666,33 @@ Terminal 1:
 |---------------------------|----------------------|
 | `/orchestrate` | `/issue` |
 | `/status`, `/status agents` | `/issues`, `/reject` |
-| `/checkpoint` | `/refresh issues\|skills\|prd` |
-| `/deorchestrate` | `/ingest-skill` |
-| `/tasks`, `/skills` | `/audit-skills`, `/skill-enhance` |
+| `/checkpoint` | `/refresh issues\|skills\|prd\|cancel` |
+| `/deorchestrate` | `/abort` |
+| `/tasks`, `/skills` | `/ingest-skill`, `/audit-skills` |
 
-### Cautions
+### Emergency Stop: /abort
 
-**PRD Refresh:**
-- Won't affect tasks already in the journal
-- Won't affect agents currently executing
-- Will affect future iteration/extension cycles
+If you discover a fundamental flaw and want to stop immediately:
 
-For substantial PRD changes, consider waiting for the current run to complete.
+```
+/abort                    # Shows confirmation prompt
+/abort confirm            # Executes abort
+```
+
+**What /abort does:**
+- Stops any running agents
+- Purges all pending tasks
+- Archives completed tasks for reference
+- Marks current run as aborted
+
+**When to use /abort vs other commands:**
+
+| Scenario | Command |
+|----------|---------|
+| Fundamental design flaw | `/abort` |
+| Want to update PRD for next run | `/refresh prd` |
+| Want to pause and resume later | `/deorchestrate` |
+| Single task is failing | Let it fail (orchestrator handles it) |
 
 ---
 

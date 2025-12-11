@@ -311,16 +311,32 @@ FUNCTION checkRefreshSignals():
 
     MATCH signal.type:
         'issues':
-            REPORT: "🔄 Refresh signal received: polling issue queue"
+            # Immediate - poll now
+            REPORT: "🔄 Refresh signal: polling issue queue"
             pollIssueQueue()
 
         'skills':
-            REPORT: "🔄 Refresh signal received: reloading skills"
+            # Immediate - reload now
+            REPORT: "🔄 Refresh signal: reloading skills"
             reloadSkillDirectory()
 
         'prd':
-            REPORT: "🔄 Refresh signal received: re-reading PRD"
-            reloadPRD()
+            # Queued - restart after current run completes
+            # DO NOT reload PRD mid-run (causes architectural conflicts)
+            session_state.restart_after_completion = true
+            session_state.restart_reason = signal.reason OR "PRD updated via /refresh prd"
+            pending_count = journal.tasks.filter(t => t.status == 'pending').length
+            REPORT: "📋 PRD restart queued - current run will complete first"
+            REPORT: "   {pending_count} tasks remaining before restart"
+
+        'cancel':
+            # Cancel queued restart
+            IF session_state.restart_after_completion:
+                session_state.restart_after_completion = false
+                session_state.restart_reason = null
+                REPORT: "📋 PRD restart cancelled"
+            ELSE:
+                REPORT: "📋 No restart was queued"
 
     # Delete signal file after processing
     DELETE .claude/refresh_signal.md
@@ -331,17 +347,6 @@ FUNCTION reloadSkillDirectory():
     skills = scanSkillDirectory(skill_path)
     skill_index = buildSkillIndex(skills)
     REPORT: "Loaded {skills.length} skills from {skill_path}"
-
-
-FUNCTION reloadPRD():
-    # Re-read PRD and update project understanding
-    IF EXISTS PRD.md:
-        prd = READ PRD.md
-        session_state.project_understanding = extractProjectUnderstanding(prd)
-        REPORT: "PRD reloaded - project understanding updated"
-        REPORT: "⚠️  Note: Existing tasks unchanged. Changes affect future planning."
-    ELSE:
-        WARN: "PRD.md not found"
 ```
 
 ### 3.0.1 Poll Issue Queue
@@ -843,10 +848,165 @@ Generate summary:
     - Known limitations
 ```
 
-### 5.2 Archive (Optional)
+### 5.2 Check for Queued PRD Restart
+
+Before completing normally, check if a PRD restart was queued via `/refresh prd`:
 
 ```
-IF project complete:
+IF session_state.restart_after_completion:
+    REPORT: "🔄 PRD restart was queued - initiating restart sequence..."
+
+    # 1. Archive completed run
+    archiveCompletedRun(run_number)
+
+    # 2. Archive current PRD to history
+    IF NOT EXISTS PRD-history/:
+        MKDIR PRD-history/
+    COPY PRD.md TO PRD-history/v{run_number}-pre-restart.md
+
+    # 3. Analyze PRD differences
+    old_prd = READ PRD-history/v{run_number}-pre-restart.md
+    new_prd = READ PRD.md
+    changes = analyzePRDDifferences(old_prd, new_prd)
+
+    REPORT: "📋 PRD Changes Detected:"
+    FOR change IN changes:
+        REPORT: "  - {change.type}: {change.summary}"
+
+    # 4. Create tasks for changes (with reference to archived context)
+    new_tasks = decomposePRDChanges(changes, archived_run_context)
+
+    # 5. Reset journal for new run
+    journal.index.run_number += 1
+    journal.index.phase = 'planning'
+    journal.index.tasks = new_tasks
+
+    # 6. Clear restart flag
+    session_state.restart_after_completion = false
+    session_state.restart_reason = null
+
+    REPORT: "✅ Restart complete - {new_tasks.length} tasks created from PRD changes"
+    REPORT: "   Archived run available at: journal/archive/run-{run_number}/"
+
+    # Continue to Phase 3 (Task Execution) with new tasks
+    GOTO Phase 3
+ELSE:
+    # Normal completion - proceed to 5.3
+    CONTINUE
+```
+
+### 5.2.1 Analyze PRD Differences
+
+Compare old and new PRD to identify changes:
+
+```
+FUNCTION analyzePRDDifferences(old_prd, new_prd):
+    changes = []
+
+    # Extract requirements from both PRDs
+    old_reqs = extractRequirements(old_prd)
+    new_reqs = extractRequirements(new_prd)
+
+    # Find added requirements
+    FOR req IN new_reqs:
+        IF req NOT IN old_reqs:
+            changes.append({
+                type: "added",
+                requirement: req,
+                summary: "New requirement: " + req.title
+            })
+
+    # Find removed requirements
+    FOR req IN old_reqs:
+        IF req NOT IN new_reqs:
+            changes.append({
+                type: "removed",
+                requirement: req,
+                summary: "Removed: " + req.title
+            })
+
+    # Find modified requirements
+    FOR old_req IN old_reqs:
+        new_req = new_reqs.find(r => r.id == old_req.id OR r.title == old_req.title)
+        IF new_req AND new_req.content != old_req.content:
+            changes.append({
+                type: "modified",
+                old: old_req,
+                new: new_req,
+                summary: "Modified: " + old_req.title
+            })
+
+    # Check for architectural changes
+    old_arch = extractArchitecture(old_prd)
+    new_arch = extractArchitecture(new_prd)
+    IF old_arch != new_arch:
+        changes.append({
+            type: "architecture",
+            old: old_arch,
+            new: new_arch,
+            summary: "Architecture changed"
+        })
+
+    RETURN changes
+```
+
+### 5.2.2 Create Tasks from PRD Changes
+
+```
+FUNCTION decomposePRDChanges(changes, archived_context):
+    tasks = []
+
+    FOR change IN changes:
+        MATCH change.type:
+            'added':
+                # New requirement - create implementation tasks
+                new_tasks = decomposeRequirement(change.requirement)
+                tasks.extend(new_tasks)
+
+            'modified':
+                # Modified requirement - create update tasks
+                # Reference archived tasks that implemented the old version
+                related_tasks = archived_context.findTasksForRequirement(change.old)
+                update_task = {
+                    type: "modification",
+                    objective: "Update implementation for: " + change.summary,
+                    context: {
+                        previous_implementation: related_tasks,
+                        old_requirement: change.old,
+                        new_requirement: change.new
+                    },
+                    acceptance_criteria: deriveFromRequirement(change.new)
+                }
+                tasks.append(update_task)
+
+            'removed':
+                # Removed requirement - create cleanup task if needed
+                IF requiresCleanup(change.requirement, archived_context):
+                    cleanup_task = {
+                        type: "cleanup",
+                        objective: "Remove implementation for: " + change.summary,
+                        context: {
+                            files_to_review: archived_context.findFilesForRequirement(change.requirement)
+                        }
+                    }
+                    tasks.append(cleanup_task)
+
+            'architecture':
+                # Architectural change - may need significant refactoring
+                refactor_tasks = planArchitecturalMigration(change.old, change.new, archived_context)
+                tasks.extend(refactor_tasks)
+
+    # Add dependency analysis
+    FOR task IN tasks:
+        task.dependencies = analyzeDependencies(task, tasks, archived_context)
+
+    RETURN tasks
+```
+
+### 5.3 Archive (Standard Completion)
+
+```
+IF project complete AND NOT restart_queued:
     Move journal/ to journal/archive/run-{run_number}/
     Keep index.md as historical record
     Increment run_number in index

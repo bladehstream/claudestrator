@@ -46,6 +46,18 @@ Scratchpad for current task execution. Cleared after each task.
 |------|-------|----------|
 | [What we're waiting for] | [timestamp] | [when expected] |
 
+## Queued Actions
+
+Signals received from Terminal 2 that affect run lifecycle.
+
+```yaml
+restart_after_completion: false
+restart_reason: null
+# When /refresh prd is called:
+# restart_after_completion: true
+# restart_reason: "PRD updated via /refresh prd"
+```
+
 ## Running Agents
 
 Active sub-agents spawned this session. Use `/status agents` to view or `/status <agent-id>` for details.

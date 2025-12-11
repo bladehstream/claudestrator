@@ -38,6 +38,7 @@ CURRENT STATE
   Next task: [task ID and name]
   Blockers: [count, or "none"]
   Running agents: [count, or "none"]
+  ⏳ PRD restart queued (X tasks remaining)    ← If /refresh prd was called
 
 RECENT ACTIVITY
   - [Last few actions/completions]

@@ -138,15 +138,19 @@ Report issues asynchronously - even while the orchestrator is running in another
 
 ### Support Commands (Terminal 2)
 
-Signal the orchestrator to reload resources immediately.
+Signal the orchestrator to reload resources or control run lifecycle.
 
 | Command | Model | Action |
 |---------|-------|--------|
-| `/refresh issues` | (main) | Signal orchestrator to poll issue queue now |
-| `/refresh skills` | (main) | Signal orchestrator to reload skill directory |
-| `/refresh prd` | (main) | Signal orchestrator to re-read PRD.md |
+| `/refresh issues` | (main) | Poll issue queue immediately |
+| `/refresh skills` | (main) | Reload skill directory immediately |
+| `/refresh prd` | (main) | Queue restart with new PRD after current run completes |
+| `/refresh cancel` | (main) | Cancel a queued PRD restart |
+| `/abort` | (main) | Emergency stop - purge pending tasks (requires confirmation) |
 
-> **Dual terminal workflow:** Run the orchestrator in Terminal 1, use Terminal 2 for `/issue`, `/refresh`, `/ingest-skill`, and other support tasks. The `/refresh` command writes a signal file that the orchestrator detects before its next task.
+> **Dual terminal workflow:** Run the orchestrator in Terminal 1, use Terminal 2 for `/issue`, `/refresh`, `/ingest-skill`, and other support tasks.
+
+> **PRD changes are queued, not immediate:** `/refresh prd` waits for the current run to complete, then analyzes PRD differences and creates tasks for the changes. This prevents architectural conflicts from mixing old and new requirements mid-run.
 
 ### Command Details
 

@@ -1,217 +1,300 @@
 # /refresh - Signal Orchestrator to Reload
 
-Signal the orchestrator (running in another session) to immediately reload a specific resource. Writes a flag file that the orchestrator checks.
+Signal the orchestrator (running in another session) to reload a specific resource.
 
 ## Usage
 
 ```
-/refresh issues       Reload issue queue immediately
-/refresh skills       Reload skill directory
-/refresh prd          Re-read PRD.md
+/refresh issues       Poll issue queue immediately
+/refresh skills       Reload skill directory immediately
+/refresh prd          Queue restart with new PRD after current run completes
+/refresh cancel       Cancel a queued PRD restart
 ```
 
 **Important:** `/refresh` without an argument does nothing. You must specify what to refresh.
 
-## Behavior
+## Behavior by Target
 
-This command writes a signal file that the orchestrator detects and acts upon:
+| Target | Timing | Action |
+|--------|--------|--------|
+| `issues` | **Immediate** | Poll issue queue before next task |
+| `skills` | **Immediate** | Reload skill directory before next task |
+| `prd` | **Queued** | Complete current run, then restart with new PRD |
+| `cancel` | **Immediate** | Cancel a queued PRD restart |
 
-```
-.claude/refresh_signal.md
-```
+### Why PRD is Queued (Not Immediate)
 
-### Signal File Format
+PRD changes mid-run can cause architectural conflicts:
+- Existing tasks were planned against the old PRD
+- New tasks would be planned against the new PRD
+- Dependencies between old and new tasks may not align
 
-```markdown
-# Refresh Signal
+Instead, `/refresh prd`:
+1. Flags the orchestrator to restart after the current run
+2. Current run completes normally (all tasks finish)
+3. Orchestrator archives the completed run
+4. New run begins with the updated PRD
+5. Orchestrator analyzes PRD differences and creates tasks for changes
 
-- **Type**: {issues|skills|prd}
-- **Requested**: {ISO timestamp}
-- **Requested By**: Terminal 2 (support session)
-- **Reason**: User requested immediate refresh via /refresh command
-```
-
-### Orchestrator Response
-
-The orchestrator checks for this signal file:
-- Before selecting the next task
-- After each agent completes
-
-When detected:
-
-| Signal | Orchestrator Action |
-|--------|---------------------|
-| `issues` | Poll `.claude/issue_queue.md` immediately |
-| `skills` | Re-scan skill directory, rebuild runtime index |
-| `prd` | Re-read `PRD.md`, update project understanding |
-
-After processing, the orchestrator deletes the signal file.
+---
 
 ## Examples
 
-### Refresh Issues (Most Common)
-
-You've just reported a critical bug and want it picked up immediately:
+### Refresh Issues (Immediate)
 
 ```
 Terminal 2:
-  /issue "Production database connection failing"
-  [completes interview, priority: critical]
-
+  /issue "Critical bug in production"
   /refresh issues
-  "Refresh signal sent: issues
-   The orchestrator will poll the issue queue before its next task."
+
+  "═══════════════════════════════════════════════════════════
+  REFRESH SIGNAL SENT
+  ═══════════════════════════════════════════════════════════
+
+  Type:    issues
+  Action:  Immediate poll
+
+  The orchestrator will poll the issue queue before its next task.
+
+  ═══════════════════════════════════════════════════════════"
 ```
 
-### Refresh Skills
-
-You've added or modified a skill and want it available for the next agent:
+### Refresh Skills (Immediate)
 
 ```
 Terminal 2:
   /ingest-skill https://example.com/new-skill.md
-  [skill imported]
-
   /refresh skills
-  "Refresh signal sent: skills
-   The orchestrator will reload the skill directory before its next task."
+
+  "═══════════════════════════════════════════════════════════
+  REFRESH SIGNAL SENT
+  ═══════════════════════════════════════════════════════════
+
+  Type:    skills
+  Action:  Immediate reload
+
+  The orchestrator will reload the skill directory before its next task.
+
+  ═══════════════════════════════════════════════════════════"
 ```
 
-### Refresh PRD
-
-You've updated requirements and want the orchestrator to be aware (use with caution):
+### Refresh PRD (Queued Restart)
 
 ```
 Terminal 2:
-  [manually edited PRD.md to clarify a requirement]
-
+  [edits PRD.md with significant changes]
   /refresh prd
-  "Refresh signal sent: prd
-   The orchestrator will re-read PRD.md before its next task.
 
-   ⚠️  Note: In-flight tasks won't be affected. PRD changes apply to
-   future task planning and iteration cycles."
+  "═══════════════════════════════════════════════════════════
+  PRD RESTART QUEUED
+  ═══════════════════════════════════════════════════════════
+
+  The orchestrator will:
+  1. Complete all tasks in the current run (3 remaining)
+  2. Archive completed tasks for reference
+  3. Analyze differences between old and new PRD
+  4. Create tasks for the changes
+  5. Begin new run automatically
+
+  To cancel: /refresh cancel
+
+  ═══════════════════════════════════════════════════════════"
 ```
+
+### Cancel Queued Restart
+
+```
+Terminal 2:
+  /refresh cancel
+
+  "═══════════════════════════════════════════════════════════
+  PRD RESTART CANCELLED
+  ═══════════════════════════════════════════════════════════
+
+  The queued PRD restart has been cancelled.
+  The current run will continue normally.
+
+  ═══════════════════════════════════════════════════════════"
+```
+
+If no restart is queued:
+```
+  "═══════════════════════════════════════════════════════════
+  NOTHING TO CANCEL
+  ═══════════════════════════════════════════════════════════
+
+  No PRD restart is currently queued.
+
+  ═══════════════════════════════════════════════════════════"
+```
+
+---
+
+## Signal File Format
+
+### For issues/skills (immediate):
+
+```markdown
+# Refresh Signal
+
+- **Type**: issues
+- **Requested**: 2025-12-11T15:30:00Z
+- **Action**: immediate
+```
+
+### For prd (queued):
+
+```markdown
+# Refresh Signal
+
+- **Type**: prd
+- **Requested**: 2025-12-11T15:30:00Z
+- **Action**: restart_after_completion
+- **Reason**: PRD updated - restart queued after current run completes
+```
+
+### For cancel:
+
+```markdown
+# Refresh Signal
+
+- **Type**: cancel
+- **Requested**: 2025-12-11T15:35:00Z
+- **Action**: cancel_restart
+```
+
+---
 
 ## Implementation
 
 ```
 FUNCTION refresh(target):
-    IF target NOT IN ['issues', 'skills', 'prd']:
-        OUTPUT: "Usage: /refresh issues|skills|prd
+    IF target NOT IN ['issues', 'skills', 'prd', 'cancel']:
+        OUTPUT: "Usage: /refresh issues|skills|prd|cancel
 
-                 You must specify what to refresh:
-                   /refresh issues  - Poll issue queue immediately
-                   /refresh skills  - Reload skill directory
-                   /refresh prd     - Re-read PRD.md"
+                 /refresh issues  - Poll issue queue immediately
+                 /refresh skills  - Reload skill directory immediately
+                 /refresh prd     - Queue restart after current run
+                 /refresh cancel  - Cancel queued PRD restart"
         RETURN
 
+    IF target == 'cancel':
+        signal = {
+            type: "cancel",
+            requested: NOW(),
+            action: "cancel_restart"
+        }
+        WRITE .claude/refresh_signal.md
+
+        OUTPUT: "PRD restart cancelled (if one was queued)."
+        RETURN
+
+    IF target == 'prd':
+        signal = {
+            type: "prd",
+            requested: NOW(),
+            action: "restart_after_completion",
+            reason: "PRD updated via /refresh prd"
+        }
+        WRITE .claude/refresh_signal.md
+
+        OUTPUT: "PRD restart queued.
+                 Current run will complete, then restart with new PRD.
+                 To cancel: /refresh cancel"
+        RETURN
+
+    # issues or skills - immediate
     signal = {
         type: target,
         requested: NOW(),
-        requested_by: "support session"
+        action: "immediate"
     }
+    WRITE .claude/refresh_signal.md
 
-    WRITE .claude/refresh_signal.md with signal
-
-    IF target == 'issues':
-        OUTPUT: "Refresh signal sent: issues
-                 The orchestrator will poll the issue queue before its next task."
-
-    ELSE IF target == 'skills':
-        OUTPUT: "Refresh signal sent: skills
-                 The orchestrator will reload the skill directory before its next task."
-
-    ELSE IF target == 'prd':
-        OUTPUT: "Refresh signal sent: prd
-                 The orchestrator will re-read PRD.md before its next task.
-
-                 ⚠️  Note: In-flight tasks won't be affected. PRD changes apply to
-                 future task planning and iteration cycles."
+    OUTPUT: "Refresh signal sent: {target}
+             The orchestrator will process this before its next task."
 ```
 
-## Display Format
+---
 
-### Success
+## Orchestrator Response
 
-```
-═══════════════════════════════════════════════════════════
-REFRESH SIGNAL SENT
-═══════════════════════════════════════════════════════════
-
-Type:      issues
-Sent:      2025-12-11T15:30:00Z
-
-The orchestrator will poll the issue queue before its next task.
-
-═══════════════════════════════════════════════════════════
-```
-
-### No Argument
+### Immediate Signals (issues, skills)
 
 ```
-═══════════════════════════════════════════════════════════
-REFRESH: ARGUMENT REQUIRED
-═══════════════════════════════════════════════════════════
+checkRefreshSignals():
+    IF signal.type == 'issues':
+        REPORT: "🔄 Refresh signal: polling issue queue"
+        pollIssueQueue()
+        DELETE signal file
 
-Usage: /refresh issues|skills|prd
-
-  /refresh issues  - Poll issue queue immediately
-  /refresh skills  - Reload skill directory
-  /refresh prd     - Re-read PRD.md
-
-═══════════════════════════════════════════════════════════
+    IF signal.type == 'skills':
+        REPORT: "🔄 Refresh signal: reloading skills"
+        reloadSkillDirectory()
+        DELETE signal file
 ```
 
-### Invalid Argument
+### Queued Signal (prd)
 
 ```
-═══════════════════════════════════════════════════════════
-REFRESH: INVALID TARGET
-═══════════════════════════════════════════════════════════
+checkRefreshSignals():
+    IF signal.type == 'prd':
+        session_state.restart_after_completion = true
+        session_state.restart_reason = signal.reason
+        REPORT: "📋 PRD restart queued - current run will complete first"
+        DELETE signal file
 
-Unknown refresh target: "foo"
-
-Valid targets:
-  /refresh issues  - Poll issue queue immediately
-  /refresh skills  - Reload skill directory
-  /refresh prd     - Re-read PRD.md
-
-═══════════════════════════════════════════════════════════
+    IF signal.type == 'cancel':
+        session_state.restart_after_completion = false
+        session_state.restart_reason = null
+        REPORT: "📋 PRD restart cancelled"
+        DELETE signal file
 ```
 
-## Cautions
+### On Run Completion (with queued restart)
 
-### PRD Refresh
-
-Re-reading the PRD mid-orchestration has limited effect:
-- **Won't affect** tasks already in the journal
-- **Won't affect** agents currently executing
-- **Will affect** future iteration/extension cycles
-- **Will affect** how the orchestrator describes the project in status reports
-
-For substantial PRD changes, consider waiting for the current run to complete and using the iteration/extension flow.
-
-### Multiple Signals
-
-If multiple `/refresh` commands are sent before the orchestrator checks:
-- Only the most recent signal file exists
-- Use separate commands if you need multiple refreshes
-
-If you need to refresh multiple things:
 ```
-/refresh issues
-/refresh skills
+Phase 5 Completion:
+    IF session_state.restart_after_completion:
+        REPORT: "🔄 Restarting with updated PRD..."
+
+        # Archive current run
+        archiveCompletedRun()
+
+        # Analyze PRD differences
+        old_prd = READ PRD-history/latest
+        new_prd = READ PRD.md
+        changes = analyzePRDDifferences(old_prd, new_prd)
+
+        # Create tasks for changes
+        tasks = decomposeChanges(changes, archived_context)
+
+        # Begin new run
+        GOTO Phase 2 (Planning) with new tasks
 ```
 
-The orchestrator will process each signal file it finds.
+---
+
+## Display in /status
+
+When a PRD restart is queued:
+
+```
+CURRENT STATE
+  Active task: task-006
+  Next task: task-007
+  Blockers: none
+  ⏳ PRD restart queued (2 tasks remaining)
+```
+
+---
 
 ## Related Commands
 
 | Command | Purpose |
 |---------|---------|
+| `/abort` | Stop current run immediately (destructive) |
 | `/issue` | Report new issue |
 | `/issues` | View issue queue |
+| `/status` | View orchestrator state (shows if restart queued) |
 | `/ingest-skill` | Import new skill |
-| `/audit-skills` | Check skill library |
-| `/status` | View orchestrator state |

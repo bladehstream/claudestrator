@@ -1,8 +1,13 @@
 {
   "companyAnnouncements": [
-    "🎭 Claudestrator installed. Run /prdgen to create a PRD, then /orchestrate to begin. Do NOT run /init.",
-    "🎭 Ready for orchestration. Use /prdgen (Terminal 2) then /orchestrate (Terminal 1). Avoid /init.",
-    "🎭 Claudestrator active. Start with /prdgen to generate requirements, then /orchestrate to execute."
+    "🎭 Claudestrator: Use TWO terminals - Terminal 2 for setup (/prdgen, /issue), Terminal 1 for /orchestrate. Do NOT run /init.",
+    "🎭 Quick Start: 1) /prdgen to create PRD  2) /orchestrate to begin  3) /issue to report bugs. Avoid /init!",
+    "🎭 Workflow: Terminal 2 runs /prdgen, /ingest-skill, /issue. Terminal 1 runs /orchestrate. Never /init.",
+    "🎭 Commands: /prdgen (create PRD), /orchestrate (execute), /status (progress), /issue (report bugs). Skip /init.",
+    "🎭 Tip: Run /orchestrate --dry-run to preview tasks and cost estimates before executing.",
+    "🎭 Tip: Use /audit-skills to check skill library health, /ingest-skill <url> to add new skills.",
+    "🎭 Tip: Report bugs with /issue in Terminal 2 - orchestrator polls and creates fix tasks automatically.",
+    "🎭 Tip: Run /status metrics to see token usage, costs, and success rates by model and skill."
   ],
   "hooks": {
     "SessionStart": [

@@ -31,6 +31,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **Iteration Support** | Iterate on feedback, extend with new features, or archive and restart |
 | **PRD Versioning** | Automatic PRD history for audit trail across iterations |
 | **Autonomy Levels** | Supervised, Trust Agents, or Full Autonomy with safety guardrails |
+| **Async Issue Reporting** | Report issues in separate session; orchestrator polls and creates tasks |
 
 ## Architecture
 
@@ -121,6 +122,19 @@ Run these commands **during** active orchestration to manage the session.
 | `/deorchestrate` | (main) | Clean exit with full state save |
 
 > **Dynamic model selection:** `/orchestrate` runs in your main context but spawns sub-agents with models selected by task complexity: Easy→Haiku, Normal→Sonnet, Complex→Opus.
+
+### Issue Reporting Commands
+
+Report issues asynchronously - even while the orchestrator is running in another session.
+
+| Command | Model | Action |
+|---------|-------|--------|
+| `/issue` | Sonnet | Report bug, enhancement, or other issue |
+| `/issues` | (main) | View issue queue status |
+| `/issues <issue-id>` | (main) | View specific issue details |
+| `/reject <id> <reason>` | (main) | Mark issue as won't fix |
+
+> **Async workflow:** `/issue` spawns a dedicated Issue Reporter agent that interviews you and writes to a queue. The orchestrator polls this queue every 10 minutes and after each task completion, automatically creating tasks from pending issues.
 
 ### Command Details
 

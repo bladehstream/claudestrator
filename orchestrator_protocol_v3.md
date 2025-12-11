@@ -294,6 +294,139 @@ Mark first executable task as in_progress
 
 ## Phase 3: Task Execution
 
+### 3.0 Poll Issue Queue
+
+Before selecting the next task, check for new issues from the async Issue Reporter.
+
+**Poll Triggers:**
+- On `/orchestrate` start
+- After each agent completes a task
+- Every 10 minutes during active orchestration
+
+```
+FUNCTION pollIssueQueue():
+    IF NOT EXISTS .claude/issue_queue.md:
+        RETURN  # No queue, nothing to do
+
+    issues = PARSE .claude/issue_queue.md
+    pending = issues.filter(i => i.status == 'pending')
+
+    IF pending.length == 0:
+        UPDATE queue "Last Polled" timestamp
+        RETURN
+
+    # Process pending issues by priority
+    pending.sort(BY priority DESC, reported_at ASC)
+
+    FOR issue IN pending:
+        task = createTaskFromIssue(issue)
+
+        # Priority handling
+        IF issue.priority == 'critical':
+            # Insert as immediate next task
+            task.priority = 0  # Highest priority
+            REPORT: "⚠️ Critical issue detected: {issue.summary}"
+            REPORT: "Creating urgent task {task.id}"
+        ELSE IF issue.priority == 'high':
+            task.priority = 1  # Top of normal queue
+        ELSE IF issue.priority == 'medium':
+            task.priority = 5  # Normal position
+        ELSE:  # low
+            task.priority = 10  # End of queue
+
+        # Add task to journal
+        journal.tasks.append(task)
+        CREATE task file: journal/task-{task.id}-{slug}.md
+
+        # Update issue status
+        issue.status = 'accepted'
+        issue.task_ref = task.id
+        issue.accepted_at = NOW()
+
+    # Update queue file
+    WRITE .claude/issue_queue.md
+    UPDATE queue status counts
+    UPDATE "Last Polled" timestamp
+
+    REPORT: "Processed {pending.length} issue(s) from queue"
+
+
+FUNCTION createTaskFromIssue(issue):
+    RETURN {
+        id: nextTaskId(),
+        name: issue.summary,
+        type: mapIssueTypeToTaskType(issue.type),
+        source: issue.id,
+        objective: issue.summary + "\n\n" + issue.details,
+        acceptance_criteria: deriveAcceptanceCriteria(issue),
+        complexity: estimateComplexity(issue),
+        dependencies: []  # Issues typically don't have deps
+    }
+
+
+FUNCTION mapIssueTypeToTaskType(issue_type):
+    MATCH issue_type:
+        'bug' → 'bugfix'
+        'performance' → 'optimization'
+        'enhancement' → 'feature'
+        'ux' → 'feature'
+        'security' → 'security'
+        'refactor' → 'refactor'
+
+
+FUNCTION deriveAcceptanceCriteria(issue):
+    criteria = []
+
+    IF issue.type == 'bug':
+        criteria.append("Issue no longer reproduces with given steps")
+        IF issue.expected_behavior:
+            criteria.append("Behavior matches expected: " + issue.expected_behavior)
+
+    ELSE IF issue.type == 'performance':
+        IF issue.target_metric:
+            criteria.append("Performance meets target: " + issue.target_metric)
+        ELSE:
+            criteria.append("Performance is measurably improved")
+
+    ELSE IF issue.type == 'enhancement':
+        IF issue.acceptance_criteria:
+            criteria.extend(issue.acceptance_criteria)
+        ELSE:
+            criteria.append("Feature works as described")
+
+    ELSE IF issue.type == 'security':
+        criteria.append("Vulnerability is mitigated")
+        criteria.append("No regression in existing security")
+
+    RETURN criteria
+```
+
+### 3.0.1 Update Issue Status on Task Completion
+
+When a task sourced from an issue completes:
+
+```
+AFTER task completes:
+    IF task.source MATCHES 'ISSUE-*':
+        issue = findIssueById(task.source)
+        IF issue:
+            issue.status = 'complete'
+            issue.completed_at = NOW()
+            issue.resolution = task.outcome
+            WRITE .claude/issue_queue.md
+```
+
+When a task sourced from an issue starts:
+
+```
+WHEN task starts execution:
+    IF task.source MATCHES 'ISSUE-*':
+        issue = findIssueById(task.source)
+        IF issue AND issue.status == 'accepted':
+            issue.status = 'in_progress'
+            WRITE .claude/issue_queue.md
+```
+
 ### 3.1 Select Next Task
 
 ```

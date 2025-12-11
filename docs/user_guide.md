@@ -463,6 +463,116 @@ Reading src/config/auth.config.ts for token expiry settings.
 
 ---
 
+## Issue Reporting
+
+Report bugs, enhancements, and other issues asynchronously - even while the orchestrator is running tasks in another session.
+
+### Why Async Issues?
+
+- **Decoupled workflow** - Report issues without interrupting orchestration
+- **Standardized format** - Issue Reporter interviews you to capture consistent details
+- **Priority handling** - Critical issues jump the queue automatically
+- **Duplicate detection** - Avoid creating redundant tasks
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/issue` | Report a new issue (spawns Issue Reporter) |
+| `/issues` | View issue queue status |
+| `/issues <issue-id>` | View specific issue details |
+| `/reject <id> <reason>` | Mark issue as won't fix |
+
+### Reporting an Issue
+
+```
+/issue
+
+Issue Reporter:
+    "What type of issue are you reporting?
+
+    1. Bug - Something isn't working correctly
+    2. Performance - Slowness or resource issues
+    3. Enhancement - New feature request
+    4. UX - User experience improvement
+    5. Security - Security concern
+    6. Refactor - Code quality issue"
+```
+
+The Issue Reporter will interview you based on the issue type, gathering:
+- Reproduction steps (for bugs)
+- Performance metrics (for performance issues)
+- Acceptance criteria (for enhancements)
+- Security impact (for security issues)
+
+### Quick Issue
+
+Start with context:
+```
+/issue Dashboard is slow when loading transactions
+```
+
+The Issue Reporter uses your description as a starting point and asks targeted follow-up questions.
+
+### Issue Priority
+
+| Priority | Behavior |
+|----------|----------|
+| `critical` | Interrupts queue - becomes next task immediately |
+| `high` | Inserted at top of pending tasks |
+| `medium` | Normal queue position by submission time |
+| `low` | End of queue, after all other pending |
+
+### How Issues Become Tasks
+
+1. You run `/issue` and complete the interview
+2. Issue is written to `.claude/issue_queue.md`
+3. Orchestrator polls the queue:
+   - Every 10 minutes during active orchestration
+   - After each agent completes a task
+   - When `/orchestrate` is started
+4. Pending issues are converted to tasks with appropriate priority
+5. Issue status updates as the task progresses
+
+### Viewing the Queue
+
+```
+/issues
+
+═══════════════════════════════════════════════════════════
+ISSUE QUEUE
+═══════════════════════════════════════════════════════════
+
+SUMMARY
+  Pending:     2
+  Accepted:    1  (tasks created)
+  In Progress: 1
+  Completed:   3
+
+PENDING ISSUES (2)
+  ISSUE-20241211-002  high    performance  Dashboard slow with 100+ items
+  ISSUE-20241211-001  medium  enhancement  Add CSV export headers
+
+ACCEPTED (awaiting execution)
+  ISSUE-20241210-001  medium  bug          → task-012
+
+IN PROGRESS
+  ISSUE-20241209-001  high    bug          → task-011 (agent-abc123)
+
+═══════════════════════════════════════════════════════════
+```
+
+### Rejecting Issues
+
+Mark an issue as "won't fix":
+```
+/reject ISSUE-20241211-001 "Out of scope for v1"
+```
+
+Only pending or accepted issues can be rejected.
+
+---
+
 ## The Journal System
 
 ### Why Journals?
@@ -783,5 +893,5 @@ Claude: Creating project journal and decomposing into tasks...
 
 ---
 
-*User Guide Version: 1.2*
+*User Guide Version: 1.3*
 *Last Updated: December 2024*

@@ -462,6 +462,68 @@ IF loops > 10:
     Continue with {loops} loops? (yes/no)
 ```
 
+### Context Management During Long Runs
+
+Multi-loop runs consume significant context. When you see warnings like:
+
+```
+● Task Output a198902
+  ⎿  Task is still running…
+  ⎿  Context low · Run /compact to compact & continue
+
+● Agent "ISSUE-009 Accessibility WCAG" completed.
+  ⎿  Context low · Run /compact to compact & continue
+```
+
+**What "Context low" means:**
+- The orchestrator's context window is filling up with agent outputs
+- Claude Code will soon need to summarize older content to make room
+- This is normal for long-running multi-loop sessions
+
+**How to respond:**
+
+1. **Run `/compact` when prompted** - This compacts the conversation history while preserving essential state. The orchestrator will continue from where it left off.
+
+2. **Let it auto-compact** - If you don't intervene, Claude Code will automatically compact when necessary. The loop will continue.
+
+3. **Check `/progress`** - After compacting, run `/progress` to verify the orchestrator state is intact.
+
+**Automatic handling:**
+
+```
+ON context_low_warning:
+    # Orchestrator should proactively checkpoint before compaction
+    IF context_usage > 80%:
+        REPORT: "⚠️ Context running low - checkpointing state..."
+        updateSessionState()  # Save current loop progress
+        updateJournal()       # Ensure task states are persisted
+
+    # After compaction, orchestrator can resume
+    ON resume_after_compact:
+        READ session_state.md
+        READ journal/index.md
+        REPORT: "✓ Resumed from checkpoint"
+        REPORT: "  Loop: {current_loop} of {total_loops}"
+        REPORT: "  Last completed task: {last_task}"
+        CONTINUE from current position
+```
+
+**Best practices for long runs:**
+
+| Loops | Context Risk | Recommendation |
+|-------|--------------|----------------|
+| 1-3 | Low | Should complete without compaction |
+| 4-7 | Medium | May need 1 compaction; monitor warnings |
+| 8-10 | High | Expect 1-2 compactions; save checkpoints |
+| 10+ | Very High | Consider splitting into multiple runs |
+
+**If something goes wrong after compaction:**
+
+1. Check `.claude/session_state.md` for current loop state
+2. Check `.claude/journal/index.md` for task progress
+3. Run `/progress` to see orchestrator status
+4. If needed, resume with `/orchestrate` - it will detect and continue the run
+
 ---
 
 ## Loop Versioning

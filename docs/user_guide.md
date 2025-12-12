@@ -1075,6 +1075,35 @@ Add entry to `skill_manifest.md`:
 - Recreate from task files
 - Worst case: restart journal (tasks are independent)
 
+### "Context low" warnings during loop mode
+
+**Cause**: Multi-loop runs consume significant context. This warning appears when the context window is filling up.
+
+**Example warning:**
+```
+● Agent "ISSUE-009 Accessibility WCAG" completed.
+  ⎿  Context low · Run /compact to compact & continue
+```
+
+**Solutions**:
+1. **Run `/compact`** - Compacts history while preserving state; loop continues automatically
+2. **Let it auto-compact** - Claude Code will handle it if you don't respond
+3. **Check `/progress`** - After compacting, verify orchestrator state is intact
+
+**Context risk by loop count:**
+
+| Loops | Risk | Notes |
+|-------|------|-------|
+| 1-3 | Low | Usually completes without compaction |
+| 4-7 | Medium | May need 1 compaction |
+| 8-10 | High | Expect 1-2 compactions |
+| 10+ | Very High | Consider splitting into multiple runs |
+
+**If state is lost after compaction:**
+1. Check `.claude/session_state.md` for loop progress
+2. Check `.claude/journal/index.md` for task states
+3. Run `/orchestrate` to resume - it detects and continues the run
+
 ---
 
 ## Customization

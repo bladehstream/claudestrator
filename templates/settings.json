@@ -34,19 +34,11 @@
     "allow": [
       "Read(**)",
       "Write(**)",
+      "Edit(**)",
       "Glob(**)",
       "Grep(**)",
       "Task(**)",
-      "Bash(mkdir*)",
-      "Bash(sleep:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(ls:*)",
-      "Bash(cat:*)",
-      "Bash(while *)",
-      "Bash(while [ *)"
+      "Bash(**)"
     ],
     "deny": [
       "Bash(sudo:*)",

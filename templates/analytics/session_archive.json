@@ -1,4 +1,9 @@
 {
+  "_meta": {
+    "schema_version": "2.0",
+    "confidence_tagging": true,
+    "reversion_doc": "docs/analytics_confidence_tagging.md"
+  },
   "session_id": "",
   "project": "",
   "archived_at": null,
@@ -6,6 +11,16 @@
   "started_at": null,
   "completed_at": null,
   "duration_ms": null,
+  "data_quality": {
+    "overall": "observed",
+    "source": "instrumented",
+    "issues_observed": 0,
+    "issues_inferred": 0,
+    "decisions_observed": 0,
+    "decisions_inferred": 0,
+    "verified_percentage": 100,
+    "notes": ""
+  },
   "summary": {
     "tasks_total": 0,
     "tasks_completed": 0,
@@ -19,11 +34,19 @@
   },
   "issues": {
     "self_detected": 0,
+    "self_detected_observed": 0,
+    "self_detected_inferred": 0,
     "user_reported": 0,
+    "user_reported_observed": 0,
+    "user_reported_inferred": 0,
     "prevented_by_learning": 0,
+    "prevented_observed": 0,
+    "prevented_guessed": 0,
     "details": []
   },
   "decisions_influenced": [],
+  "decisions_observed": 0,
+  "decisions_inferred": 0,
   "knowledge_applied": [],
   "by_model": {
     "haiku": {

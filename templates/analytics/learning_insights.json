@@ -1,11 +1,34 @@
 {
+  "_meta": {
+    "schema_version": "2.0",
+    "confidence_tagging": true,
+    "reversion_doc": "docs/analytics_confidence_tagging.md"
+  },
+
   "last_updated": null,
   "sessions_analyzed": 0,
 
+  "data_quality": {
+    "overall": "unknown",
+    "observed_count": 0,
+    "inferred_count": 0,
+    "guessed_count": 0,
+    "unknown_count": 0,
+    "verified_percentage": 0
+  },
+
   "issue_detection": {
     "total_issues": 0,
+    "by_confidence": {
+      "observed": 0,
+      "inferred": 0,
+      "guessed": 0,
+      "unknown": 0
+    },
     "self_detected": {
       "count": 0,
+      "count_observed": 0,
+      "count_inferred": 0,
       "percentage": 0,
       "by_category": {
         "qa_found": 0,
@@ -19,6 +42,8 @@
     },
     "user_reported": {
       "count": 0,
+      "count_observed": 0,
+      "count_inferred": 0,
       "percentage": 0,
       "by_priority": {
         "critical": 0,
@@ -30,44 +55,66 @@
     },
     "prevented_by_learning": {
       "count": 0,
+      "count_observed": 0,
+      "count_guessed": 0,
       "description": "Issues avoided because of patterns learned from previous runs",
+      "note": "Prevented issues are never higher than 'guessed' confidence for inferred data",
       "examples": []
     },
-    "detection_ratio_trend": []
+    "detection_ratio_trend": [],
+    "issue_records": []
   },
 
   "decisions_influenced_by_learning": {
     "total_decisions": 0,
     "influenced_count": 0,
+    "influenced_count_observed": 0,
+    "influenced_count_inferred": 0,
     "influence_rate": 0,
+    "by_confidence": {
+      "observed": 0,
+      "inferred": 0,
+      "guessed": 0
+    },
     "categories": {
       "skill_selection": {
         "count": 0,
+        "count_observed": 0,
+        "count_inferred": 0,
         "description": "Chose specific skills based on past success/failure",
         "examples": []
       },
       "model_upgrade": {
         "count": 0,
+        "count_observed": 0,
+        "count_inferred": 0,
         "description": "Upgraded model based on complexity learning",
         "examples": []
       },
       "context_adjustment": {
         "count": 0,
+        "count_observed": 0,
+        "count_inferred": 0,
         "description": "Adjusted context size based on past issues",
         "examples": []
       },
       "approach_change": {
         "count": 0,
+        "count_observed": 0,
+        "count_inferred": 0,
         "description": "Changed implementation approach due to anti-pattern",
         "examples": []
       },
       "dependency_ordering": {
         "count": 0,
+        "count_observed": 0,
+        "count_inferred": 0,
         "description": "Reordered tasks based on learned dependencies",
         "examples": []
       }
     },
-    "recent_influences": []
+    "recent_influences": [],
+    "decision_records": []
   },
 
   "knowledge_application": {

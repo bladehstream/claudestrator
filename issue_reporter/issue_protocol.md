@@ -237,32 +237,56 @@ PROMPT (using AskUserQuestion):
 
 ### Phase 5: Component Identification (Optional)
 
+**Option A: Use AskUserQuestion**
 ```
-PROMPT:
-    "Do you know which files or components are affected?"
+PROMPT (using AskUserQuestion):
+    question: "Do you know which files or components are affected?"
+    header: "Components"
+    options:
+    - label: "Yes, I can specify"
+      description: "I know the affected files/components"
+    - label: "No, I'm not sure"
+      description: "Skip this question"
 
-    Options:
-    - Yes, I can specify
-    - No, I'm not sure
-
-IF "Yes":
+IF "Yes, I can specify":
     "List the affected files or components:"
     [Freeform]
 ```
 
-### Phase 6: Suggested Fix (Optional)
-
+**Option B: Freeform with submit instruction**
 ```
 PROMPT:
-    "Do you have a suggested fix or approach?"
+    "Do you know which specific files or components are affected?
+    (Optional - type 'submit' or 's' to proceed without specifying)"
 
-    Options:
-    - Yes
-    - No / Not sure
+    [Freeform - accept 'submit', 's', 'no', 'none', 'unknown' as proceed signals]
+```
+
+### Phase 6: Suggested Fix (Optional)
+
+**Option A: Use AskUserQuestion**
+```
+PROMPT (using AskUserQuestion):
+    question: "Do you have a suggested fix or approach?"
+    header: "Suggestion"
+    options:
+    - label: "Yes"
+      description: "I have a suggestion"
+    - label: "No / Not sure"
+      description: "Skip this question"
 
 IF "Yes":
     "Describe your suggested approach:"
     [Freeform]
+```
+
+**Option B: Freeform with submit instruction**
+```
+PROMPT:
+    "Do you have a suggested fix or approach?
+    (Optional - type 'submit' or 's' to proceed without specifying)"
+
+    [Freeform - accept 'submit', 's', 'no', 'none' as proceed signals]
 ```
 
 ---

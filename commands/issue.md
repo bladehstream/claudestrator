@@ -93,10 +93,14 @@ Task(
         **You MUST ask this question. Do NOT auto-assign priority.**
 
         ### 5. Affected Components (optional)
-        Ask if user knows which files/components are affected
+        Ask if user knows which files/components are affected.
+        Say: "Do you know which specific files or components are affected? (Optional - type 'submit' or 's' to proceed without specifying)"
+        Accept 'submit', 's', 'no', 'none', 'unknown' as signals to proceed without this info.
 
         ### 6. Suggested Fix (optional)
-        Ask if user has a suggested approach
+        Ask if user has a suggested approach.
+        Say: "Do you have a suggested fix or approach? (Optional - type 'submit' or 's' to proceed without specifying)"
+        Accept 'submit', 's', 'no', 'none' as signals to proceed without this info.
 
         ## Duplicate Detection
         Before writing, check .claude/issue_queue.md for similar pending issues.

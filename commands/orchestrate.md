@@ -39,6 +39,79 @@ Examples:
 
 ---
 
+## Autonomy Level Selection
+
+When starting loop mode (`/orchestrate N`), prompt the user to select their autonomy level:
+
+```
+IF total_loops > 0:
+    PROMPT using AskUserQuestion:
+        question: "What level of autonomy should the orchestrator have during this run?"
+        header: "Autonomy"
+        options:
+            - label: "Full Autonomy (Recommended for loop mode)"
+              description: "Auto-approve safe operations via hook. You'll only be asked about potentially risky actions. Best for multi-loop runs."
+
+            - label: "Supervised"
+              description: "Approve each agent spawn and significant action. More control but requires attention."
+
+            - label: "Manual"
+              description: "Approve every tool use. Maximum control but very slow for multi-loop runs."
+
+    IF user selects "Full Autonomy":
+        # Verify hook is installed
+        IF NOT EXISTS .claude/hooks/safe-autonomy.sh:
+            REPORT: "Installing safe-autonomy hook..."
+            COPY templates/hooks/safe-autonomy.sh → .claude/hooks/
+            CHMOD +x .claude/hooks/safe-autonomy.sh
+
+        # Verify settings.json has the hook configured
+        IF hook not in settings.json:
+            UPDATE .claude/settings.json to add PermissionRequest hook
+
+        REPORT: "✓ Full Autonomy enabled via safe-autonomy hook"
+        REPORT: "  • Safe operations auto-approved"
+        REPORT: "  • Dangerous operations blocked or prompted"
+        REPORT: ""
+
+    ELSE IF user selects "Supervised":
+        REPORT: "✓ Supervised mode - you'll approve agent spawns"
+        REPORT: ""
+
+    ELSE IF user selects "Manual":
+        REPORT: "⚠️ Manual mode selected"
+        REPORT: "  This will require many approvals during loop execution."
+        REPORT: "  Consider 'Supervised' for a better balance."
+        REPORT: ""
+```
+
+### Autonomy Levels Explained
+
+| Level | Agent Spawns | File Edits | Bash Commands | Best For |
+|-------|--------------|------------|---------------|----------|
+| **Full Autonomy** | Auto | Auto (safe) | Auto (safe) | Multi-loop runs, overnight runs |
+| **Supervised** | Prompt | Auto (safe) | Prompt (some) | Watching progress, learning |
+| **Manual** | Prompt | Prompt | Prompt | Debugging, auditing |
+
+### Safe Autonomy Hook
+
+The `safe-autonomy.sh` hook (installed at `.claude/hooks/`) auto-approves:
+- Read operations (Read, Glob, Grep, WebSearch)
+- File edits within project directory (not .env, secrets, etc.)
+- Git commands (except force push to main/master)
+- Package manager commands (npm, pip, cargo, etc.)
+- Build/test commands
+
+And blocks:
+- Privilege escalation (sudo, su)
+- Dangerous deletions (rm -rf /)
+- System file modifications
+- Sensitive file access (.ssh, .aws, credentials)
+
+See `templates/hooks/safe-autonomy.sh` for full rules.
+
+---
+
 ## Loop Execution Flow
 
 **CRITICAL:** The orchestrator is a PROJECT MANAGER. All work—including research—MUST be delegated to sub-agents via the Task tool. The orchestrator NEVER performs research, implementation, or analysis directly.

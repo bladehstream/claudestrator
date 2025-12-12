@@ -7,8 +7,37 @@ Report new issues or reject existing ones. Issues are written to a queue that th
 ```
 /issue                           Start interactive issue reporting
 /issue <brief description>       Start with initial context
+/issue [generated] <details>     Agent-generated issue (from research/QA)
 /issue reject <id> <reason>      Mark issue as won't fix
 ```
+
+## Issue Sources
+
+Issues can come from two sources, tracked via the `source` field:
+
+| Source | Tag | Origin | Example |
+|--------|-----|--------|---------|
+| `user` | (none) | Human user via Terminal 2 | `/issue Login button doesn't work` |
+| `generated` | `[generated]` | Research agent, QA agent, or other sub-agents | `/issue [generated] Missing CSRF protection on forms` |
+
+### Generated Issues
+
+Sub-agents (research, QA, etc.) report findings as issues with the `[generated]` tag:
+
+```
+/issue [generated] Title: Add rate limiting to API
+Description: API endpoints have no rate limiting, vulnerable to abuse
+Acceptance Criteria: 100 req/min per IP, Redis-backed counter
+Complexity: normal
+Files: src/middleware/rateLimit.ts (new), src/app.ts
+Rationale: Industry standard security practice, prevents DoS
+```
+
+This allows the orchestrator to:
+1. Distinguish human-reported issues from agent-discovered issues
+2. Track "self-detected" vs "user-reported" bugs in analytics
+3. Prioritize appropriately (user issues may need faster response)
+4. Generate accurate learning metrics
 
 ## Behavior
 

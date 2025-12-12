@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Summary - {{RUN_ID}}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border-color: #30363d;
+            --accent-green: #3fb950;
+            --accent-yellow: #d29922;
+            --accent-red: #f85149;
+            --accent-blue: #58a6ff;
+            --accent-purple: #a371f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-info h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header-info .meta {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .header-info .meta span {
+            margin-right: 20px;
+        }
+
+        .success-ring {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .success-ring canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .success-ring .percentage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .success-ring .percentage .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        .success-ring .percentage .label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .stat-card.green .value { color: var(--accent-green); }
+        .stat-card.yellow .value { color: var(--accent-yellow); }
+        .stat-card.blue .value { color: var(--accent-blue); }
+        .stat-card.purple .value { color: var(--accent-purple); }
+
+        /* Sections */
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Features List */
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+
+        .feature-status {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 12px;
+        }
+
+        .feature-status.complete { background: var(--accent-green); color: white; }
+        .feature-status.partial { background: var(--accent-yellow); color: black; }
+        .feature-status.failed { background: var(--accent-red); color: white; }
+
+        .feature-content {
+            flex: 1;
+        }
+
+        .feature-content h4 {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .feature-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .feature-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        /* Bugs Table */
+        .bugs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bugs-table th,
+        .bugs-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .bugs-table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .bug-source {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .bug-source.self { background: var(--accent-blue); color: white; }
+        .bug-source.user { background: var(--accent-purple); color: white; }
+        .bug-source.prevented { background: var(--accent-green); color: white; }
+
+        .severity {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .severity.high { background: rgba(248, 81, 73, 0.2); color: var(--accent-red); }
+        .severity.medium { background: rgba(210, 153, 34, 0.2); color: var(--accent-yellow); }
+        .severity.low { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+
+        /* Charts Row */
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .chart-container h3 {
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* Loop Accordion */
+        .loop-accordion {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .loop-item {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .loop-item:last-child {
+            border-bottom: none;
+        }
+
+        .loop-header {
+            background: var(--bg-secondary);
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .loop-header:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .loop-header h4 {
+            font-size: 15px;
+        }
+
+        .loop-header .loop-meta {
+            display: flex;
+            gap: 16px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .loop-content {
+            display: none;
+            padding: 20px;
+            background: var(--bg-primary);
+        }
+
+        .loop-content.open {
+            display: block;
+        }
+
+        .loop-changes {
+            list-style: none;
+        }
+
+        .loop-changes li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        .loop-changes li:last-child {
+            border-bottom: none;
+        }
+
+        /* Git Commands */
+        .git-commands {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .git-commands h4 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .git-command {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .git-command code {
+            flex: 1;
+            background: var(--bg-primary);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .git-command button {
+            margin-left: 8px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .git-command button:hover {
+            background: var(--bg-tertiary);
+        }
+
+        /* Learnings */
+        .learning-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .learning-item h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .learning-item p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin-left: 8px;
+        }
+
+        .confidence-badge.observed { background: var(--accent-green); color: white; }
+        .confidence-badge.inferred { background: var(--accent-yellow); color: black; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .success-ring {
+                margin-top: 20px;
+            }
+
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-info">
+                <h1>Run Summary</h1>
+                <div class="meta">
+                    <span>🆔 {{RUN_ID}}</span>
+                    <span>📅 {{DATE}}</span>
+                    <span>🔄 {{LOOPS_COMPLETED}} of {{TOTAL_LOOPS}} loops</span>
+                    <span>⏱️ {{DURATION}} minutes</span>
+                </div>
+                <div class="meta" style="margin-top: 8px;">
+                    <span>🎯 Focus: {{FOCUS_AREAS}}</span>
+                </div>
+            </div>
+            <div class="success-ring">
+                <canvas id="successRing" width="120" height="120"></canvas>
+                <div class="percentage">
+                    <div class="value">{{SUCCESS_PERCENT}}%</div>
+                    <div class="label">Success</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card green">
+                <div class="value">{{IMPROVEMENTS_COMPLETED}}</div>
+                <div class="label">Improvements</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="value">{{BUGS_FIXED}}</div>
+                <div class="label">Bugs Fixed</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="value">{{FILES_CHANGED}}</div>
+                <div class="label">Files Changed</div>
+            </div>
+            <div class="stat-card yellow">
+                <div class="value">${{EST_COST}}</div>
+                <div class="label">Est. Cost</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="chart-container">
+                <h3>Improvements by Status</h3>
+                <canvas id="improvementsChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Bug Sources</h3>
+                <canvas id="bugsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Features Implemented -->
+        <div class="section">
+            <h2>Features Implemented</h2>
+            {{FEATURES_LIST}}
+        </div>
+
+        <!-- Bugs Found & Fixed -->
+        <div class="section">
+            <h2>Bugs Found & Fixed</h2>
+            <table class="bugs-table">
+                <thead>
+                    <tr>
+                        <th>Bug</th>
+                        <th>Source</th>
+                        <th>Loop</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{BUGS_TABLE_ROWS}}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- New Inferences & Learnings -->
+        <div class="section">
+            <h2>New Inferences & Learnings</h2>
+            {{LEARNINGS_LIST}}
+        </div>
+
+        <!-- Model & Skill Usage -->
+        <div class="charts-row">
+            <div class="chart-container">
+                <h3>Model Usage</h3>
+                <canvas id="modelChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Skill Effectiveness</h3>
+                <canvas id="skillChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Loop-by-Loop Breakdown -->
+        <div class="section">
+            <h2>Loop-by-Loop Breakdown</h2>
+            <div class="loop-accordion">
+                {{LOOP_ACCORDION_ITEMS}}
+            </div>
+        </div>
+
+        <!-- Git Commands -->
+        <div class="section">
+            <h2>Navigation Commands</h2>
+            <div class="git-commands">
+                <h4>Review & Revert</h4>
+                <div class="git-command">
+                    <code>git log --oneline {{FIRST_COMMIT}}..{{LAST_COMMIT}}</code>
+                    <button onclick="copyCommand(this)">Copy</button>
+                </div>
+                <div class="git-command">
+                    <code>git revert {{FIRST_COMMIT}}..{{LAST_COMMIT}} --no-edit</code>
+                    <button onclick="copyCommand(this)">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Generated: {{TIMESTAMP}} | Run ID: {{RUN_ID}} | Claudestrator
+        </div>
+    </div>
+
+    <script>
+        // Success Ring
+        const successPercent = {{SUCCESS_PERCENT_RAW}};
+        const ctx = document.getElementById('successRing').getContext('2d');
+        const centerX = 60;
+        const centerY = 60;
+        const radius = 50;
+
+        // Background ring
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#30363d';
+        ctx.lineWidth = 10;
+        ctx.stroke();
+
+        // Success ring
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + (2 * Math.PI * successPercent / 100));
+        ctx.strokeStyle = '#3fb950';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Improvements Chart
+        new Chart(document.getElementById('improvementsChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Partial', 'Failed'],
+                datasets: [{
+                    data: [{{IMPROVEMENTS_COMPLETE}}, {{IMPROVEMENTS_PARTIAL}}, {{IMPROVEMENTS_FAILED}}],
+                    backgroundColor: ['#3fb950', '#d29922', '#f85149'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#8b949e' }
+                    }
+                }
+            }
+        });
+
+        // Bugs Chart
+        new Chart(document.getElementById('bugsChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Self-Detected', 'User Reported', 'Prevented'],
+                datasets: [{
+                    data: [{{BUGS_SELF}}, {{BUGS_USER}}, {{BUGS_PREVENTED}}],
+                    backgroundColor: ['#58a6ff', '#a371f7', '#3fb950'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#8b949e' }
+                    }
+                }
+            }
+        });
+
+        // Model Usage Chart
+        new Chart(document.getElementById('modelChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Haiku', 'Sonnet', 'Opus'],
+                datasets: [{
+                    label: 'Tasks',
+                    data: [{{MODEL_HAIKU_TASKS}}, {{MODEL_SONNET_TASKS}}, {{MODEL_OPUS_TASKS}}],
+                    backgroundColor: ['#58a6ff', '#a371f7', '#f0883e'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#8b949e' },
+                        grid: { color: '#30363d' }
+                    },
+                    x: {
+                        ticks: { color: '#8b949e' },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Skill Effectiveness Chart
+        new Chart(document.getElementById('skillChart'), {
+            type: 'radar',
+            data: {
+                labels: [{{SKILL_LABELS}}],
+                datasets: [{
+                    label: 'Success Rate %',
+                    data: [{{SKILL_VALUES}}],
+                    backgroundColor: 'rgba(88, 166, 255, 0.2)',
+                    borderColor: '#58a6ff',
+                    pointBackgroundColor: '#58a6ff'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: '#8b949e' },
+                        grid: { color: '#30363d' },
+                        pointLabels: { color: '#8b949e' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Loop accordion toggle
+        document.querySelectorAll('.loop-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                content.classList.toggle('open');
+            });
+        });
+
+        // Copy command
+        function copyCommand(button) {
+            const code = button.previousElementSibling.textContent;
+            navigator.clipboard.writeText(code);
+            button.textContent = 'Copied!';
+            setTimeout(() => button.textContent = 'Copy', 2000);
+        }
+    </script>
+</body>
+</html>

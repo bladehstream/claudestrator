@@ -1,32 +1,38 @@
-# /improve - Autonomous Self-Improvement Loops
+# /improve - Deprecated (Use /orchestrate)
 
-Run iterative improvement cycles that analyze current state, identify enhancements, and implement them automatically.
+> ⚠️ **This command has been merged into `/orchestrate`**
 
-## Usage
+The improvement loop functionality is now part of the main orchestrate command.
 
-```
-/improve                      Run 1 improvement cycle
-/improve 5                    Run 5 improvement cycles
-/improve --continuous         Run until stopped (Ctrl+C)
-/improve 10 --focus "performance"   Focus on single area
-/improve 3 --skip-tests       Skip test runs between cycles (faster, riskier)
-/improve UI, authentication, security    Focus on multiple areas (comma-separated)
-/improve new features                    Creative mode with deep research
-/improve 5 security, new features        Mix targeted fixes with creative research
-```
-
-### Multi-Focus Syntax
-
-Specify multiple improvement areas as comma-separated values:
+## New Usage
 
 ```
-/improve [cycles] <area1>, <area2>, <area3>...
+/orchestrate                      Single run with creative research (default)
+/orchestrate 5                    Run 5 improvement loops with creative research
+/orchestrate 3 security           Focus on security for 3 loops
+/orchestrate 5 UI, security       Focus on multiple specific areas
+/orchestrate 5 security, new features   Mix focus areas with creative research
 ```
 
-Areas can be:
-- **Predefined**: `bugs`, `performance`, `security`, `UI`, `UX`, `authentication`, `testing`, `documentation`, `accessibility`, `dependencies`, `refactoring`
-- **Custom**: Any free-text description (e.g., `database optimization`, `error handling`)
-- **Special**: `new features` - triggers creative research mode (see below)
+See `/orchestrate` for full documentation.
+
+---
+
+## Migration Guide
+
+| Old Command | New Command |
+|-------------|-------------|
+| `/improve` | `/orchestrate` |
+| `/improve 5` | `/orchestrate 5` |
+| `/improve --focus "performance"` | `/orchestrate performance` |
+| `/improve UI, security` | `/orchestrate UI, security` |
+| `/improve new features` | `/orchestrate` (creative research is now default) |
+
+---
+
+## Reference (Archived)
+
+The sections below are kept for reference but the functionality now lives in `/orchestrate`.
 
 ---
 

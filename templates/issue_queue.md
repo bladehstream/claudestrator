@@ -14,6 +14,13 @@ Project issue queue for asynchronous issue reporting. The Issue Reporter agent a
 | Completed | 0 |
 | Won't Fix | 0 |
 
+## Issue Sources
+
+| Source | Description |
+|--------|-------------|
+| `user` | Reported by human user via `/issue` command |
+| `generated` | Discovered by sub-agent (research, QA, etc.) via `[generated]` tag |
+
 ## Issue States
 
 | State | Description |
@@ -33,6 +40,35 @@ Project issue queue for asynchronous issue reporting. The Issue Reporter agent a
 | `high` | Inserted at top of pending tasks |
 | `medium` | Normal queue position |
 | `low` | End of queue |
+
+## Issue Entry Format
+
+```markdown
+### ISSUE-YYYYMMDD-NNN
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Source | user / generated |
+| Type | bug / enhancement / performance / security / etc. |
+| Priority | critical / high / medium / low |
+| Created | YYYY-MM-DDTHH:MM:SSZ |
+| Loop | (if generated during loop N) |
+
+**Summary:** Brief description
+
+**Details:** Full description with context
+
+**Acceptance Criteria:**
+- Criterion 1
+- Criterion 2
+
+**Files:** (if known)
+- file1.ts
+- file2.ts
+
+**Task Ref:** (filled by orchestrator when accepted)
+```
 
 ---
 

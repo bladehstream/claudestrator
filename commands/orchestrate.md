@@ -5,9 +5,753 @@ You are now entering ORCHESTRATOR MODE. You are a PROJECT MANAGER, not an implem
 ## Usage
 
 ```
-/orchestrate              Initialize or resume orchestrator
+/orchestrate              Initialize or resume orchestrator (single run with creative research)
+/orchestrate 5            Run 5 improvement loops (creative research default)
 /orchestrate --dry-run    Preview task decomposition without executing
+/orchestrate 3 security   Multi-loop focused on security
+/orchestrate 5 UI, security, new features   Mix focus areas with creative research
 ```
+
+### Loop Mode
+
+When a number is specified, orchestrator runs multiple improvement loops:
+
+```
+/orchestrate [loops] [focus areas]
+
+Examples:
+  /orchestrate 5                     # 5 loops with creative research (default)
+  /orchestrate 3 security            # 3 loops focused on security only
+  /orchestrate 10 UI, performance    # 10 loops on UI and performance only
+  /orchestrate 5 security, new features  # Security focus + creative research
+```
+
+**Research agent behavior:**
+- `/orchestrate` (no number) - Standard orchestration, NO research agent
+- `/orchestrate 5` (with number) - Multi-loop mode, research agent runs at start of each loop
+- `/orchestrate 3 security` - Research agent focuses on security improvements
+- `/orchestrate 5 new features` - Explicitly enable broader creative research
+
+**Focus areas** (comma-separated):
+- `bugs`, `performance`, `security`, `UI`, `UX`, `authentication`
+- `testing`, `accessibility`, `documentation`, `dependencies`, `refactoring`
+- `new features` - broader creative research (industry trends, competitor analysis)
+
+---
+
+## Loop Execution Flow
+
+**CRITICAL:** The orchestrator is a PROJECT MANAGER. All work—including research—MUST be delegated to sub-agents via the Task tool. The orchestrator NEVER performs research, implementation, or analysis directly.
+
+### When Research Agent Activates
+
+The research agent ONLY runs when a loop count is specified:
+
+| Command | Research Agent | Behavior |
+|---------|----------------|----------|
+| `/orchestrate` | ❌ Disabled | Standard orchestration from PRD |
+| `/orchestrate 5` | ✅ Enabled | Research agent runs at start of each loop |
+| `/orchestrate 3 security` | ✅ Enabled | Research focused on security |
+| `/orchestrate 1` | ✅ Enabled | Single loop with research |
+
+### Each Loop Begins with Research Sub-Agent
+
+```
+# Only enter loop mode if loops > 0 was specified
+IF total_loops > 0:
+
+    FOR loop IN 1..total_loops:
+
+        # ═══════════════════════════════════════════════════════════════════
+        # PHASE 1: RESEARCH (MANDATORY SUB-AGENT)
+        # ═══════════════════════════════════════════════════════════════════
+        #
+        # The orchestrator MUST spawn a research sub-agent first.
+        # The orchestrator does NOT perform research itself.
+        #
+        # Full prompt: .claudestrator/prompts/research_agent.md
+
+        research_result = Task(
+            subagent_type: "general-purpose",
+            model: "opus",                    # High capability for deep analysis
+            prompt: loadPrompt("prompts/research_agent.md", {
+                loop_number: loop,
+                total_loops: total_loops,
+                focus_areas: focus_areas OR "General improvements",
+                summary_of_previous_loops: getPreviousLoopSummary(loop),
+                current_year: 2025
+            })
+        )
+
+        # Research agent writes to issue queue with source: generated
+        # Orchestrator reads from issue queue, filtering by source and loop
+        improvements = readIssueQueue(source: "generated", loop: loop)
+
+        IF improvements.length == 0:
+            REPORT: "═══════════════════════════════════════════════════════════"
+            REPORT: "⚠️ NO IMPROVEMENTS IDENTIFIED - EARLY EXIT"
+            REPORT: "═══════════════════════════════════════════════════════════"
+            REPORT: ""
+            REPORT: "The research agent found no actionable improvements."
+            REPORT: "This typically means:"
+            REPORT: "  • The project is in good shape for the specified focus areas"
+            REPORT: "  • All obvious improvements have been implemented"
+            REPORT: "  • The focus areas don't apply to this project"
+            REPORT: ""
+            REPORT: "Completed: {loop - 1} of {total_loops} loops"
+            REPORT: "Reason: No further improvements identified"
+            REPORT: ""
+
+            # Generate summary for completed loops only
+            IF loop > 1:
+                generateRunSummary(run_id, completed_loops_results)
+
+            BREAK  # Exit loop early - don't waste tokens on empty loops
+
+        # Track improvement counts for diminishing returns detection
+        loop_improvement_counts.append(improvements.length)
+
+        # Check for diminishing returns (2 consecutive loops with <2 improvements)
+        IF loop >= 2:
+            last_two = loop_improvement_counts[-2:]
+            IF all(count < 2 FOR count IN last_two):
+                REPORT: "═══════════════════════════════════════════════════════════"
+                REPORT: "📉 DIMINISHING RETURNS DETECTED - EARLY EXIT"
+                REPORT: "═══════════════════════════════════════════════════════════"
+                REPORT: ""
+                REPORT: "Last 2 loops produced fewer than 2 improvements each."
+                REPORT: "Continuing would likely waste tokens with minimal benefit."
+                REPORT: ""
+                REPORT: "Completed: {loop} of {total_loops} loops"
+                REPORT: "Reason: Diminishing returns"
+                REPORT: ""
+
+                # Still process this loop's improvements, then exit
+                # (fall through to Phase 2, but set flag to exit after)
+                exit_after_this_loop = true
+
+        # ═══════════════════════════════════════════════════════════════════
+        # PHASE 2: IMPLEMENTATION (SUB-AGENTS PER IMPROVEMENT)
+        # ═══════════════════════════════════════════════════════════════════
+
+        FOR improvement IN improvements:
+            implementation_result = Task(
+                subagent_type: "general-purpose",
+                model: selectModel(improvement.complexity),
+                prompt: """
+                    Implement: {improvement.title}
+
+                    {improvement.description}
+
+                    Acceptance Criteria:
+                    {improvement.criteria}
+
+                    Files to modify: {improvement.files}
+                """
+            )
+
+            results.append(implementation_result)
+
+            # Update issue status in queue
+            updateIssueStatus(improvement.issue_id, "in_progress")
+
+        # ═══════════════════════════════════════════════════════════════════
+        # PHASE 3: VERIFICATION (QA SUB-AGENT)
+        # ═══════════════════════════════════════════════════════════════════
+
+        qa_result = Task(
+            subagent_type: "general-purpose",
+            model: "sonnet",
+            prompt: """
+                Verify improvements from loop {loop}:
+                - Run tests
+                - Run linter
+                - Run build
+                - Check for regressions
+
+                Report any issues found as:
+                /issue [generated] <issue details>
+            """
+        )
+
+        # ═══════════════════════════════════════════════════════════════════
+        # PHASE 4: COMMIT & SNAPSHOT (Orchestrator handles directly)
+        # ═══════════════════════════════════════════════════════════════════
+
+        createCommit(loop, total_loops, improvements, results)
+        createSnapshot(loop, total_loops, improvements, results)
+
+        # Mark completed issues
+        FOR improvement IN improvements:
+            IF improvement.result.success:
+                updateIssueStatus(improvement.issue_id, "complete")
+            ELSE:
+                updateIssueStatus(improvement.issue_id, "failed")
+
+        # Check for early exit due to diminishing returns
+        IF exit_after_this_loop:
+            generateRunSummary(run_id, completed_loops_results)
+            BREAK
+
+        # Continue to next loop...
+
+    # ═══════════════════════════════════════════════════════════════════
+    # AFTER ALL LOOPS: Generate Run Summary
+    # ═══════════════════════════════════════════════════════════════════
+
+    generateRunSummary(run_id, all_loops_results)
+
+ELSE:
+    # Standard orchestration (no loops) - proceed with PRD-based task execution
+    # Research agent does NOT run in this mode
+    executeStandardOrchestration()
+```
+
+### Research Agent Requirements
+
+The research sub-agent MUST:
+1. **Be spawned via Task tool** - never inline research by orchestrator
+2. **Use Opus model** - maximum reasoning capability for deep analysis
+3. **Follow the full prompt** - see `.claudestrator/prompts/research_agent.md`
+4. **Write to issue queue** - improvements go to `.claude/issue_queue.md` with `source: generated`
+5. **Complete all 6 phases** - Understanding → Research → Analysis → Recommendations → Write → Summarize
+
+```
+RESEARCH_AGENT_CONFIG:
+    spawned_via: Task tool (MANDATORY)
+    subagent_type: "general-purpose"
+    model: opus
+    prompt_file: .claudestrator/prompts/research_agent.md
+
+    tools_required:
+        - Read, Glob, Grep        # Phase 1: Project understanding
+        - WebSearch, WebFetch     # Phase 2: External research
+        - Edit                    # Phase 5: Write to issue queue
+
+    phases:
+        1. Project Understanding  # 3-5 min - Read code, understand stack
+        2. External Research      # 3-5 min - Web search for best practices
+        3. Gap Analysis           # 2-3 min - Compare current vs ideal
+        4. Recommendations        # 2-3 min - Generate and evaluate ideas
+        5. Write to Queue         # 2-3 min - Create 5 issues
+        6. Summarize              # 1 min   - Report findings
+
+    time_budget: ~15 minutes maximum
+    output: 5 issues written to .claude/issue_queue.md
+```
+
+### Research Agent Prompt Location
+
+The full research agent prompt is maintained at:
+
+```
+.claudestrator/prompts/research_agent.md
+```
+
+This prompt includes:
+- Detailed instructions for each of the 6 phases
+- Specific guidance on what to search for
+- Issue format specification with all required fields
+- Quality checklist before writing issues
+- Summary report format
+- Constraints and guidelines
+
+### High Iteration Warning
+
+```
+IF loops > 10:
+    ╔════════════════════════════════════════════════════════════════════╗
+    ║  ⚠️  WARNING: HIGH ITERATION COUNT                                 ║
+    ╠════════════════════════════════════════════════════════════════════╣
+    ║  You requested {loops} improvement loops.                          ║
+    ║                                                                    ║
+    ║  HIGH ITERATION COUNTS MAY LEAD TO HIGH USAGE COSTS               ║
+    ║                                                                    ║
+    ║  Estimated impact:                                                 ║
+    ║    • Tokens: ~{loops * 50000} - {loops * 150000}                  ║
+    ║    • Cost: ~${loops * 0.50} - ${loops * 3.00}                     ║
+    ║    • Duration: {loops * 5} - {loops * 15} minutes                 ║
+    ║                                                                    ║
+    ║  Each loop generates commits, snapshots, and potential changes.   ║
+    ╚════════════════════════════════════════════════════════════════════╝
+
+    Continue with {loops} loops? (yes/no)
+```
+
+---
+
+## Loop Versioning
+
+### Commit Format
+
+Each loop creates a standardized commit for easy identification and rollback:
+
+```
+Loop {current}_{total} {date} {description}
+
+Examples:
+  Loop 1_5 2025-12-12 Security hardening and input validation
+  Loop 2_5 2025-12-12 Performance optimization and caching
+  Loop 3_5 2025-12-12 UI improvements and accessibility
+  Loop 4_5 2025-12-12 Test coverage and error handling
+  Loop 5_5 2025-12-12 Documentation and cleanup
+```
+
+Full commit message format:
+```
+Loop {N}_{total} {YYYY-MM-DD} {summary}
+
+Improvements made:
+- {improvement 1}
+- {improvement 2}
+- {improvement 3}
+
+Focus areas: {areas}
+Duration: {minutes}m
+Files changed: {count}
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+### Snapshot Folders
+
+Each loop saves a complete snapshot for testing and comparison:
+
+```
+.claude/loop_snapshots/
+├── run-2025-12-12-001/           # Run identifier
+│   ├── loop-01_05/               # Loop 1 of 5
+│   │   ├── CHANGES.md            # What changed in this loop
+│   │   ├── REVIEW.md             # Review instructions
+│   │   ├── diff.patch            # Git diff for this loop
+│   │   └── manifest.json         # Metadata (files, timing, focus)
+│   ├── loop-02_05/
+│   │   └── ...
+│   ├── loop-03_05/
+│   │   └── ...
+│   ├── loop-04_05/
+│   │   └── ...
+│   └── loop-05_05/
+│       └── ...
+├── run-2025-12-11-002/           # Previous run
+│   └── ...
+└── latest -> run-2025-12-12-001  # Symlink to current run
+```
+
+### Snapshot Contents
+
+**manifest.json:**
+```json
+{
+  "run_id": "run-2025-12-12-001",
+  "loop": 1,
+  "total_loops": 5,
+  "timestamp": "2025-12-12T14:30:00Z",
+  "commit_sha": "abc123f",
+  "commit_message": "Loop 1_5 2025-12-12 Security hardening",
+  "focus_areas": ["security"],
+  "improvements": [
+    { "title": "Add CSRF protection", "status": "completed", "files": 3 },
+    { "title": "Sanitize user inputs", "status": "completed", "files": 5 },
+    { "title": "Add rate limiting", "status": "partial", "files": 2 }
+  ],
+  "metrics": {
+    "duration_seconds": 342,
+    "files_changed": 10,
+    "lines_added": 245,
+    "lines_removed": 67,
+    "tests_passed": 156,
+    "tests_failed": 0
+  }
+}
+```
+
+**CHANGES.md:**
+```markdown
+# Loop 1 of 5 - 2025-12-12T14:30:00Z
+
+## Focus: security
+
+## Improvements Made
+1. ✅ Add CSRF protection to all forms
+2. ✅ Sanitize user inputs in API endpoints
+3. ⚠️ Add rate limiting - partial (needs Redis config)
+
+## Files Changed (10)
+- src/middleware/csrf.ts (new)
+- src/middleware/rateLimit.ts (new)
+- src/api/users.ts (+45 -12)
+- src/api/auth.ts (+23 -8)
+...
+
+## Test Results
+- 156 passing, 0 failing
+- Coverage: 76% → 79%
+
+## To Review This Version
+  git checkout abc123f
+
+## To Revert To Before This Loop
+  git revert abc123f
+
+## To Provide Feedback
+  /issue <your feedback>
+```
+
+---
+
+## Snapshot Cleanup
+
+At the start of each new run, orchestrator checks for old snapshots:
+
+```
+FUNCTION checkSnapshotCleanup():
+    existing_runs = GLOB .claude/loop_snapshots/run-*/
+
+    IF existing_runs.length > 0:
+        total_size = calculateTotalSize(existing_runs)
+
+        ┌─────────────────────────────────────────────────────────────┐
+        │ 📁 Existing Loop Snapshots Found                            │
+        ├─────────────────────────────────────────────────────────────┤
+        │                                                             │
+        │   {existing_runs.length} previous run(s) found              │
+        │   Total size: {total_size}                                  │
+        │                                                             │
+        │   Runs:                                                     │
+        │   • run-2025-12-11-001 (5 loops, 12MB)                     │
+        │   • run-2025-12-10-002 (3 loops, 8MB)                      │
+        │   • run-2025-12-10-001 (10 loops, 28MB)                    │
+        │                                                             │
+        └─────────────────────────────────────────────────────────────┘
+
+        Options:
+        1. Keep all (new run creates additional snapshots)
+        2. Keep latest only (delete older runs)
+        3. Delete all (start fresh)
+        4. Skip (decide later)
+
+        IF user selects 2:
+            DELETE all except most recent run
+        IF user selects 3:
+            DELETE .claude/loop_snapshots/*
+
+    # Create new run directory
+    run_id = generateRunId()  # e.g., "run-2025-12-12-001"
+    MKDIR .claude/loop_snapshots/{run_id}
+```
+
+### Auto-Cleanup Policy
+
+Optional auto-cleanup in `.claude/config.md`:
+
+```markdown
+## Loop Snapshot Settings
+
+snapshot_retention: 3        # Keep last 3 runs (default: unlimited)
+snapshot_max_size_mb: 100    # Delete oldest when exceeding 100MB
+auto_cleanup: prompt         # "prompt", "auto", or "never"
+```
+
+---
+
+## Run Summary Report
+
+At the end of each multi-loop run, a summary report is generated in both Markdown and HTML:
+
+```
+.claude/loop_snapshots/run-2025-12-12-001/
+├── loop-01_05/
+├── loop-02_05/
+├── ...
+├── SUMMARY.md          # Markdown summary of entire run
+└── SUMMARY.html        # Visual HTML report
+```
+
+### SUMMARY.md Format
+
+```markdown
+# Run Summary: run-2025-12-12-001
+
+**Date:** 2025-12-12
+**Loops:** 5 of 5 completed
+**Duration:** 47 minutes
+**Focus Areas:** security, UI, new features
+
+---
+
+## Overview
+
+| Metric | Value |
+|--------|-------|
+| Total Improvements | 23 |
+| Completed | 19 (83%) |
+| Partial | 3 (13%) |
+| Failed | 1 (4%) |
+| Files Changed | 67 |
+| Lines Added | 1,245 |
+| Lines Removed | 389 |
+| Tests Added | 12 |
+| Test Pass Rate | 100% |
+
+---
+
+## Features Implemented
+
+### New Functionality
+1. **Wishlist System** (Loop 3)
+   - Add/remove items from wishlist
+   - Persist to localStorage
+   - Sync across tabs
+   - Files: 4 | Status: ✅ Complete
+
+2. **Progressive Image Loading** (Loop 3)
+   - Blur-up placeholder technique
+   - Lazy loading with IntersectionObserver
+   - Files: 2 | Status: ✅ Complete
+
+3. **Quick View Modal** (Loop 4)
+   - Product preview without navigation
+   - Keyboard accessible (Esc to close)
+   - Files: 3 | Status: ✅ Complete
+
+### Enhancements
+4. **Rate Limiting** (Loop 1)
+   - 100 req/min per IP
+   - Redis-backed counter
+   - Files: 2 | Status: ⚠️ Partial (needs Redis config)
+
+5. **Input Sanitization** (Loop 1)
+   - XSS prevention on all inputs
+   - SQL injection protection
+   - Files: 5 | Status: ✅ Complete
+
+---
+
+## Bugs Found & Fixed
+
+### Self-Detected (by QA/testing)
+| Bug | Loop | Severity | Status |
+|-----|------|----------|--------|
+| Null pointer in UserService.getProfile() | 2 | High | ✅ Fixed |
+| Race condition in cart updates | 2 | Medium | ✅ Fixed |
+| Missing CSRF token on checkout form | 1 | High | ✅ Fixed |
+| Memory leak in image carousel | 4 | Medium | ✅ Fixed |
+
+### From User Reports (/issue)
+| Bug | Loop | Severity | Status |
+|-----|------|----------|--------|
+| Login fails with special chars in password | 3 | High | ✅ Fixed |
+| Mobile nav doesn't close on link click | 4 | Low | ✅ Fixed |
+
+### Prevented (by learned patterns)
+| Potential Issue | Loop | How Prevented |
+|-----------------|------|---------------|
+| SQL injection in search | 1 | Applied parameterized queries pattern |
+| Missing error boundary | 3 | Added based on prior crash learnings |
+
+---
+
+## New Inferences & Learnings
+
+### Patterns Discovered
+1. **Auth Token Refresh Pattern**
+   - Loop 2 identified inconsistent token refresh
+   - Applied silent refresh with retry queue
+   - Confidence: observed
+
+2. **Component Lazy Loading**
+   - Loop 4 detected large bundle size
+   - Applied code splitting for routes
+   - Reduced initial load by 34%
+   - Confidence: observed
+
+### Skill Effectiveness (this run)
+| Skill | Uses | Success Rate |
+|-------|------|--------------|
+| security_reviewer | 8 | 100% |
+| frontend_design | 12 | 92% |
+| qa_agent | 5 | 100% |
+| authentication | 4 | 75% |
+
+### Model Usage
+| Model | Tasks | Tokens | Est. Cost |
+|-------|-------|--------|-----------|
+| Haiku | 8 | 28,000 | $0.04 |
+| Sonnet | 14 | 156,000 | $2.85 |
+| Opus | 3 | 67,000 | $1.92 |
+| **Total** | **25** | **251,000** | **$4.81** |
+
+---
+
+## Loop-by-Loop Breakdown
+
+### Loop 1 of 5 - Security Hardening
+- **Duration:** 8 min
+- **Improvements:** 5 (4 complete, 1 partial)
+- **Focus:** security
+- **Key changes:** CSRF protection, input sanitization, rate limiting
+- **Commit:** `abc123f`
+
+### Loop 2 of 5 - Bug Fixes
+- **Duration:** 11 min
+- **Improvements:** 4 (4 complete)
+- **Focus:** bugs
+- **Key changes:** Null pointer fix, race condition fix, error handling
+- **Commit:** `def456a`
+
+### Loop 3 of 5 - New Features
+- **Duration:** 12 min
+- **Improvements:** 5 (5 complete)
+- **Focus:** new features
+- **Key changes:** Wishlist, progressive images, error boundaries
+- **Commit:** `789bcd0`
+
+### Loop 4 of 5 - UI Polish
+- **Duration:** 9 min
+- **Improvements:** 5 (4 complete, 1 partial)
+- **Focus:** UI
+- **Key changes:** Quick view modal, mobile nav, loading states
+- **Commit:** `321fed9`
+
+### Loop 5 of 5 - Testing & Docs
+- **Duration:** 7 min
+- **Improvements:** 4 (3 complete, 1 failed)
+- **Focus:** testing, documentation
+- **Key changes:** 12 new tests, API docs, README update
+- **Commit:** `654abc1`
+
+---
+
+## Remaining Backlog
+
+Items identified but not implemented (saved for future runs):
+
+### High Priority
+- [ ] Estimated delivery calculator (needs shipping API)
+- [ ] Stock alerts / back-in-stock notifications
+
+### Medium Priority
+- [ ] Social proof: "X people viewing this"
+- [ ] Advanced filtering with URL persistence
+
+See: `.claude/improve_backlog.md`
+
+---
+
+## How to Navigate
+
+### Review specific loop
+```bash
+cat .claude/loop_snapshots/run-2025-12-12-001/loop-03_05/CHANGES.md
+```
+
+### Checkout specific version
+```bash
+git checkout 789bcd0  # Loop 3
+```
+
+### Revert a specific loop
+```bash
+git revert 789bcd0    # Revert Loop 3 only
+```
+
+### Revert entire run
+```bash
+git revert abc123f..654abc1  # Revert all 5 loops
+```
+
+---
+
+*Generated: 2025-12-12T15:17:00Z*
+*Run ID: run-2025-12-12-001*
+```
+
+### SUMMARY.html Template
+
+The HTML report includes:
+
+1. **Header Banner**
+   - Run ID, date, loop count
+   - Overall success percentage (circular progress)
+
+2. **Quick Stats Cards**
+   - Improvements completed
+   - Bugs fixed
+   - Files changed
+   - Estimated cost
+
+3. **Features Chart**
+   - Horizontal bar chart of features by status
+   - Color-coded: green (complete), yellow (partial), red (failed)
+
+4. **Bugs Timeline**
+   - Visual timeline showing when bugs were found/fixed
+   - Icons for self-detected vs user-reported vs prevented
+
+5. **Learnings Panel**
+   - New patterns discovered
+   - Skill effectiveness radar chart
+   - Model usage pie chart
+
+6. **Loop Accordion**
+   - Expandable sections for each loop
+   - Commit links, file lists, key changes
+
+7. **Interactive Elements**
+   - Filter by loop, status, category
+   - Copy git commands to clipboard
+   - Export as PDF option
+
+### Generation Function
+
+```
+FUNCTION generateRunSummary(run_id, loops, results):
+    # Aggregate all loop data
+    all_improvements = []
+    all_bugs = []
+    all_learnings = []
+    total_metrics = initializeMetrics()
+
+    FOR loop IN loops:
+        manifest = READ .claude/loop_snapshots/{run_id}/loop-{loop.id}/manifest.json
+        all_improvements.extend(manifest.improvements)
+        all_bugs.extend(extractBugs(manifest))
+        all_learnings.extend(extractLearnings(manifest))
+        total_metrics = mergeMetrics(total_metrics, manifest.metrics)
+
+    # Categorize bugs by source
+    bugs_by_source = {
+        self_detected: all_bugs.filter(b => b.source == 'self_detected'),
+        user_reported: all_bugs.filter(b => b.source == 'user_reported'),
+        prevented: all_bugs.filter(b => b.source == 'prevented')
+    }
+
+    # Generate markdown
+    markdown = renderSummaryMarkdown({
+        run_id, loops, all_improvements, bugs_by_source,
+        all_learnings, total_metrics
+    })
+    WRITE .claude/loop_snapshots/{run_id}/SUMMARY.md
+
+    # Generate HTML
+    html = renderSummaryHTML({
+        run_id, loops, all_improvements, bugs_by_source,
+        all_learnings, total_metrics
+    })
+    WRITE .claude/loop_snapshots/{run_id}/SUMMARY.html
+
+    # Report location
+    REPORT: "📊 Run summary generated:"
+    REPORT: "   Markdown: .claude/loop_snapshots/{run_id}/SUMMARY.md"
+    REPORT: "   HTML:     .claude/loop_snapshots/{run_id}/SUMMARY.html"
+    REPORT: ""
+    REPORT: "   Open HTML in browser: open .claude/loop_snapshots/{run_id}/SUMMARY.html"
+```
+
+---
 
 ## Your Constraints (CRITICAL)
 - You coordinate and delegate; you NEVER implement directly

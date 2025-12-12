@@ -725,6 +725,10 @@ create_directories() {
     mkdir -p "$CLAUDE_DIR/memories"
     log_verbose "Created: $CLAUDE_DIR/memories"
 
+    # Create .orchestrator directory for runtime data (separate from .claude)
+    mkdir -p ".orchestrator/complete"
+    log_verbose "Created: .orchestrator/complete (for completion markers)"
+
     log_success "Directories created"
 }
 

@@ -55,21 +55,35 @@ Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
 
 ```
 FOR loop IN 1..N:
-    # 1. Research (if initial complete)
+    # 1. Research Agent (finds issues, writes to issue_queue.md)
     IF initial_complete:
-        spawn_research_agent(loop)
+        Task(
+            prompt: "Analyze codebase for improvements. Write issues to .claude/issue_queue.md.
+                     When done: Write '.claude/agent_complete/research-{loop}.done' with 'done'",
+            model: "opus",
+            run_in_background: true
+        )
         Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-    # 2. Execute pending issues (max 5)
-    FOR issue IN pending_issues.slice(0, 5):
-        marker = ".claude/agent_complete/{issue.id}.done"
+    # 2. Decomposition Agent (reads issue_queue.md, writes task_queue.md)
+    Task(
+        prompt: "Read .claude/issue_queue.md (pending issues).
+                 Create tasks in .claude/task_queue.md for each issue.
+                 When done: Write '.claude/agent_complete/decomp-{loop}.done' with 'done'",
+        model: "opus",
+        run_in_background: true
+    )
+    Bash("while [ ! -f '.claude/agent_complete/decomp-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+    # 3. Execute tasks from task_queue.md (max 5)
+    tasks = parse(".claude/task_queue.md", status="pending", limit=5)
+    FOR task IN tasks:
+        marker = ".claude/agent_complete/{task.id}.done"
         Task(..., run_in_background: true)
         Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+        Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
 
-        # Mark issue complete (single line update)
-        update_issue_status(issue.id, "completed")
-
-    # 3. Commit
+    # 4. Commit
     Bash("git add -A && git commit -m 'Loop {loop}'")
 ```
 

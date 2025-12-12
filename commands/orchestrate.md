@@ -77,35 +77,51 @@ Bash("git add -A && git commit -m 'Initial build complete'")
 ```
 FOR loop IN 1..N:
 
-    # 1. Research phase (only after initial PRD complete)
-    IF initial_complete AND (loop == 1 OR no_pending_issues):
-        marker = ".claude/agent_complete/research-{loop}.done"
-        Task(
-            prompt: <research_agent_prompt>,
-            model: "opus",
-            run_in_background: true
-        )
-        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
-
-    # 2. Get pending issues (max 5 per loop)
-    issues = parse(".claude/issue_queue.md", status="pending", limit=5)
-
-    # 3. Execute each issue
-    FOR issue IN issues:
-        marker = ".claude/agent_complete/{issue.id}.done"
+    # 1. Research Agent (finds issues, writes to issue_queue.md)
+    IF initial_complete:
         Task(
             subagent_type: "general-purpose",
-            model: select_model(issue.complexity),
+            model: "opus",
             prompt: """
-                Task: {issue.id} - {issue.summary}
-                Details: {issue.details}
-                Acceptance: {issue.acceptance_criteria}
+                Analyze the codebase for improvements, bugs, security issues.
+                Write findings to .claude/issue_queue.md in standard format.
+                When done: Write ".claude/agent_complete/research-{loop}.done" with "done"
+            """,
+            run_in_background: true
+        )
+        Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+    # 2. Decomposition Agent (reads issue_queue.md, writes task_queue.md)
+    Task(
+        subagent_type: "general-purpose",
+        model: "opus",
+        prompt: """
+            Read .claude/issue_queue.md for pending issues.
+            Create implementation tasks in .claude/task_queue.md.
+            Format: TASK-{loop}-{n} with objective and acceptance criteria.
+            When done: Write ".claude/agent_complete/decomp-{loop}.done" with "done"
+        """,
+        run_in_background: true
+    )
+    Bash("while [ ! -f '.claude/agent_complete/decomp-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+    # 3. Execute tasks from task_queue.md (max 5 per loop)
+    tasks = parse(".claude/task_queue.md", status="pending", limit=5)
+    FOR task IN tasks:
+        marker = ".claude/agent_complete/{task.id}.done"
+        Task(
+            subagent_type: "general-purpose",
+            model: select_model(task.complexity),
+            prompt: """
+                Task: {task.id}
+                Objective: {task.objective}
+                Acceptance: {task.acceptance_criteria}
                 When DONE: Write "{marker}" with "done"
             """,
             run_in_background: true
         )
         Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
-        Edit(".claude/issue_queue.md", "Status | pending" -> "Status | completed", issue section)
+        Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
 
     # 4. Commit
     Bash("git add -A && git commit -m 'Loop {loop}'")

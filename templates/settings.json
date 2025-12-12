@@ -33,7 +33,7 @@
   "permissions": {
     "allow": [
       "Read(**)",
-      "Write(.claude/**)",
+      "Write(**)",
       "Glob(**)",
       "Grep(**)",
       "Task(**)",

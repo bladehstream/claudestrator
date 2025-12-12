@@ -8,27 +8,25 @@
 **Step 1: Spawn Decomposition Agent** (reads PRD, writes task_queue.md)
 
 ```
+# Load the decomposition skill for the agent prompt
+decomp_skill = Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+
 Task(
     subagent_type: "general-purpose",
     model: "opus",
     prompt: """
-        Read PRD.md and create .claude/task_queue.md with tasks.
+        {decomp_skill}
 
-        Format each task as:
-        ### TASK-001
-        | Field | Value |
-        |-------|-------|
-        | Status | pending |
-        | Complexity | normal |
-        **Objective:** [single sentence]
-        **Acceptance Criteria:**
-        - [criterion 1]
-        - [criterion 2]
         ---
 
-        CRITICAL: When finished, you MUST create the completion marker file:
-        Use the Write tool: Write(".claude/agent_complete/decomposition.done", "done")
-        The orchestrator is waiting for this file to exist.
+        ## Your Task
+
+        Read PRD.md and create .claude/task_queue.md with implementation tasks.
+        Follow the process defined in the skill above.
+
+        Source document: PRD.md
+        Output file: .claude/task_queue.md
+        Completion marker: .claude/agent_complete/decomposition.done
     """,
     run_in_background: true
 )
@@ -68,10 +66,10 @@ FOR loop IN 1..N:
         Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
     # 2. Decomposition Agent (reads issue_queue.md, writes task_queue.md)
+    decomp_skill = Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+
     Task(
-        prompt: "Read .claude/issue_queue.md (pending issues).
-                 Create tasks in .claude/task_queue.md for each issue.
-                 CRITICAL: When finished, use Write tool: Write('.claude/agent_complete/decomp-{loop}.done', 'done')",
+        prompt: "{decomp_skill}\n\n---\n\n## Your Task\n\nSource: .claude/issue_queue.md\nOutput: .claude/task_queue.md\nMarker: .claude/agent_complete/decomp-{loop}.done",
         model: "opus",
         run_in_background: true
     )

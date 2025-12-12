@@ -27,26 +27,26 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 
 ```
 # Step 1: Spawn Decomposition Agent (reads PRD, writes task_queue.md)
+
+# First, read the skill file to include in prompt
+decomp_skill = Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+
 Task(
     subagent_type: "general-purpose",
     model: "opus",
     prompt: """
-        Read PRD.md and create .claude/task_queue.md with implementation tasks.
+        {decomp_skill}
 
-        Format:
-        ### TASK-001
-        | Field | Value |
-        |-------|-------|
-        | Status | pending |
-        | Complexity | [easy/normal/complex] |
-        **Objective:** [what to implement]
-        **Acceptance Criteria:**
-        - [criterion]
         ---
 
-        CRITICAL: When finished, you MUST create the completion marker file:
-        Use the Write tool: Write(".claude/agent_complete/decomposition.done", "done")
-        The orchestrator is waiting for this file to exist.
+        ## Your Task
+
+        Read PRD.md and create .claude/task_queue.md with implementation tasks.
+        Follow the process defined in the skill above.
+
+        Source document: PRD.md
+        Output file: .claude/task_queue.md
+        Completion marker: .claude/agent_complete/decomposition.done
     """,
     run_in_background: true
 )
@@ -96,14 +96,25 @@ FOR loop IN 1..N:
         Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
     # 2. Decomposition Agent (reads issue_queue.md, writes task_queue.md)
+    decomp_skill = Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+
     Task(
         subagent_type: "general-purpose",
         model: "opus",
         prompt: """
-            Read .claude/issue_queue.md for pending issues.
-            Create implementation tasks in .claude/task_queue.md.
-            Format: TASK-{loop}-{n} with objective and acceptance criteria.
-            CRITICAL: When finished, use Write tool: Write(".claude/agent_complete/decomp-{loop}.done", "done")
+            {decomp_skill}
+
+            ---
+
+            ## Your Task
+
+            Read .claude/issue_queue.md and create tasks in .claude/task_queue.md.
+            Follow the process defined in the skill above.
+            Use task IDs: TASK-{loop}-001, TASK-{loop}-002, etc.
+
+            Source document: .claude/issue_queue.md
+            Output file: .claude/task_queue.md
+            Completion marker: .claude/agent_complete/decomp-{loop}.done
         """,
         run_in_background: true
     )

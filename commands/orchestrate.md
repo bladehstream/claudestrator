@@ -48,7 +48,7 @@ Task(
     """,
     run_in_background: true
 )
-Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
 # Step 2: Execute each task from task_queue.md
 tasks = parse(".claude/task_queue.md", status="pending")
@@ -65,7 +65,7 @@ FOR task IN tasks:
         """,
         run_in_background: true
     )
-    Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+    Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
     Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
 
 Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
@@ -89,7 +89,7 @@ FOR loop IN 1..N:
             """,
             run_in_background: true
         )
-        Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+        Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
     # 2. Decomposition Agent (reads issue_queue.md, writes task_queue.md)
     Task(
@@ -103,7 +103,7 @@ FOR loop IN 1..N:
         """,
         run_in_background: true
     )
-    Bash("while [ ! -f '.claude/agent_complete/decomp-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+    Bash("while [ ! -f '.claude/agent_complete/decomp-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
     # 3. Execute tasks from task_queue.md (max 5 per loop)
     tasks = parse(".claude/task_queue.md", status="pending", limit=5)
@@ -120,7 +120,7 @@ FOR loop IN 1..N:
             """,
             run_in_background: true
         )
-        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
         Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
 
     # 4. Commit
@@ -167,7 +167,7 @@ No files are modified. Setting is forgotten when session ends.
 
 ```bash
 # ✅ CORRECT - ONE tool call
-Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
 # ❌ WRONG - fills context
 WHILE Glob(marker).length == 0: Bash("sleep 5")

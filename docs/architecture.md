@@ -86,7 +86,7 @@ Orchestrator uses a **single blocking Bash command** - not a polling loop:
 
 ```bash
 # ✅ CORRECT - ONE tool call, blocks until file exists
-Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
 # ❌ WRONG - Creates 100+ tool calls that fill context
 WHILE Glob(marker).length == 0:

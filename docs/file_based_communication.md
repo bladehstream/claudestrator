@@ -21,7 +21,7 @@
 **Pattern**:
 ```bash
 # Orchestrator waits (SINGLE blocking call):
-Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 ```
 
 **Context cost**: ~100 tokens

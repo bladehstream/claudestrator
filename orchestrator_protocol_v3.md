@@ -848,24 +848,56 @@ session_state.running_agents.append({
 WRITE session_state.md
 
 # Wait for agent to complete using AgentOutputTool
-# This retrieves ONLY the final status, not the full conversation
-result = AgentOutputTool(agent_id, block=true)
+# IMPORTANT: AgentOutputTool may return the full agent conversation.
+# The orchestrator MUST NOT echo, process, or store this content.
+AgentOutputTool(agent_id, block=true)
 
-# Extract minimal data needed - DO NOT store full output
+# DO NOT use or reference the result from AgentOutputTool!
+# The agent writes its outcome to the task journal file.
+# Orchestrator reads ONLY the structured handoff section from the file.
+
+# Read the handoff from the task journal (agent has written this)
+handoff = Read(.claude/journal/task-{task_id}.md) -> parse HANDOFF section only
 agent_outcome = {
-    success: result.status == "completed",
-    error: result.error IF result.status == "error" ELSE null
+    success: handoff.outcome == "completed",
+    error: handoff.blockers IF handoff.outcome != "completed" ELSE null
 }
-
-# Agent writes its own detailed output to task journal file
-# Orchestrator reads ONLY the structured handoff section, not full output
 ```
 
-**Why run_in_background:**
-- Agent's full conversation stays isolated, not added to orchestrator context
-- Only the final result summary is retrieved
-- Orchestrator context stays lean even across many agents
-- Essential for multi-loop runs (5+ loops can spawn 25+ agents)
+**CRITICAL: Context Overflow Prevention**
+
+Even with `run_in_background: true`, calling `AgentOutputTool(agent_id, block=true)`
+may return the agent's full conversation to the orchestrator. To prevent context overflow:
+
+1. **DO NOT** assign the AgentOutputTool result to a variable you then use
+2. **DO NOT** echo or print the result content
+3. **DO NOT** include result content in any output to the user
+4. **DO** call AgentOutputTool only to wait for completion, then discard
+5. **DO** read the agent's outcome from the task journal file instead
+
+**Why this matters:**
+- Agent conversations can be 50-100k+ tokens (large file edits)
+- 5 loops × 5 agents = 25 full conversations = context overflow
+- The handoff in the journal file is only ~200-500 tokens
+
+**Helper Function: Read Task Journal Handoff**
+
+```
+FUNCTION readTaskJournalHandoff(task_id):
+    # Agents write their outcome to task journal files
+    journal_path = ".claude/journal/task-{task_id}.md"
+    content = Read(journal_path)
+
+    # Parse only the HANDOFF section (last ~500 bytes typically)
+    handoff_section = extractSection(content, "## Handoff")
+
+    RETURN {
+        outcome: parseField(handoff_section, "Outcome"),  # completed | blocked | failed
+        summary: parseField(handoff_section, "Summary"),
+        blockers: parseField(handoff_section, "Blockers"),
+        files_changed: parseField(handoff_section, "Files Changed")
+    }
+```
 
 **Parallel Agent Spawning:**
 
@@ -881,25 +913,20 @@ FOR task IN independent_tasks.slice(0, MAX_PARALLEL):
     Task(..., run_in_background: true)
     session_state.running_agents.append(...)
 
-# Poll for completion without blocking on full output
-WHILE any_agents_running:
-    FOR agent IN running_agents:
-        status = AgentOutputTool(agent.id, block=false)
-        IF status.completed:
-            processMinimalResult(agent, status)
-            move agent to completed_agents
+# Wait for completion, read status from files (NOT from AgentOutputTool result)
+FOR agent IN running_agents:
+    AgentOutputTool(agent.id, block=true)  # Wait only, discard result
+    handoff = readTaskJournalHandoff(agent.task_id)
+    IF handoff.outcome == "completed":
+        move agent to completed_agents
 ```
 
 **Checking Agent Status (for /progress command):**
 
-```
-FUNCTION getAgentStatus(agent_id):
-    result = AgentOutputTool(agent_id, block=false)
-    RETURN {
-        status: result.status,  # running | completed | error
-        # DO NOT return full output - it stays in agent's isolated context
-    }
-```
+For non-blocking status checks, the /progress command can poll:
+- Check if agent file exists in session_state.running_agents
+- Agent writes status updates to its task journal as it progresses
+- Read current status from journal, not from AgentOutputTool
 
 ### 3.7 Process Agent Result
 

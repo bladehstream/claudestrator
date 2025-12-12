@@ -1079,13 +1079,31 @@ orchestrator's context.
 
 **If you see this warning:**
 
-This indicates the orchestrator is not spawning agents in background mode. The protocol
-has been updated to fix this - make sure you have the latest version.
+This indicates the orchestrator protocol has a context leak. Common causes:
+
+1. **AgentOutputTool result stored**: The `AgentOutputTool` returns the **full agent
+   conversation**, not just status. If the result is assigned to a variable
+   (`result = AgentOutputTool(...)`), the entire conversation fills orchestrator context.
+
+2. **Missing background flag**: Agents not spawned with `run_in_background: true`.
+
+**Correct pattern:**
+```
+# Spawn agent in background
+agent_id = Task(..., run_in_background: true)
+
+# Wait for completion - DO NOT store the result
+AgentOutputTool(agent_id, block=true)  # No assignment!
+
+# Read outcome from file instead
+handoff = Read(".claude/journal/task-{id}.md") -> parse HANDOFF section
+```
 
 **How it should work:**
 - Agents run in background (`run_in_background: true`)
-- Orchestrator only retrieves completion status via `AgentOutputTool`
-- Agent outputs stay in isolated context, not orchestrator's messages
+- `AgentOutputTool` called to wait, but result is **NOT stored**
+- Agent writes outcome to task journal file
+- Orchestrator reads only the handoff section from file
 - Orchestrator context stays lean (~2k tokens per loop)
 
 **Expected context usage:**

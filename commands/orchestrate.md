@@ -170,8 +170,9 @@ IF total_loops > 0:
             run_in_background: true  # CRITICAL: Keep agent output out of orchestrator context
         )
 
-        # Wait for completion, retrieve only status (not full output)
-        research_result = AgentOutputTool(research_agent_id, block=true)
+        # Wait for completion - DO NOT store result to avoid context bloat
+        # AgentOutputTool returns full conversation; storing it fills context
+        AgentOutputTool(research_agent_id, block=true)
         REPORT: "Phase 1: Research complete"
 
         # Research agent writes to issue queue with source: generated
@@ -267,13 +268,16 @@ IF total_loops > 0:
             agent_ids.append({id: agent_id, index: i, improvement: improvement})
             loop_tasks[i].status = "working"
 
-        # Wait for all agents to complete, polling periodically
-        # This keeps orchestrator context lean - only status checks, not full outputs
+        # Wait for all agents to complete
+        # CRITICAL: Do NOT store AgentOutputTool result - it contains full conversation
         FOR agent_info IN agent_ids:
-            result = AgentOutputTool(agent_info.id, block=true)
+            # Wait for completion - result is intentionally NOT stored
+            AgentOutputTool(agent_info.id, block=true)
 
-            # Update status based on result (minimal data extraction)
-            IF result.status == "completed":
+            # Read status from task journal file (agent wrote handoff there)
+            handoff = readTaskJournalHandoff(agent_info.improvement.task_id)
+
+            IF handoff.outcome == "completed":
                 loop_tasks[agent_info.index].status = "complete"
                 REPORT: "  ✓ [{agent_info.index+1}] {agent_info.improvement.title}"
             ELSE:
@@ -305,8 +309,13 @@ IF total_loops > 0:
             run_in_background: true  # CRITICAL: Prevents context bloat
         )
 
-        qa_result = AgentOutputTool(qa_agent_id, block=true)
-        qa_status = IF qa_result.status == "completed" THEN "passed" ELSE "issues found"
+        # Wait for QA completion - DO NOT store result
+        AgentOutputTool(qa_agent_id, block=true)
+
+        # QA agent writes issues directly to issue queue if found
+        # Check if any new issues were added during this phase
+        new_issues = readIssueQueue(source: "generated", loop: loop, created_after: qa_start_time)
+        qa_status = IF new_issues.length == 0 THEN "passed" ELSE "issues found"
         REPORT: "  → Verification {qa_status}"
 
         # ═══════════════════════════════════════════════════════════════════
@@ -447,11 +456,20 @@ This prevents agent outputs from accumulating in the orchestrator's context.
 result = Task(prompt: "...", subagent_type: "general-purpose")
 # result contains full agent conversation → context bloat
 
-# GOOD - Agent output stays isolated
-agent_id = Task(prompt: "...", subagent_type: "general-purpose", run_in_background: true)
-status = AgentOutputTool(agent_id, block=true)
-# status contains only completion status → context stays lean
+# ALSO BAD - AgentOutputTool result STILL contains full conversation
+agent_id = Task(prompt: "...", run_in_background: true)
+result = AgentOutputTool(agent_id, block=true)  # result has full conversation!
+status = result.status  # Too late - full conversation already in context
+
+# GOOD - Do NOT store AgentOutputTool result
+agent_id = Task(prompt: "...", run_in_background: true)
+AgentOutputTool(agent_id, block=true)  # Wait for completion, discard result
+handoff = readTaskJournalHandoff(task_id)  # Read outcome from file instead
 ```
+
+**CRITICAL**: The `AgentOutputTool` returns the agent's full conversation, NOT just status.
+Storing its result in a variable pulls the entire conversation into orchestrator context.
+Call it to wait, but do NOT assign to a variable. Read outcomes from files instead.
 
 **Orchestrator context budget:**
 

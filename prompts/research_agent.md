@@ -221,8 +221,16 @@ When "new features" is specified, conduct deeper customer-centric research:
    - Check stated requirements vs implemented features
    - Identify gaps between vision and current state
    - Note any "future considerations" or "nice to haves" mentioned
+   - **Identify target platform(s)**: web, mobile, desktop, CLI, API, embedded, etc.
 
-2. **Analyze User-Reported Issues** (.claude/issue_queue.md)
+2. **Respect Platform Constraints**
+   - Only propose features appropriate for the target platform
+   - Consider platform-specific UX patterns (e.g., touch vs mouse, screen size)
+   - Don't suggest mobile features for desktop-only products (and vice versa)
+   - Account for platform limitations (offline capability, permissions, hardware access)
+   - If multi-platform, note which platforms a feature applies to
+
+3. **Analyze User-Reported Issues** (.claude/issue_queue.md)
    - Filter for `source: user` issues only (not agent-generated)
    - Look for patterns in user complaints/requests
    - Identify frequently requested capabilities
@@ -243,6 +251,7 @@ When "new features" is specified, conduct deeper customer-centric research:
 - Explain the user value, not just technical novelty
 - Consider implementation complexity vs user impact
 - Prioritize features that serve the stated personas
+- Be appropriate for the target platform (don't suggest mobile features for CLI tools)
 
 ### 4.2 Improvement Specification
 

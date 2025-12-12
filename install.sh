@@ -797,6 +797,18 @@ install_hooks() {
         fi
     fi
 
+    # Install check-completion-marker hook (SubagentStop - ensures agents write .done files)
+    local completion_hook="$hooks_dir/check-completion-marker.py"
+    local completion_template="$template_hooks/check-completion-marker.py"
+
+    if [ -f "$completion_template" ]; then
+        cp "$completion_template" "$completion_hook"
+        chmod +x "$completion_hook"
+        log_verbose "Installed check-completion-marker.py (SubagentStop hook)"
+    else
+        log_warning "Hook template not found: $completion_template"
+    fi
+
     log_success "Hooks installed (safe autonomy mode available)"
 }
 

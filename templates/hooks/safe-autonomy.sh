@@ -232,6 +232,12 @@ case "$tool_name" in
             allow
         fi
 
+        # Orchestrator snapshot commands (compound mkdir + git diff + echo)
+        # These are safe: creating directories and saving git diffs to files
+        if [[ "$command" =~ ^mkdir.*\.claude/loop_snapshots.*git[[:space:]]diff ]]; then
+            allow
+        fi
+
         # Environment/info commands
         if [[ "$command" =~ ^echo[[:space:]] ]] || \
            [[ "$command" =~ ^printf[[:space:]] ]] || \

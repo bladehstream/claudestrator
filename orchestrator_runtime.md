@@ -3,26 +3,35 @@
 > **Full reference**: See `orchestrator_protocol_v3.md` for detailed documentation.
 > **This file**: ~2k tokens - load this, not the full protocol.
 
-## Single Run Mode (`/orchestrate`)
+## Initial Run (`/orchestrate` - first time)
 
-No research agent. Execute existing issues from queue or PRD requirements.
+Decompose PRD into tasks, execute them. No research agent.
 
 ```
-issues = read_pending_issues() OR decompose_prd()
-FOR issue IN issues:
-    execute_issue(issue)
+tasks = decompose_prd_into_tasks()
+FOR task IN tasks:
+    execute_task(task)
     # Poll: WHILE Glob(marker).length == 0: Bash("sleep 5")
+
+# Mark initial run complete
+Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
 ```
 
-## Loop Mode (`/orchestrate N`)
+## Improvement Loops (`/orchestrate N` - after initial complete)
 
-Research agent generates issues each loop.
+Research agent ONLY runs if initial PRD tasks are done.
 
 ```
+initial_complete = read_session_state("initial_prd_tasks_complete")
+
 FOR loop IN 1..total_loops:
-    # 1. Research phase (generates 5 issues)
-    spawn_research_agent(loop, focus_areas)
-    WHILE Glob(research_marker).length == 0: Bash("sleep 5")
+    # 1. Research phase - ONLY if initial build is done
+    IF initial_complete:
+        spawn_research_agent(loop, focus_areas)
+        WHILE Glob(research_marker).length == 0: Bash("sleep 5")
+    ELSE:
+        # Still building - execute remaining PRD tasks
+        continue_prd_tasks()
 
     # 2. Execute issues (max 5 per loop)
     FOR issue IN read_pending_issues().slice(0, 5):

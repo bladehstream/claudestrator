@@ -27,10 +27,15 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 ## Main Loop
 
 ```
+# Check if initial PRD tasks are complete
+initial_complete = check_session_state("initial_prd_tasks_complete") == true
+
 FOR loop IN 1..total_loops:
 
-    # 1. Research phase (ONLY in loop mode with N > 0)
-    IF total_loops > 0 AND (loop == 1 OR no_pending_issues):
+    # 1. Research phase - ONLY if:
+    #    - Loop mode (N > 0) AND
+    #    - Initial PRD tasks already completed (at least 1 successful prior run)
+    IF total_loops > 0 AND initial_complete AND (loop == 1 OR no_pending_issues):
         marker = ".claude/agent_complete/research-{loop}.done"
         Task(
             prompt: <research_agent_prompt from prompts/research_agent.md>,

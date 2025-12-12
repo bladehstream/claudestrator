@@ -251,8 +251,10 @@ Usage: /progress <agent-id> to see last agent output
 
 **Implementation:**
 1. Read `session_state.md` for `running_agents` and `completed_agents` arrays
-2. For running agents, use `AgentOutputTool(agentId, block=false)` to check status
+2. For running agents, check if completion marker exists: `Glob(".claude/agent_complete/{task_id}.done")`
 3. Display agent ID, task reference, and elapsed time
+
+**NOTE:** Do NOT use `AgentOutputTool` - it adds full agent conversation to context.
 
 ---
 
@@ -284,9 +286,12 @@ Reading src/config/auth.config.ts for token expiry settings.
 
 **Implementation:**
 1. Look up agent-id in `session_state.md`
-2. Call `AgentOutputTool(agentId, block=false)` to get latest output
-3. Truncate output to last ~500 characters if longer
-4. Display agent metadata and output
+2. Read the task journal file: `.claude/journal/task-{task_id}.md`
+3. Parse the latest "Progress" or "Handoff" section for status
+4. Display agent metadata and status from journal
+
+**NOTE:** Do NOT use `AgentOutputTool` - it adds full agent conversation to context.
+Agent progress is written to task journal files, read those instead.
 
 **For completed agents:**
 ```

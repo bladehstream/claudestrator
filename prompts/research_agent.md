@@ -149,7 +149,13 @@ Consider:
 ### 3.3 Filter by Focus Areas
 
 If focus areas were specified ({focus_areas}), prioritize gaps in those areas.
-If "new features" is specified, also include novel enhancements beyond fixing gaps.
+
+If "new features" is specified:
+- Go beyond fixing gaps to proposing novel enhancements
+- Re-read PRD.md to understand user personas and stated goals
+- Check .claude/issue_queue.md for user-reported issues (source: user)
+- Synthesize what customers actually need based on both sources
+- Research what similar products offer as standard features
 
 ═══════════════════════════════════════════════════════════════════════════════
 PHASE 4: GENERATE IMPROVEMENT RECOMMENDATIONS
@@ -207,9 +213,36 @@ Consider improvements in these categories:
 - Onboarding friction
 
 **New Features** (if "new features" in focus areas)
-- Features users expect but are missing
-- Competitive feature gaps
-- Modern patterns not yet adopted
+
+When "new features" is specified, conduct deeper customer-centric research:
+
+1. **Re-read the PRD** (./PRD.md)
+   - Review user personas and their goals
+   - Check stated requirements vs implemented features
+   - Identify gaps between vision and current state
+   - Note any "future considerations" or "nice to haves" mentioned
+
+2. **Analyze User-Reported Issues** (.claude/issue_queue.md)
+   - Filter for `source: user` issues only (not agent-generated)
+   - Look for patterns in user complaints/requests
+   - Identify frequently requested capabilities
+   - Note pain points that suggest missing features
+
+3. **Synthesize Customer Requirements**
+   - What do users need that they haven't explicitly asked for?
+   - What workflow improvements would reduce friction?
+   - What features would make the product "complete" for the target persona?
+
+4. **Research Competitive/Industry Standards**
+   - What features do similar products have?
+   - What's considered table-stakes for this type of application?
+   - What emerging patterns are users coming to expect?
+
+**New feature recommendations should:**
+- Tie back to PRD goals or user-reported needs
+- Explain the user value, not just technical novelty
+- Consider implementation complexity vs user impact
+- Prioritize features that serve the stated personas
 
 ### 4.2 Improvement Specification
 

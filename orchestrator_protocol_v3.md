@@ -962,12 +962,17 @@ independent_tasks = pending_tasks.filter(
 
 # Spawn up to MAX_PARALLEL agents in one message, ALL in background
 FOR task IN independent_tasks.slice(0, MAX_PARALLEL):
-    Task(..., run_in_background: true)
-    session_state.running_agents.append(...)
+    marker_path = ".claude/agent_complete/task-{task.id}.done"
+    Task(
+        prompt: "... When finished, Write '{marker_path}' with content 'done' ...",
+        run_in_background: true
+    )
+    session_state.running_agents.append({task_id: task.id, marker: marker_path, ...})
 
-# Wait for completion, read status from files (NOT from AgentOutputTool result)
+# Wait for completion via file polling (NEVER use AgentOutputTool)
 FOR agent IN running_agents:
-    AgentOutputTool(agent.id, block=true)  # Wait only, discard result
+    WHILE Glob(agent.marker).length == 0:
+        Bash("sleep 5")
     handoff = readTaskJournalHandoff(agent.task_id)
     IF handoff.outcome == "completed":
         move agent to completed_agents

@@ -1,5 +1,12 @@
 # /orchestrate - Initialize or Resume Orchestrator Mode
 
+> **CRITICAL: Load the slim runtime, not full protocol!**
+> ```
+> Read: .claudestrator/orchestrator_runtime.md (~2k tokens)
+> DO NOT Read: .claudestrator/orchestrator_protocol_v3.md (68k tokens!)
+> ```
+> The full protocol is reference documentation. Use `orchestrator_runtime.md` for execution.
+
 You are now entering ORCHESTRATOR MODE. You are a PROJECT MANAGER, not an implementer.
 
 ## Usage

@@ -48,6 +48,7 @@ FORCE_INSTALL=false
 UNINSTALL=false
 DRY_RUN=false
 VERBOSE=false
+UPDATE_MODE=false
 REPO_URL="https://github.com/bladehstream/claudestrator.git"
 REPO_RAW_URL="https://raw.githubusercontent.com/bladehstream/claudestrator/main"
 
@@ -79,6 +80,10 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        --update|-u)
+            UPDATE_MODE=true
+            shift
+            ;;
         --skip-preview)
             SKIP_PREVIEW=true
             shift
@@ -96,6 +101,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --uninstall     Remove Claudestrator installation"
             echo "  --dry-run       Show what would be done without making changes"
             echo "  --verbose, -v   Show detailed output for each action"
+            echo "  --update, -u    Update existing files that differ from repo (creates backups)"
             echo "  --skip-preview  Skip change preview (useful for private repos)"
             echo "  --help          Show this help message"
             exit 0
@@ -424,10 +430,19 @@ preview_changes() {
     fi
 
     if [ ${#skill_diff[@]} -gt 0 ]; then
-        echo -e "   ${YELLOW}Existing skills with differences (will NOT overwrite):${NC}"
-        for skill in "${skill_diff[@]}"; do
-            echo -e "     ~ $skill"
-        done
+        if [ "$UPDATE_MODE" = true ]; then
+            echo -e "   ${GREEN}Will update (with backup):${NC}"
+            for skill in "${skill_diff[@]}"; do
+                echo -e "     ↻ $skill"
+            done
+            has_changes=true
+            changes_summary+=("Update ${#skill_diff[@]} existing skills")
+        else
+            echo -e "   ${YELLOW}Existing skills with differences (use --update to update):${NC}"
+            for skill in "${skill_diff[@]}"; do
+                echo -e "     ~ $skill"
+            done
+        fi
 
         if confirm "   Show diffs for modified skills?"; then
             for skill in "${skill_diff[@]}"; do
@@ -482,7 +497,12 @@ preview_changes() {
     fi
 
     echo ""
-    echo -e "${YELLOW}Note: Existing files will NOT be overwritten.${NC}"
+    if [ "$UPDATE_MODE" = true ]; then
+        echo -e "${GREEN}Update mode: Existing files will be updated (backups created).${NC}"
+    else
+        echo -e "${YELLOW}Note: Existing files will NOT be overwritten.${NC}"
+        echo -e "${YELLOW}Run with --update to update files that differ.${NC}"
+    fi
     echo -e "${YELLOW}A backup of CLAUDE.md will be created before modification.${NC}"
     echo ""
 
@@ -584,6 +604,7 @@ install_skills() {
     log_verbose "Created directory: $SKILLS_DIR"
 
     local installed=0
+    local updated=0
     local skipped=0
 
     # Copy skill subdirectories
@@ -602,9 +623,23 @@ install_skills() {
                     local target="$dst_dir/$skill_name"
 
                     if [ -f "$target" ]; then
-                        # File exists - skip (already showed diff in preview)
-                        log_verbose "  Skipped (exists): $skill_name"
-                        ((++skipped))
+                        # File exists - check if different
+                        if ! diff -q "$target" "$skill_file" > /dev/null 2>&1; then
+                            # Files differ
+                            if [ "$UPDATE_MODE" = true ]; then
+                                # Backup and update
+                                cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)"
+                                cp "$skill_file" "$target"
+                                log_verbose "  Updated (backup created): $skill_name"
+                                ((++updated))
+                            else
+                                log_verbose "  Skipped (differs, use --update to overwrite): $skill_name"
+                                ((++skipped))
+                            fi
+                        else
+                            log_verbose "  Skipped (identical): $skill_name"
+                            ((++skipped))
+                        fi
                     else
                         cp "$skill_file" "$target"
                         log_verbose "  Copied: $skill_name -> $target"
@@ -625,8 +660,20 @@ install_skills() {
 
         if [ -f "$src" ]; then
             if [ -f "$dst" ]; then
-                log_verbose "  Skipped (exists): $top_file"
-                ((++skipped))
+                if ! diff -q "$dst" "$src" > /dev/null 2>&1; then
+                    if [ "$UPDATE_MODE" = true ]; then
+                        cp "$dst" "$dst.backup.$(date +%Y%m%d_%H%M%S)"
+                        cp "$src" "$dst"
+                        log_verbose "  Updated (backup created): $top_file"
+                        ((++updated))
+                    else
+                        log_verbose "  Skipped (differs, use --update): $top_file"
+                        ((++skipped))
+                    fi
+                else
+                    log_verbose "  Skipped (identical): $top_file"
+                    ((++skipped))
+                fi
             else
                 cp "$src" "$dst"
                 log_verbose "  Copied: $top_file -> $dst"
@@ -637,7 +684,11 @@ install_skills() {
         fi
     done
 
-    log_success "Skills installed: $installed, skipped: $skipped"
+    if [ "$UPDATE_MODE" = true ]; then
+        log_success "Skills: $installed new, $updated updated, $skipped unchanged"
+    else
+        log_success "Skills: $installed new, $skipped skipped (run with --update to update existing)"
+    fi
 }
 
 # Configure CLAUDE.md

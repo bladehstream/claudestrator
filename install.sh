@@ -21,9 +21,6 @@
 
 set -e
 
-# Prevent git from prompting for credentials (use credential helper or fail)
-export GIT_TERMINAL_PROMPT=0
-
 # Colors (disabled if not a terminal)
 if [ -t 1 ]; then
     RED='\033[0;31m'

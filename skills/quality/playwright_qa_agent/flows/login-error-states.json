@@ -1,0 +1,123 @@
+{
+  "name": "Login Flow - Error States",
+  "description": "Tests login form validation and error handling",
+  "steps": [
+    { 
+      "action": "goto", 
+      "url": "{{BASE_URL}}/login" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "01-initial" 
+    },
+    
+    {
+      "comment": "=== Test: Empty form submission ==="
+    },
+    { 
+      "action": "click", 
+      "selector": "button[type='submit']" 
+    },
+    { 
+      "action": "wait", 
+      "for": "timeout", 
+      "ms": 500 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "02-empty-submit-errors" 
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": ".error, .error-message, [class*='error'], [role='alert']",
+      "comment": "Error message should appear for required fields"
+    },
+    
+    {
+      "comment": "=== Test: Invalid email format ==="
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='email'], input[name='email'], #email", 
+      "value": "not-an-email" 
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='password'], input[name='password'], #password", 
+      "value": "somepassword" 
+    },
+    { 
+      "action": "click", 
+      "selector": "button[type='submit']" 
+    },
+    { 
+      "action": "wait", 
+      "for": "timeout", 
+      "ms": 500 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "03-invalid-email-error" 
+    },
+    
+    {
+      "comment": "=== Test: Wrong credentials ==="
+    },
+    { 
+      "action": "goto", 
+      "url": "{{BASE_URL}}/login" 
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='email'], input[name='email'], #email", 
+      "value": "wrong@example.com" 
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='password'], input[name='password'], #password", 
+      "value": "wrongpassword" 
+    },
+    { 
+      "action": "click", 
+      "selector": "button[type='submit']" 
+    },
+    { 
+      "action": "wait", 
+      "for": "networkidle" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "04-wrong-credentials-error" 
+    },
+    { 
+      "action": "assert", 
+      "type": "url", 
+      "contains": "/login",
+      "comment": "Should remain on login page"
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": ".error, .error-message, [class*='error'], [role='alert']",
+      "comment": "Should show authentication error"
+    },
+    
+    {
+      "comment": "=== Test: Password visibility toggle (if exists) ==="
+    },
+    { 
+      "action": "goto", 
+      "url": "{{BASE_URL}}/login" 
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='password']", 
+      "value": "testpassword123" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "05-password-hidden" 
+    }
+  ]
+}

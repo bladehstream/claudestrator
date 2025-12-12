@@ -1,0 +1,87 @@
+{
+  "name": "Responsive Design Audit",
+  "description": "Tests page layout across breakpoints - run with --viewport all",
+  "steps": [
+    { 
+      "action": "goto", 
+      "url": "{{BASE_URL}}" 
+    },
+    { 
+      "action": "wait", 
+      "for": "networkidle" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "01-initial-load",
+      "fullPage": true
+    },
+    
+    {
+      "comment": "=== Navigation checks ==="
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": "nav, header, [role='navigation']" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "02-navigation" 
+    },
+    
+    {
+      "comment": "=== Check for horizontal overflow ==="
+    },
+    {
+      "action": "evaluate",
+      "script": "document.documentElement.scrollWidth > document.documentElement.clientWidth"
+    },
+    
+    {
+      "comment": "=== Scroll behavior ==="
+    },
+    { 
+      "action": "scroll", 
+      "position": "bottom" 
+    },
+    { 
+      "action": "wait", 
+      "for": "timeout", 
+      "ms": 500 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "03-page-bottom" 
+    },
+    
+    { 
+      "action": "scroll", 
+      "position": "top" 
+    },
+    
+    {
+      "comment": "=== Interactive elements ==="
+    },
+    { 
+      "action": "screenshot", 
+      "name": "04-interactive-default" 
+    },
+    
+    {
+      "comment": "=== Footer visibility ==="
+    },
+    { 
+      "action": "scroll", 
+      "position": "bottom" 
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": "footer, [role='contentinfo']" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "05-footer" 
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "name": "Login Flow - Happy Path",
+  "description": "Tests standard login with valid credentials",
+  "steps": [
+    { 
+      "action": "goto", 
+      "url": "{{BASE_URL}}/login",
+      "comment": "Navigate to login page"
+    },
+    { 
+      "action": "screenshot", 
+      "name": "01-login-page-initial" 
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": "form#login-form",
+      "comment": "Verify login form is visible"
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": "input[type='email'], input[name='email'], #email" 
+    },
+    { 
+      "action": "assert", 
+      "type": "visible", 
+      "selector": "input[type='password'], input[name='password'], #password" 
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='email'], input[name='email'], #email", 
+      "value": "{{TEST_EMAIL}}" 
+    },
+    { 
+      "action": "fill", 
+      "selector": "input[type='password'], input[name='password'], #password", 
+      "value": "{{TEST_PASSWORD}}" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "02-credentials-entered" 
+    },
+    { 
+      "action": "click", 
+      "selector": "button[type='submit'], input[type='submit'], .login-button" 
+    },
+    { 
+      "action": "wait", 
+      "for": "navigation" 
+    },
+    { 
+      "action": "screenshot", 
+      "name": "03-post-login" 
+    },
+    { 
+      "action": "assert", 
+      "type": "url", 
+      "contains": "/dashboard",
+      "comment": "Should redirect to dashboard after login"
+    },
+    { 
+      "action": "assert", 
+      "type": "hidden", 
+      "selector": "form#login-form",
+      "comment": "Login form should no longer be visible"
+    }
+  ]
+}

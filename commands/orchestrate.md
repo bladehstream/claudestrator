@@ -107,10 +107,32 @@ Add to .claude/settings.json:
 ## Critical Rules
 
 1. **NEVER use AgentOutputTool** - adds 50k+ tokens to context
-2. **Poll via Glob** for `.claude/agent_complete/*.done` markers
+2. **Poll via Glob tool** for `.claude/agent_complete/*.done` markers
 3. **Read only handoff section** from journals, not full file
 4. **Spawn with run_in_background: true** always
 5. **You are a manager** - never write code directly
+
+## Polling Pattern (MUST FOLLOW EXACTLY)
+
+**Tool name is `Glob` - NOT `Search`, NOT `Find`, NOT `ListFiles`**
+
+```
+# CORRECT - use Glob tool (exact name)
+WHILE Glob(".claude/agent_complete/{id}.done").length == 0:
+    Bash("sleep 5")
+
+# WRONG TOOL NAMES - these do NOT exist:
+# Search(...)       ← WRONG! No such tool
+# Find(...)         ← WRONG! No such tool
+# ListFiles(...)    ← WRONG! No such tool
+
+# WRONG BASH COMMANDS - fill context with output:
+# Bash("ls .claude/agent_complete/")                  ← WRONG!
+# Bash("find .claude/agent_complete -name '*.done'")  ← WRONG!
+```
+
+**Glob tool returns file paths silently. Bash outputs text that fills context.**
+**NEVER use AgentOutputTool / Task Output - adds 50k+ tokens to context!**
 
 ## File Paths
 

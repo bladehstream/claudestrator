@@ -89,7 +89,28 @@ Prefer: vendor docs > GitHub > tutorials > forums
 ## CRITICAL RULES
 
 1. **NEVER use AgentOutputTool** - causes context bloat
-2. **Poll via Glob** for completion markers
+2. **Poll via Glob tool** for completion markers (NOT ls, NOT find)
 3. **Read only handoff section** from journals (~500 tokens)
 4. **Spawn agents with run_in_background: true**
 5. **Don't read full protocol** - use this runtime doc only
+
+## POLLING (EXACT PATTERN - USE THESE EXACT TOOL NAMES)
+
+**Tool name is `Glob` - NOT `Search`, NOT `Find`, NOT `ListFiles`**
+
+```
+# CORRECT - use Glob tool (exact name)
+WHILE Glob(".claude/agent_complete/{id}.done").length == 0:
+    Bash("sleep 5")
+
+# WRONG TOOL NAMES - these do NOT exist:
+# Search(...)       ← WRONG! No such tool
+# Find(...)         ← WRONG! No such tool
+# ListFiles(...)    ← WRONG! No such tool
+
+# WRONG COMMANDS - these fill context:
+# Bash("ls .claude/agent_complete/")
+# Bash("find ... -name *.done")
+```
+
+**NEVER use AgentOutputTool / Task Output - it adds 50k+ tokens to context!**

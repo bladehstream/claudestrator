@@ -246,6 +246,23 @@ All paths are relative to the project root:
 5. Append execution log to {{task_file_path}}
 6. Include structured handoff in YAML format
 7. Verify work against acceptance criteria before completing
+8. **CRITICAL: Write completion marker** (see below)
+
+## Completion Marker (REQUIRED)
+
+**When you finish, you MUST write a completion marker file:**
+
+```
+Write(".claude/agent_complete/{{task_id}}.done", "done")
+```
+
+The orchestrator polls for this marker to know you're finished. If you don't write it, the orchestrator will wait forever.
+
+**Example:**
+- Task ID: `001` → Write to `.claude/agent_complete/001.done`
+- Task ID: `auth-setup` → Write to `.claude/agent_complete/auth-setup.done`
+
+This is the LAST thing you do before stopping.
 ```
 
 ---

@@ -1,14 +1,14 @@
 # /orchestrate
 
 > **Runtime**: Load `.claudestrator/orchestrator_runtime.md` for execution logic.
-> **Full docs**: `.claudestrator/orchestrator_protocol_v3.md` (reference only, don't load).
+> **Version**: MVP - No journalling, no knowledge graph, minimal context overhead.
 
 You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 
 ## Usage
 
 ```
-/orchestrate              # Single pass
+/orchestrate              # Single pass - execute PRD tasks
 /orchestrate N            # N improvement loops
 /orchestrate N security   # N loops focused on security
 /orchestrate --dry-run    # Preview without executing
@@ -17,32 +17,25 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 ## Startup Checklist
 
 1. Check PRD.md exists → if not, tell user to run `/prdgen` first
-2. Check git → init if needed, enable auto-commits
+2. Check git → init if needed
 3. Ask autonomy level (if loops > 0):
    - Full Autonomy → install safe-autonomy hook
    - Supervised → approve agent spawns
-   - Manual → approve everything
 4. Read `.claudestrator/orchestrator_runtime.md` for loop logic
 
-## Main Loop
+## Main Loop (MVP)
 
 ```
-# Check if initial PRD tasks are complete
-initial_complete = check_session_state("initial_prd_tasks_complete") == true
-
 FOR loop IN 1..total_loops:
 
-    # 1. Research phase - ONLY if:
-    #    - Loop mode (N > 0) AND
-    #    - Initial PRD tasks already completed (at least 1 successful prior run)
-    IF total_loops > 0 AND initial_complete AND (loop == 1 OR no_pending_issues):
+    # 1. Research phase (only after initial PRD complete)
+    IF initial_complete AND (loop == 1 OR no_pending_issues):
         marker = ".claude/agent_complete/research-{loop}.done"
         Task(
-            prompt: <research_agent_prompt from prompts/research_agent.md>,
+            prompt: <research_agent_prompt>,
             model: "opus",
             run_in_background: true
         )
-        # SINGLE blocking wait - ONE tool call, not a loop
         Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
     # 2. Get pending issues (max 5 per loop)
@@ -54,29 +47,25 @@ FOR loop IN 1..total_loops:
 
         Task(
             subagent_type: "general-purpose",
-            model: select_model(issue.complexity),  # easy→haiku, normal→sonnet, complex→opus
+            model: select_model(issue.complexity),
             prompt: """
                 Task: {issue.id} - {issue.summary}
                 Details: {issue.details}
                 Acceptance: {issue.acceptance_criteria}
 
-                When done:
-                1. Write journal: .claude/journal/task-{issue.id}.md
-                2. Write marker: "{marker}" with content "done"
+                When DONE: Write "{marker}" with content "done"
             """,
             run_in_background: true
         )
 
-        # SINGLE blocking wait - ONE tool call (NEVER use AgentOutputTool or Glob loop)
+        # SINGLE blocking wait
         Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-        # Read only handoff section (~500 tokens)
-        handoff = read_section(".claude/journal/task-{issue.id}.md", "## Handoff")
-        update_issue(issue.id, handoff.outcome)
+        # Update issue status (single field, no handoff reading)
+        Edit(".claude/issue_queue.md", "Status | pending" -> "Status | completed", issue.id section)
 
-    # 4. End of loop
-    IF git_enabled: Bash("git add -A && git commit -m 'Loop {loop}'")
-    save_snapshot(loop)
+    # 4. Commit
+    Bash("git add -A && git commit -m 'Loop {loop}'")
 ```
 
 ## Model Selection
@@ -102,47 +91,59 @@ Add to .claude/settings.json:
     }]
 ```
 
-## Critical Rules
+## Critical Rules (MVP)
 
 1. **NEVER use AgentOutputTool** - adds 50-100k tokens to context
-2. **ONE blocking Bash per agent** - not a polling loop (see below)
-3. **Read only handoff section** from journals, not full file
-4. **Spawn with run_in_background: true** always
-5. **You are a manager** - never write code directly
+2. **ONE blocking Bash per agent** - not a polling loop
+3. **NO journal reading** - just check marker exists
+4. **NO handoff processing** - just update issue status field
+5. **NO knowledge graph queries** - deferred to future Memory Agent
+6. **You are a manager** - never write code directly
 
-## Waiting for Agents (MUST FOLLOW EXACTLY)
-
-**Use a SINGLE blocking Bash command - NOT a loop of Glob + sleep calls**
+## Waiting for Agents
 
 ```bash
-# ✅ CORRECT - ONE tool call, blocks internally until file exists
+# ✅ CORRECT - ONE tool call
 Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-# ❌ WRONG - Creates 100+ tool calls that fill context:
-WHILE Glob(".claude/agent_complete/{id}.done").length == 0:
-    Bash("sleep 5")
+# ❌ WRONG - fills context
+WHILE Glob(marker).length == 0: Bash("sleep 5")
 ```
 
-**Why this matters:**
-- The WRONG pattern: 10 min wait = 120 iterations = 240 tool calls = ~20k tokens wasted
-- The CORRECT pattern: 10 min wait = 1 tool call = ~100 tokens
+## Context Budget (MVP)
 
-**For multiple agents (wait for all N to complete):**
-```bash
-Bash("while [ $(ls .claude/agent_complete/*.done 2>/dev/null | wc -l) -lt {N} ]; do sleep 10; done && echo 'all done'", timeout: 600000)
-```
+| Per Agent | Tokens |
+|-----------|--------|
+| Blocking wait | ~100 |
+| Status update | ~50 |
+| **Total** | **~150** |
 
-**NEVER use:**
-- `AgentOutputTool` / `TaskOutput` - adds 50-100k tokens per agent
-- Repeated `Glob()` calls in a loop - fills context with tool calls
-- `Bash("ls ...")` for status checks - output fills context
+5 agents × 10 loops = 50 agents × 150 tokens = **7,500 tokens total**
+
+Compare to full journalling: 50 agents × 3,500 tokens = 175,000 tokens
 
 ## File Paths
 
 | Purpose | Path |
 |---------|------|
 | Issues | `.claude/issue_queue.md` |
-| Journals | `.claude/journal/task-{id}.md` |
 | Markers | `.claude/agent_complete/{id}.done` |
 | State | `.claude/session_state.md` |
-| Research | `.claude/research/` |
+
+---
+
+## Future: Memory Agent (v2)
+
+> **Not implemented.** After MVP stable, add Memory Agent for learning.
+
+The Memory Agent runs BETWEEN loops in its own context:
+- Reads git diff from completed loop
+- Extracts patterns/gotchas from code changes
+- Updates knowledge graph
+- Writes 500-token loop summary
+
+Orchestrator reads ONLY the summary, keeping context minimal.
+
+---
+
+*MVP Version: 1.0*

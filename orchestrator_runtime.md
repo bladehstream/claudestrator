@@ -1,58 +1,67 @@
-# Orchestrator Runtime (Slim)
+# Orchestrator Runtime (MVP)
 
-> **Full reference**: See `orchestrator_protocol_v3.md` for detailed documentation.
-> **This file**: ~2k tokens - load this, not the full protocol.
+> **Version**: MVP - Minimal viable orchestration, no learning/journalling overhead.
+> **Future**: Journalling and learning will be handled by a dedicated Memory Agent between loops.
 
-## Initial Run (`/orchestrate` - first time)
+## Initial Run (`/orchestrate`)
 
-Decompose PRD into tasks, execute them. No research agent.
+Decompose PRD into tasks, execute them sequentially.
 
 ```
 tasks = decompose_prd_into_tasks()
 FOR task IN tasks:
     marker = ".claude/agent_complete/{task.id}.done"
-    Task(..., run_in_background: true)
 
-    # SINGLE blocking wait (ONE tool call, not a loop)
+    Task(
+        prompt: <agent_prompt>,
+        run_in_background: true
+    )
+
+    # SINGLE blocking wait
     Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-# Mark initial run complete
 Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
 ```
 
-## Improvement Loops (`/orchestrate N` - after initial complete)
-
-Research agent ONLY runs if initial PRD tasks are done.
+## Improvement Loops (`/orchestrate N`)
 
 ```
-initial_complete = read_session_state("initial_prd_tasks_complete")
-
-FOR loop IN 1..total_loops:
-    # 1. Research phase - ONLY if initial build is done
+FOR loop IN 1..N:
+    # 1. Research (if initial complete)
     IF initial_complete:
-        research_marker = ".claude/agent_complete/research-{loop}.done"
-        spawn_research_agent(loop, focus_areas)
-        # SINGLE blocking wait
-        Bash("while [ ! -f '{research_marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
-    ELSE:
-        # Still building - execute remaining PRD tasks
-        continue_prd_tasks()
+        spawn_research_agent(loop)
+        Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-    # 2. Execute issues (max 5 per loop)
-    FOR issue IN read_pending_issues().slice(0, 5):
+    # 2. Execute pending issues (max 5)
+    FOR issue IN pending_issues.slice(0, 5):
         marker = ".claude/agent_complete/{issue.id}.done"
         Task(..., run_in_background: true)
-
-        # SINGLE blocking wait (ONE tool call, blocks until file exists)
         Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-        handoff = read_handoff(issue.id)
-        update_issue(issue, handoff)
+        # Mark issue complete (single line update)
+        update_issue_status(issue.id, "completed")
 
-    # 3. Commit & snapshot
-    git add -A && git commit
-    save_snapshot(loop)
+    # 3. Commit
+    Bash("git add -A && git commit -m 'Loop {loop}'")
 ```
+
+## Agent Prompt (Minimal)
+
+```
+You are executing: {task.id} - {task.summary}
+
+## Acceptance Criteria
+{task.acceptance_criteria}
+
+## Instructions
+1. Implement the requirement
+2. When DONE: Write ".claude/agent_complete/{task.id}.done" with content "done"
+
+## Confidence Check
+If LOW confidence on implementation approach: WebSearch for official docs first.
+```
+
+**No journal writing required.** Agents just implement and write the completion marker.
 
 ## Model Selection
 
@@ -62,65 +71,76 @@ FOR loop IN 1..total_loops:
 | normal | sonnet |
 | complex | opus |
 
-## Agent Prompt Template
-
-```
-You are executing task {task.id}: {task.summary}
-
-## Acceptance Criteria
-{task.acceptance_criteria}
-
-## Instructions
-1. Implement the requirement
-2. Write to .claude/journal/task-{task.id}.md
-3. When done: Write ".claude/agent_complete/{task.id}.done" with "done"
-
-## Confidence Check
-If LOW confidence: WebSearch for official docs first.
-Prefer: vendor docs > GitHub > tutorials > forums
-```
-
-## File Paths
+## File Paths (Minimal)
 
 | Purpose | Path |
 |---------|------|
 | Issues | `.claude/issue_queue.md` |
-| Journal | `.claude/journal/task-{id}.md` |
 | Completion | `.claude/agent_complete/{id}.done` |
 | State | `.claude/session_state.md` |
-| Snapshots | `.claude/loop_snapshots/` |
 
 ## CRITICAL RULES
 
-1. **NEVER use AgentOutputTool** - causes 50k+ token context bloat
-2. **ONE blocking Bash per agent** - not a polling loop (see below)
-3. **Read only handoff section** from journals (~500 tokens)
-4. **Spawn agents with run_in_background: true**
-5. **Don't read full protocol** - use this runtime doc only
+1. **NEVER use AgentOutputTool** - adds 50-100k tokens to context
+2. **ONE blocking Bash per agent** - not a polling loop
+3. **NO journal reading** - just check marker exists
+4. **NO handoff processing** - just update issue status field
+5. **NO knowledge graph** - deferred to future Memory Agent
 
-## WAITING FOR AGENTS (CRITICAL - FOLLOW EXACTLY)
-
-**Use a SINGLE blocking Bash command - NOT a loop of Glob + sleep calls**
+## Waiting for Agents
 
 ```bash
-# ✅ CORRECT - ONE tool call, blocks internally until file exists
+# ✅ CORRECT - ONE tool call
 Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-# ❌ WRONG - Creates 100+ tool calls that fill context:
-WHILE Glob(".claude/agent_complete/{id}.done").length == 0:
-    Bash("sleep 5")
+# ❌ WRONG - fills context
+WHILE Glob(marker).length == 0: Bash("sleep 5")
 ```
 
-**Why this matters:**
-- The WRONG pattern: 10 min wait = 120 iterations = 240 tool calls = ~20k tokens
-- The CORRECT pattern: 10 min wait = 1 tool call = ~100 tokens
+## Context Budget (MVP)
 
-**For multiple agents (wait for all N to complete):**
-```bash
-Bash("while [ $(ls .claude/agent_complete/*.done 2>/dev/null | wc -l) -lt {N} ]; do sleep 10; done && echo 'all done'", timeout: 600000)
+| Operation | Tokens |
+|-----------|--------|
+| Wait for agent | ~100 |
+| Update issue status | ~50 |
+| Git commit | ~100 |
+| **Total per agent** | **~250** |
+
+Compare to full journalling: ~3-5k tokens per agent.
+
+---
+
+## Future: Memory Agent Architecture
+
+> **Not implemented in MVP.** This is the target architecture for v2.
+
+After MVP is stable, add a dedicated Memory Agent that runs BETWEEN loops:
+
+```
+# Orchestrator (stays minimal)
+FOR loop IN 1..N:
+    execute_agents()
+    Bash("git add -A && git commit")
+
+    # Spawn Memory Agent at end of loop
+    spawn_memory_agent(loop)
+    wait_for_memory_agent()
+
+# Memory Agent (separate context)
+- Read all .claude/agent_complete/*.done markers
+- Read corresponding source file changes (git diff)
+- Extract patterns, gotchas from code changes
+- Update .claude/knowledge_graph.json
+- Write .claude/loop_summary.md (~500 tokens)
+- Orchestrator reads ONLY loop_summary.md next loop
 ```
 
-**NEVER use:**
-- `AgentOutputTool` / `TaskOutput` - adds 50-100k tokens per agent
-- Repeated `Glob()` calls in a loop - fills context
-- `Bash("ls ...")` for status checks - output fills context
+**Benefits:**
+- Learning happens in isolated context (Memory Agent)
+- Orchestrator stays minimal (~250 tokens/agent)
+- Knowledge accumulates without bloating orchestrator
+- Memory Agent can use Opus for sophisticated pattern extraction
+
+---
+
+*MVP Runtime Version: 1.0*

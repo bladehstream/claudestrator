@@ -27,45 +27,42 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool. 
 
 ### Step 1: Spawn Decomposition Agent
 
-**You must do these actions in order:**
+Spawn the agent with this EXACT prompt (copy-paste, do not modify):
 
-1. **Read the skill file first.** Use the Read tool:
-   ```
-   Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
-   ```
+```
+Task(
+  subagent_type: "general-purpose",
+  model: "opus",
+  run_in_background: true,
+  prompt: "You are a task decomposition agent. Your job:
 
-2. **Copy the ENTIRE content** of that skill file. You will paste it into the Task prompt.
+1. Use Read tool to read PRD.md
+2. Break it into 5-15 implementation tasks
+3. Use Write tool to create .claude/task_queue.md with this format:
 
-3. **Spawn the agent** using the Task tool. The prompt parameter must contain:
-   - The FULL text of the skill file you just read (not a reference like `{decomp_skill}`)
-   - Followed by the task-specific instructions below
+### TASK-001
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Complexity | normal |
 
-   Use these Task parameters:
-   - `subagent_type`: "general-purpose"
-   - `model`: "opus"
-   - `run_in_background`: true
-   - `prompt`: [Full skill file content] + the following:
+**Objective:** [what to build]
+**Acceptance Criteria:**
+- [testable criterion 1]
+- [testable criterion 2]
+**Dependencies:** None
+---
 
-   ```
-   ---
+4. Use Write tool to create .claude/agent_complete/decomposition.done with content: done
 
-   ## Your Task
+START NOW. First action: Read('PRD.md')"
+)
+```
 
-   Read PRD.md and create .claude/task_queue.md with implementation tasks.
-   Follow the process defined in the skill above.
-
-   Source document: PRD.md
-   Output file: .claude/task_queue.md
-   Completion marker: .claude/agent_complete/decomposition.done
-
-   CRITICAL: You MUST use the Write tool to create the completion marker when done:
-   Write(".claude/agent_complete/decomposition.done", "done")
-   ```
-
-4. **Wait for completion** with a single blocking Bash call:
-   ```
-   Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
-   ```
+Then wait for completion:
+```
+Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+```
 
 ### Step 2: Execute Implementation Tasks
 

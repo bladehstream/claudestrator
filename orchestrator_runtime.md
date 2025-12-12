@@ -10,8 +10,11 @@ Decompose PRD into tasks, execute them. No research agent.
 ```
 tasks = decompose_prd_into_tasks()
 FOR task IN tasks:
-    execute_task(task)
-    # Poll: WHILE Glob(marker).length == 0: Bash("sleep 5")
+    marker = ".claude/agent_complete/{task.id}.done"
+    Task(..., run_in_background: true)
+
+    # SINGLE blocking wait (ONE tool call, not a loop)
+    Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
 # Mark initial run complete
 Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
@@ -27,8 +30,10 @@ initial_complete = read_session_state("initial_prd_tasks_complete")
 FOR loop IN 1..total_loops:
     # 1. Research phase - ONLY if initial build is done
     IF initial_complete:
+        research_marker = ".claude/agent_complete/research-{loop}.done"
         spawn_research_agent(loop, focus_areas)
-        WHILE Glob(research_marker).length == 0: Bash("sleep 5")
+        # SINGLE blocking wait
+        Bash("while [ ! -f '{research_marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
     ELSE:
         # Still building - execute remaining PRD tasks
         continue_prd_tasks()
@@ -38,9 +43,8 @@ FOR loop IN 1..total_loops:
         marker = ".claude/agent_complete/{issue.id}.done"
         Task(..., run_in_background: true)
 
-        # Poll SILENTLY - no ls output
-        WHILE Glob(marker).length == 0:
-            Bash("sleep 5")
+        # SINGLE blocking wait (ONE tool call, blocks until file exists)
+        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
         handoff = read_handoff(issue.id)
         update_issue(issue, handoff)
@@ -88,29 +92,35 @@ Prefer: vendor docs > GitHub > tutorials > forums
 
 ## CRITICAL RULES
 
-1. **NEVER use AgentOutputTool** - causes context bloat
-2. **Poll via Glob tool** for completion markers (NOT ls, NOT find)
+1. **NEVER use AgentOutputTool** - causes 50k+ token context bloat
+2. **ONE blocking Bash per agent** - not a polling loop (see below)
 3. **Read only handoff section** from journals (~500 tokens)
 4. **Spawn agents with run_in_background: true**
 5. **Don't read full protocol** - use this runtime doc only
 
-## POLLING (EXACT PATTERN - USE THESE EXACT TOOL NAMES)
+## WAITING FOR AGENTS (CRITICAL - FOLLOW EXACTLY)
 
-**Tool name is `Glob` - NOT `Search`, NOT `Find`, NOT `ListFiles`**
+**Use a SINGLE blocking Bash command - NOT a loop of Glob + sleep calls**
 
-```
-# CORRECT - use Glob tool (exact name)
+```bash
+# ✅ CORRECT - ONE tool call, blocks internally until file exists
+Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+# ❌ WRONG - Creates 100+ tool calls that fill context:
 WHILE Glob(".claude/agent_complete/{id}.done").length == 0:
     Bash("sleep 5")
-
-# WRONG TOOL NAMES - these do NOT exist:
-# Search(...)       ← WRONG! No such tool
-# Find(...)         ← WRONG! No such tool
-# ListFiles(...)    ← WRONG! No such tool
-
-# WRONG COMMANDS - these fill context:
-# Bash("ls .claude/agent_complete/")
-# Bash("find ... -name *.done")
 ```
 
-**NEVER use AgentOutputTool / Task Output - it adds 50k+ tokens to context!**
+**Why this matters:**
+- The WRONG pattern: 10 min wait = 120 iterations = 240 tool calls = ~20k tokens
+- The CORRECT pattern: 10 min wait = 1 tool call = ~100 tokens
+
+**For multiple agents (wait for all N to complete):**
+```bash
+Bash("while [ $(ls .claude/agent_complete/*.done 2>/dev/null | wc -l) -lt {N} ]; do sleep 10; done && echo 'all done'", timeout: 600000)
+```
+
+**NEVER use:**
+- `AgentOutputTool` / `TaskOutput` - adds 50-100k tokens per agent
+- Repeated `Glob()` calls in a loop - fills context
+- `Bash("ls ...")` for status checks - output fills context

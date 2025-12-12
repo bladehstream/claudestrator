@@ -42,9 +42,8 @@ FOR loop IN 1..total_loops:
             model: "opus",
             run_in_background: true
         )
-        # Poll silently with Glob, not Bash
-        WHILE Glob(marker).length == 0:
-            Bash("sleep 5")  # Just sleep, no output
+        # SINGLE blocking wait - ONE tool call, not a loop
+        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
     # 2. Get pending issues (max 5 per loop)
     issues = parse(".claude/issue_queue.md", status="pending", limit=5)
@@ -68,9 +67,8 @@ FOR loop IN 1..total_loops:
             run_in_background: true
         )
 
-        # Poll silently for completion (NEVER use AgentOutputTool)
-        WHILE Glob(marker).length == 0:
-            Bash("sleep 5")  # Just sleep, no ls or other output
+        # SINGLE blocking wait - ONE tool call (NEVER use AgentOutputTool or Glob loop)
+        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
         # Read only handoff section (~500 tokens)
         handoff = read_section(".claude/journal/task-{issue.id}.md", "## Handoff")
@@ -106,33 +104,38 @@ Add to .claude/settings.json:
 
 ## Critical Rules
 
-1. **NEVER use AgentOutputTool** - adds 50k+ tokens to context
-2. **Poll via Glob tool** for `.claude/agent_complete/*.done` markers
+1. **NEVER use AgentOutputTool** - adds 50-100k tokens to context
+2. **ONE blocking Bash per agent** - not a polling loop (see below)
 3. **Read only handoff section** from journals, not full file
 4. **Spawn with run_in_background: true** always
 5. **You are a manager** - never write code directly
 
-## Polling Pattern (MUST FOLLOW EXACTLY)
+## Waiting for Agents (MUST FOLLOW EXACTLY)
 
-**Tool name is `Glob` - NOT `Search`, NOT `Find`, NOT `ListFiles`**
+**Use a SINGLE blocking Bash command - NOT a loop of Glob + sleep calls**
 
-```
-# CORRECT - use Glob tool (exact name)
+```bash
+# ✅ CORRECT - ONE tool call, blocks internally until file exists
+Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+# ❌ WRONG - Creates 100+ tool calls that fill context:
 WHILE Glob(".claude/agent_complete/{id}.done").length == 0:
     Bash("sleep 5")
-
-# WRONG TOOL NAMES - these do NOT exist:
-# Search(...)       ← WRONG! No such tool
-# Find(...)         ← WRONG! No such tool
-# ListFiles(...)    ← WRONG! No such tool
-
-# WRONG BASH COMMANDS - fill context with output:
-# Bash("ls .claude/agent_complete/")                  ← WRONG!
-# Bash("find .claude/agent_complete -name '*.done'")  ← WRONG!
 ```
 
-**Glob tool returns file paths silently. Bash outputs text that fills context.**
-**NEVER use AgentOutputTool / Task Output - adds 50k+ tokens to context!**
+**Why this matters:**
+- The WRONG pattern: 10 min wait = 120 iterations = 240 tool calls = ~20k tokens wasted
+- The CORRECT pattern: 10 min wait = 1 tool call = ~100 tokens
+
+**For multiple agents (wait for all N to complete):**
+```bash
+Bash("while [ $(ls .claude/agent_complete/*.done 2>/dev/null | wc -l) -lt {N} ]; do sleep 10; done && echo 'all done'", timeout: 600000)
+```
+
+**NEVER use:**
+- `AgentOutputTool` / `TaskOutput` - adds 50-100k tokens per agent
+- Repeated `Glob()` calls in a loop - fills context with tool calls
+- `Bash("ls ...")` for status checks - output fills context
 
 ## File Paths
 

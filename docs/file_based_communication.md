@@ -25,12 +25,11 @@ Never use `AgentOutputTool` - it adds full agent conversation (50-100k tokens) t
 # Agent prompt includes:
 "When finished, Write '.claude/agent_complete/{task_id}.done' with content 'done'"
 
-# Orchestrator polls:
-WHILE Glob(".claude/agent_complete/{task_id}.done").length == 0:
-    Bash("sleep 5")
+# Orchestrator waits with SINGLE blocking Bash (NOT a polling loop):
+Bash("while [ ! -f '.claude/agent_complete/{task_id}.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 ```
 
-**Context cost**: ~100 tokens per poll (Glob returns only file path)
+**Context cost**: ~100 tokens (ONE tool call, blocks internally until file exists)
 
 ---
 
@@ -275,7 +274,7 @@ handoff = extractSection(content, "## Handoff")  # ~500 tokens
 
 | Channel | Reads/Loop | Tokens/Read | Total |
 |---------|------------|-------------|-------|
-| Completion markers | 5-7 | 100 | 700 |
+| Completion waits | 5-7 | 100 | 700 |
 | Task handoffs | 5-7 | 500 | 3,500 |
 | Issue queue | 2 | 200 | 400 |
 | Session state | 3 | 300 | 900 |
@@ -283,10 +282,11 @@ handoff = extractSection(content, "## Handoff")  # ~500 tokens
 
 **Total per loop**: ~6,000 tokens
 
-**Comparison with AgentOutputTool**:
+**Comparison with other patterns**:
 - With AgentOutputTool: 5 agents × 50k = 250,000 tokens/loop
-- With file polling: ~6,000 tokens/loop
-- **Reduction: 97.5%**
+- With Glob polling loop: 10 min × 12/min × 2 calls = ~20,000 tokens/agent
+- With blocking Bash: 5 agents × 100 = 500 tokens
+- **Reduction: 99.8%**
 
 ---
 

@@ -19,8 +19,8 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 1. Check PRD.md exists → if not, tell user to run `/prdgen` first
 2. Check git → init if needed
 3. Ask autonomy level (if loops > 0):
-   - Full Autonomy → install safe-autonomy hook
-   - Supervised → approve agent spawns
+   - Full Autonomy → user approves first spawn, then "Trust for session"
+   - Supervised → approve each agent spawn
 4. Read `.claudestrator/orchestrator_runtime.md` for loop logic
 
 ## Initial Run (First `/orchestrate`)
@@ -135,26 +135,24 @@ FOR loop IN 1..N:
 | normal | sonnet | Features, refactoring |
 | complex | opus | Architecture, security |
 
-## Autonomy Hook Setup
+## Autonomy (Session Only)
 
-When user selects "Full Autonomy", ASK if they want it permanent:
-```
-AskUserQuestion: "Make Full Autonomy permanent for this project?"
-  - "Yes, save to settings.json" → Install hook permanently
-  - "No, just this session" → Do NOT modify settings.json, manually approve spawns
+Autonomy is per-session only. NEVER modify settings.json.
 
-IF user wants permanent:
-    IF NOT exists(".claude/hooks/safe-autonomy.sh"):
-        Copy from .claudestrator/templates/hooks/safe-autonomy.sh
-        chmod +x
-    Add to .claude/settings.json:
-        hooks.PermissionRequest = [{
-            matcher: "",
-            hooks: [{ type: "command", command: ".claude/hooks/safe-autonomy.sh" }]
-        }]
-ELSE:
-    Inform user they'll need to approve each agent spawn manually
+When user selects "Full Autonomy":
 ```
+INFORM user:
+    "Full Autonomy selected. When prompted, choose 'Trust for session' to
+    auto-approve agent spawns for this session only."
+```
+
+When user selects "Supervised":
+```
+INFORM user:
+    "Supervised mode. You'll approve each agent spawn individually."
+```
+
+No files are modified. Setting is forgotten when session ends.
 
 ## Critical Rules (MVP)
 

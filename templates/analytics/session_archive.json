@@ -17,6 +17,14 @@
     "iterations_performed": 0,
     "issues_processed": 0
   },
+  "issues": {
+    "self_detected": 0,
+    "user_reported": 0,
+    "prevented_by_learning": 0,
+    "details": []
+  },
+  "decisions_influenced": [],
+  "knowledge_applied": [],
   "by_model": {
     "haiku": {
       "count": 0,

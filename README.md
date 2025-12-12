@@ -148,6 +148,7 @@ Run these **before** starting orchestration in Terminal 1:
 | `/analytics trends` | (main) | Success rate trends over time |
 | `/analytics skills` | (main) | Skill effectiveness rankings |
 | `/analytics errors` | (main) | Error pattern analysis |
+| `/dashboard` | (main) | Generate visual HTML dashboard |
 | `/skills` | (main) | Show loaded skills |
 | `/checkpoint` | (main) | Save state (continue working) |
 | `/deorchestrate` | (main) | Clean exit with full save |

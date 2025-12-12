@@ -573,7 +573,116 @@ FUNCTION matchSkills(task):
         WHEN 'normal' THEN 7
         WHEN 'complex' THEN 15
 
+    # Step 7: Apply learning-based adjustments (NEW - for analytics)
+    selected = applyLearningAdjustments(task, selected)
+
     RETURN selected.take(max_skills)
+```
+
+### 3.2.1 Learning-Based Skill Adjustments (Analytics)
+
+Apply lessons learned from previous runs to improve skill selection:
+
+```
+FUNCTION applyLearningAdjustments(task, selected_skills):
+    strategy_log = READ .claude/strategy_log.json
+    skill_rankings = READ .claude/analytics/skill_rankings.json
+
+    adjustments_made = []
+
+    # Check for skill-related feedback from past runs
+    FOR signal IN strategy_log WHERE signal.type == 'skill_mismatch':
+        IF taskMatchesContext(task, signal.context):
+            # This task is similar to one that had skill issues
+
+            IF signal.recommendation == 'add_skill':
+                # Add recommended skill if not already present
+                IF signal.skill NOT IN selected_skills:
+                    selected_skills.add(signal.skill)
+                    adjustments_made.append({
+                        type: 'skill_selection',
+                        action: 'added',
+                        skill: signal.skill,
+                        reason: signal.source
+                    })
+
+            ELSE IF signal.recommendation == 'upgrade_complexity':
+                # Flag for model upgrade consideration
+                task.learning_suggests_upgrade = true
+                adjustments_made.append({
+                    type: 'model_upgrade',
+                    reason: signal.source
+                })
+
+    # Check skill rankings for poor performers
+    FOR skill IN selected_skills:
+        IF skill IN skill_rankings.rankings.needs_improvement:
+            # Consider pairing with a stronger skill
+            IF skill_rankings.skill_details[skill].success_rate < 0.70:
+                alternative = findStrongerAlternative(skill, skill_rankings)
+                IF alternative:
+                    adjustments_made.append({
+                        type: 'skill_selection',
+                        action: 'supplemented',
+                        skill: skill,
+                        with: alternative,
+                        reason: 'Low historical success rate'
+                    })
+
+    # Log decision influences for dashboard
+    IF adjustments_made.length > 0:
+        logDecisionInfluences(task, adjustments_made)
+
+    RETURN selected_skills
+
+
+FUNCTION logDecisionInfluences(task, adjustments):
+    insights = READ .claude/analytics/learning_insights.json OR CREATE from template
+
+    FOR adjustment IN adjustments:
+        influence = {
+            task: task.id,
+            session: current_session_id,
+            timestamp: NOW(),
+            type: adjustment.type,
+            title: formatInfluenceTitle(adjustment),
+            description: formatInfluenceDescription(adjustment),
+            influenced_by: {
+                type: 'learning',  # or 'error' or 'insight'
+                source: adjustment.reason,
+                knowledge_node: findRelatedKnowledgeNode(adjustment)
+            }
+        }
+
+        insights.decisions_influenced_by_learning.recent_influences.append(influence)
+        insights.decisions_influenced_by_learning.influenced_count += 1
+        insights.decisions_influenced_by_learning.categories[adjustment.type].count += 1
+        insights.decisions_influenced_by_learning.categories[adjustment.type].examples.append(influence)
+
+    WRITE .claude/analytics/learning_insights.json
+
+
+FUNCTION checkPreventedIssues(task, approach):
+    # Called during task execution to detect when anti-patterns are avoided
+    anti_patterns = READ .claude/strategies.md (anti-patterns section)
+
+    FOR pattern IN anti_patterns:
+        IF wouldHaveApplied(pattern, task, approach):
+            # This anti-pattern was avoided due to learning
+
+            recordIssueSource({
+                summary: "Avoided: " + pattern.description,
+                related_task: task.id,
+                severity: pattern.severity
+            }, 'prevented', 'learning')
+
+            # Log the prevention
+            logDecisionInfluences(task, [{
+                type: 'approach_change',
+                action: 'avoided',
+                pattern: pattern.id,
+                reason: pattern.source
+            }])
 ```
 
 **Category Deduplication**: Each skill has a `category` field (e.g., `rendering`, `testing`, `security`). Only the highest-scoring skill from each category is selected. This prevents redundant skills (e.g., three different testing skills) while ensuring diversity.
@@ -1001,10 +1110,72 @@ IF qa.result == 'pass':
     Report to user
 ELSE:
     FOR each issue IN qa.issues:
+        # Track issue as self-detected (found by QA, not user-reported)
+        recordIssueSource(issue, 'self_detected', 'qa_agent')
+
         Create remediation task
         Add to journal
 
     Return to Phase 3 (execution)
+```
+
+### 4.4 Issue Source Tracking (Learning Analytics)
+
+Track how issues are detected to measure QA effectiveness vs user-reported issues:
+
+```
+FUNCTION recordIssueSource(issue, source, detector):
+    insights = READ .claude/analytics/learning_insights.json OR CREATE from template
+
+    issue_record = {
+        id: generateIssueRecordId(),
+        source: source,  # 'self_detected' | 'user_reported' | 'prevented'
+        detector: detector,  # 'qa_agent' | 'build_system' | 'user' | 'learning'
+        category: categorizeIssue(issue),
+        task: issue.related_task,
+        session: current_session_id,
+        timestamp: NOW(),
+        description: issue.summary,
+        severity: issue.severity
+    }
+
+    IF source == 'self_detected':
+        insights.issue_detection.self_detected.count += 1
+        insights.issue_detection.self_detected.by_category[issue_record.category] += 1
+
+    ELSE IF source == 'user_reported':
+        insights.issue_detection.user_reported.count += 1
+        insights.issue_detection.user_reported.by_priority[issue.priority] += 1
+
+    ELSE IF source == 'prevented':
+        insights.issue_detection.prevented_by_learning.count += 1
+        insights.issue_detection.prevented_by_learning.examples.append(issue_record)
+
+    insights.issue_detection.total_issues += 1
+
+    # Update percentages
+    total = insights.issue_detection.total_issues
+    insights.issue_detection.self_detected.percentage =
+        (insights.issue_detection.self_detected.count / total) * 100
+    insights.issue_detection.user_reported.percentage =
+        (insights.issue_detection.user_reported.count / total) * 100
+
+    WRITE .claude/analytics/learning_insights.json
+
+FUNCTION categorizeIssue(issue):
+    # Categorize based on detection context
+    IF issue.from_qa:
+        RETURN 'qa_found'
+    ELSE IF issue.from_build:
+        RETURN 'build_error'
+    ELSE IF issue.from_tests:
+        RETURN 'test_failure'
+    ELSE IF issue.from_lint:
+        RETURN 'lint_error'
+    ELSE IF issue.from_typecheck:
+        RETURN 'type_error'
+    ELSE:
+        RETURN 'runtime_error'
 ```
 
 ---

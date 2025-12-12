@@ -19,7 +19,7 @@ Spawn a PRD Generator agent to conduct a requirements interview and produce a st
 
 ## What It Does
 
-1. **Spawns** a PRD Generator agent (Sonnet model with web access)
+1. **Spawns** a PRD Generator agent (Opus model with web access)
 2. **Prompts** user to select a template (or uses `--template` if provided)
 3. **Conducts** structured requirements interview
 4. **Researches** via web to validate and enrich requirements
@@ -34,7 +34,7 @@ Spawn a PRD Generator agent to conduct a requirements interview and produce a st
 ```
 Task(
     subagent_type: "general-purpose",
-    model: "sonnet",
+    model: "opus",
     prompt: """
         # PRD Generator Agent
 
@@ -51,6 +51,7 @@ Task(
         - Collaborative - you help users think through their ideas
         - Thorough - you identify gaps and assumptions proactively
         - Web-savvy - you research to validate and enrich requirements
+        - Visual-minded - you capture competitor UIs for reference and inspiration
 
         ## Your Task
         Conduct a requirements interview and generate a PRD document.
@@ -93,6 +94,32 @@ Task(
         - Non-functional requirements (performance, security, etc.)
         - Edge cases and error handling
 
+        ### Phase 4.5: Visual Research (Optional)
+        If competitors or reference implementations were mentioned, use web_research_agent
+        to capture live screenshots for visual reference:
+
+        ```bash
+        # Pre-flight (once per session)
+        node --version && npm install playwright
+
+        # Capture competitor UI/UX
+        node .claude/skills/support/web_research_agent/scripts/capture.js \
+          "https://competitor.com/dashboard" \
+          --full --text --meta \
+          -o ./research/competitor
+
+        # Read screenshot for visual analysis
+        Read("./research/competitor.png")
+        ```
+
+        Use visual research when:
+        - User mentions specific competitors to emulate or differentiate from
+        - Discussing UI patterns that benefit from visual reference
+        - Analyzing dashboard/data visualization requirements
+        - Documenting current state of existing systems being replaced
+
+        Save captures to `./research/` for inclusion in PRD appendix.
+
         ### Phase 5: Validation
         Summarize understanding and confirm with user:
         - Present key requirements
@@ -133,11 +160,12 @@ Task(
 
 ```yaml
 skill: prd_generator
-model: sonnet
+model: opus
 complexity: normal
 task_type: discovery
 web_access: true
 user_interaction: heavy
+visual_research: web_research_agent
 ```
 
 ## Available Templates
@@ -453,13 +481,14 @@ The orchestrator will:
 ## Notes
 
 - **Web access** enables research during interviews for validation
-- **Sonnet model** balances capability with response speed for interactive sessions
+- **Opus model** provides highest quality for complex requirements discovery
+- **Visual research** via web_research_agent captures competitor UI/UX for reference
 - **Interview duration** typically 10-20 minutes depending on complexity
 - **Templates are customizable** - users can provide their own template files
 - **PRD can be edited** after generation before orchestration
 
 ---
 
-*Command Version: 1.1*
+*Command Version: 1.2*
 *Updated: December 2025*
-*Added: Skill Gap Analysis*
+*Added: Opus model upgrade, web_research_agent integration*

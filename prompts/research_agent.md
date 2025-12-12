@@ -79,10 +79,37 @@ Map the high-level structure:
 - Authentication and authorization patterns
 
 ═══════════════════════════════════════════════════════════════════════════════
-PHASE 2: EXTERNAL RESEARCH (Use WebSearch, WebFetch)
+PHASE 2: EXTERNAL RESEARCH (Use WebSearch, WebFetch, web_research_agent)
 ═══════════════════════════════════════════════════════════════════════════════
 
 Now that you understand the project, research what "great" looks like for this type of application.
+
+### 2.0 Web Research Agent (Visual Capture)
+
+**IMPORTANT**: For competitor analysis, UI patterns, and visual research, use the `web_research_agent` skill to capture live screenshots and extract content from websites.
+
+```bash
+# Capture competitor dashboard/UI for visual analysis
+node .claude/skills/support/web_research_agent/scripts/capture.js \
+  "https://competitor.com/dashboard" \
+  --full --text --meta \
+  -o ./research/competitor-analysis
+
+# Then read the screenshot for visual analysis
+Read("./research/competitor-analysis.png")
+Read("./research/competitor-analysis.txt")
+```
+
+**When to use visual capture:**
+- Competitor UI/UX analysis (see actual interfaces, not just descriptions)
+- Dashboard/chart patterns (layout, data visualization approaches)
+- Mobile/responsive design patterns (use `--mobile` flag)
+- Current state documentation of reference implementations
+
+**Pre-flight check** (run once per session):
+```bash
+node --version && npm install playwright
+```
 
 ### 2.1 Industry Best Practices
 
@@ -103,6 +130,17 @@ If the domain is clear:
 - What features do similar applications typically have?
 - What UX patterns are users accustomed to?
 - What differentiates the best implementations?
+
+**Use web_research_agent for visual competitive analysis:**
+```bash
+# Capture multiple competitors
+for url in "https://competitor1.com" "https://competitor2.com"; do
+  node .claude/skills/support/web_research_agent/scripts/capture.js \
+    "$url" --full --meta -o "./research/$(basename $url)"
+done
+```
+
+This provides actual screenshots of competitor UIs rather than just text descriptions.
 
 ### 2.3 Technology-Specific Research
 

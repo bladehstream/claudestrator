@@ -1,18 +1,20 @@
-# Project Instructions
+# 🎭 CLAUDESTRATOR
 
-> ⚠️ **DO NOT run `/init`** - it will overwrite this configuration file.
+> **Multi-Agent Orchestration Framework**
 
-## Claudestrator
+This project is powered by Claudestrator. Standard Claude Code `/init` has been replaced with orchestration commands.
 
-Multi-agent orchestration framework for complex, multi-step projects.
+## Quick Start
 
-### Quick Start
+```
+/prdgen      →  Create your PRD (Product Requirements Document)
+/orchestrate →  Start multi-agent task execution
+/issue       →  Report bugs as you find them
+```
 
-1. **Terminal 2:** Run `/prdgen` to generate a PRD (Product Requirements Document)
-2. **Terminal 1:** Run `/orchestrate` to begin orchestration
-3. **Terminal 2:** Use `/issue` to report bugs as you find them
+## Dual Terminal Workflow
 
-### Dual Terminal Workflow
+For best results, use two terminals:
 
 ```
 ┌─────────────────────────────────┐  ┌─────────────────────────────────┐
@@ -28,35 +30,25 @@ Multi-agent orchestration framework for complex, multi-step projects.
 └─────────────────────────────────┘  └─────────────────────────────────┘
 ```
 
-### Commands
+## Commands Reference
 
-Run `/claudestrator-help` for full command reference.
+Run `/claudestrator-help` for full documentation.
 
-**Getting Started:**
-- `/prdgen` - Generate PRD via interactive interview
-- `/orchestrate` - Start or resume orchestration
-- `/orchestrate --dry-run` - Preview tasks and cost estimates
+| Command | Description |
+|---------|-------------|
+| `/prdgen` | Generate PRD via interactive interview |
+| `/orchestrate` | Start or resume orchestration |
+| `/orchestrate --dry-run` | Preview tasks and cost estimates |
+| `/progress` | Show project status and metrics |
+| `/issue` | Report bug or enhancement |
+| `/issues` | View issue queue |
+| `/skills` | List loaded skills by category |
+| `/audit-skills` | Skill library health report |
+| `/ingest-skill <url>` | Import external skill |
 
-**Monitoring:**
-- `/progress` - Show project overview
-- `/progress tasks` - Task list with dependency graph
-- `/progress metrics` - Token usage, costs, success rates
-- `/skills` - Loaded skills by category
+## Resources
 
-**Issue Tracking:**
-- `/issue` - Report bug or enhancement
-- `/issues` - View issue queue
-
-**Skill Management:**
-- `/audit-skills` - Skill library health report
-- `/ingest-skill <source>` - Import external skill
-
-### Resources
-
-- **Protocol:** Read `.claudestrator/orchestrator_protocol_v3.md` when orchestrating
+- **Protocol:** `.claudestrator/orchestrator_protocol_v3.md`
 - **Skills:** `.claude/skills/`
-- **State:** `.claude/` (session_state.md, orchestrator_memory.md, journal/)
-
-### Documentation
-
-https://github.com/bladehstream/claudestrator
+- **State:** `.claude/` (session_state.md, journal/)
+- **Docs:** https://github.com/bladehstream/claudestrator

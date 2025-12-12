@@ -1,13 +1,10 @@
 {
   "companyAnnouncements": [
-    "🎭 Claudestrator: Use TWO terminals - Terminal 2 for setup (/prdgen, /issue), Terminal 1 for /orchestrate. Do NOT run /init.",
-    "🎭 Quick Start: 1) /prdgen to create PRD  2) /orchestrate to begin  3) /issue to report bugs. Avoid /init!",
-    "🎭 Workflow: Terminal 2 runs /prdgen, /ingest-skill, /issue. Terminal 1 runs /orchestrate. Never /init.",
-    "🎭 Commands: /prdgen (create PRD), /orchestrate (execute), /progress (status), /issue (report bugs). Skip /init.",
-    "🎭 Tip: Run /orchestrate --dry-run to preview tasks and cost estimates before executing.",
-    "🎭 Tip: Use /audit-skills to check skill library health, /ingest-skill <url> to add new skills.",
-    "🎭 Tip: Report bugs with /issue in Terminal 2 - orchestrator polls and creates fix tasks automatically.",
-    "🎭 Tip: Run /progress metrics to see token usage, costs, and success rates by model and skill."
+    "🎭 CLAUDESTRATOR - Multi-agent orchestration framework. Start with /prdgen, then /orchestrate.",
+    "🎭 CLAUDESTRATOR - Quick Start: /prdgen → /orchestrate → /issue (to report bugs)",
+    "🎭 CLAUDESTRATOR - Use /orchestrate --dry-run to preview tasks and cost estimates.",
+    "🎭 CLAUDESTRATOR - Run /claudestrator-help for full command reference.",
+    "🎭 CLAUDESTRATOR - Tip: Use two terminals - one for /orchestrate, one for /prdgen and /issue."
   ],
   "hooks": {
     "SessionStart": [
@@ -16,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '🎭 Claudestrator ready. Run /prdgen first, then /orchestrate. Do NOT run /init - it overwrites configuration.'"
+            "command": "cat << 'CLAUDESTRATOR_BANNER'\n\n╔═══════════════════════════════════════════════════════════════════╗\n║  🎭 CLAUDESTRATOR - Multi-Agent Orchestration Framework           ║\n╠═══════════════════════════════════════════════════════════════════╣\n║                                                                   ║\n║  QUICK START:                                                     ║\n║    1. /prdgen      - Create your PRD (do this first!)            ║\n║    2. /orchestrate - Start multi-agent task execution            ║\n║    3. /issue       - Report bugs as you find them                ║\n║                                                                   ║\n║  Run /claudestrator-help for full command reference              ║\n║                                                                   ║\n╚═══════════════════════════════════════════════════════════════════╝\n\nCLAUDESTRATOR_BANNER"
           }
         ]
       }

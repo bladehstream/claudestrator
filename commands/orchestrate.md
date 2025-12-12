@@ -156,7 +156,10 @@ IF total_loops > 0:
 
         REPORT: "Phase 1: Research - analyzing project..."
 
-        # Spawn research agent IN BACKGROUND to prevent context bloat
+        # Spawn research agent IN BACKGROUND
+        # Agent writes to issue queue when done, and creates completion marker
+        research_marker = ".claude/agent_complete/research-loop-{loop}.done"
+
         research_agent_id = Task(
             subagent_type: "general-purpose",
             model: "opus",                    # High capability for deep analysis
@@ -166,13 +169,19 @@ IF total_loops > 0:
                 focus_areas: focus_areas OR "General improvements",
                 summary_of_previous_loops: getPreviousLoopSummary(loop),
                 current_year: 2025
-            }),
-            run_in_background: true  # CRITICAL: Keep agent output out of orchestrator context
+            }) + """
+
+            CRITICAL: When finished, create completion marker file:
+            Write "{research_marker}" with content "done"
+            """,
+            run_in_background: true
         )
 
-        # Wait for completion - DO NOT store result to avoid context bloat
-        # AgentOutputTool returns full conversation; storing it fills context
-        AgentOutputTool(research_agent_id, block=true)
+        # Poll for completion marker (NOT AgentOutputTool - that fills context)
+        Bash("mkdir -p .claude/agent_complete")
+        WHILE Glob(research_marker).length == 0:
+            Bash("sleep 5")
+
         REPORT: "Phase 1: Research complete"
 
         # Research agent writes to issue queue with source: generated
@@ -247,6 +256,9 @@ IF total_loops > 0:
         FOR i, improvement IN enumerate(improvements):
             REPORT: "  [{i+1}/{improvements.length}] Starting: {improvement.title}"
 
+            # Generate unique completion marker path
+            marker_path = ".claude/agent_complete/{improvement.issue_id}.done"
+
             agent_id = Task(
                 subagent_type: "general-purpose",
                 model: selectModel(improvement.complexity),
@@ -260,38 +272,59 @@ IF total_loops > 0:
 
                     Files to modify: {improvement.files}
 
-                    IMPORTANT: Write your results to the task journal file.
-                    The orchestrator will read only the Handoff section.
+                    CRITICAL - When you finish (success OR failure):
+                    1. Write your handoff to: .claude/journal/task-{improvement.issue_id}.md
+                    2. Create completion marker: Write "{marker_path}" with content "done"
+
+                    The orchestrator polls for the marker file to know you're done.
                 """,
-                run_in_background: true  # CRITICAL: Prevents context bloat
+                run_in_background: true
             )
-            agent_ids.append({id: agent_id, index: i, improvement: improvement})
+            agent_ids.append({id: agent_id, index: i, improvement: improvement, marker: marker_path})
             loop_tasks[i].status = "working"
 
-        # Wait for all agents to complete
-        # CRITICAL: Do NOT store AgentOutputTool result - it contains full conversation
-        FOR agent_info IN agent_ids:
-            # Wait for completion - result is intentionally NOT stored
-            AgentOutputTool(agent_info.id, block=true)
+        # ═══════════════════════════════════════════════════════════════════
+        # WAIT FOR AGENTS VIA FILE POLLING (NOT AgentOutputTool)
+        # ═══════════════════════════════════════════════════════════════════
+        #
+        # AgentOutputTool returns full agent conversation to orchestrator context.
+        # Even without assignment, the response is in message history = context bloat.
+        # Instead, poll for completion marker files that agents create when done.
 
-            # Read status from task journal file (agent wrote handoff there)
-            handoff = readTaskJournalHandoff(agent_info.improvement.task_id)
+        Bash("mkdir -p .claude/agent_complete")
 
-            IF handoff.outcome == "completed":
-                loop_tasks[agent_info.index].status = "complete"
-                REPORT: "  ✓ [{agent_info.index+1}] {agent_info.improvement.title}"
-            ELSE:
-                loop_tasks[agent_info.index].status = "failed"
-                REPORT: "  ✗ [{agent_info.index+1}] {agent_info.improvement.title}"
+        pending_agents = agent_ids.copy()
+        WHILE pending_agents.length > 0:
+            FOR agent_info IN pending_agents:
+                # Check if completion marker exists (minimal context: just file check)
+                marker_exists = Glob(agent_info.marker).length > 0
 
-            # Update issue status in queue
-            updateIssueStatus(agent_info.improvement.issue_id, "in_progress")
+                IF marker_exists:
+                    # Agent finished - read outcome from journal
+                    handoff = readTaskJournalHandoff(agent_info.improvement.issue_id)
+
+                    IF handoff.outcome == "completed":
+                        loop_tasks[agent_info.index].status = "complete"
+                        REPORT: "  ✓ [{agent_info.index+1}] {agent_info.improvement.title}"
+                    ELSE:
+                        loop_tasks[agent_info.index].status = "failed"
+                        REPORT: "  ✗ [{agent_info.index+1}] {agent_info.improvement.title}"
+
+                    updateIssueStatus(agent_info.improvement.issue_id, "in_progress")
+                    pending_agents.remove(agent_info)
+
+            IF pending_agents.length > 0:
+                # Wait before next poll (avoid tight loop)
+                Bash("sleep 5")
 
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 3: VERIFICATION (QA SUB-AGENT)
         # ═══════════════════════════════════════════════════════════════════
 
         REPORT: "Phase 3: Verification - running checks..."
+
+        qa_marker = ".claude/agent_complete/qa-loop-{loop}.done"
+        qa_start_time = NOW()
 
         qa_agent_id = Task(
             subagent_type: "general-purpose",
@@ -305,18 +338,25 @@ IF total_loops > 0:
 
                 Report any issues found as:
                 /issue [generated] <issue details>
+
+                CRITICAL: When finished, create completion marker file:
+                Write "{qa_marker}" with content "done"
             """,
-            run_in_background: true  # CRITICAL: Prevents context bloat
+            run_in_background: true
         )
 
-        # Wait for QA completion - DO NOT store result
-        AgentOutputTool(qa_agent_id, block=true)
+        # Poll for completion marker (NOT AgentOutputTool)
+        Bash("mkdir -p .claude/agent_complete")
+        WHILE Glob(qa_marker).length == 0:
+            Bash("sleep 5")
 
         # QA agent writes issues directly to issue queue if found
-        # Check if any new issues were added during this phase
         new_issues = readIssueQueue(source: "generated", loop: loop, created_after: qa_start_time)
         qa_status = IF new_issues.length == 0 THEN "passed" ELSE "issues found"
         REPORT: "  → Verification {qa_status}"
+
+        # Clean up completion markers
+        Bash("rm -rf .claude/agent_complete")
 
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 4: COMMIT & SNAPSHOT (Orchestrator handles directly)
@@ -456,20 +496,30 @@ This prevents agent outputs from accumulating in the orchestrator's context.
 result = Task(prompt: "...", subagent_type: "general-purpose")
 # result contains full agent conversation → context bloat
 
-# ALSO BAD - AgentOutputTool result STILL contains full conversation
+# ALSO BAD - AgentOutputTool adds response to context even without assignment
 agent_id = Task(prompt: "...", run_in_background: true)
-result = AgentOutputTool(agent_id, block=true)  # result has full conversation!
-status = result.status  # Too late - full conversation already in context
+AgentOutputTool(agent_id, block=true)  # Response still in message history!
 
-# GOOD - Do NOT store AgentOutputTool result
-agent_id = Task(prompt: "...", run_in_background: true)
-AgentOutputTool(agent_id, block=true)  # Wait for completion, discard result
-handoff = readTaskJournalHandoff(task_id)  # Read outcome from file instead
+# GOOD - File-based completion polling (no AgentOutputTool)
+marker_path = ".claude/agent_complete/{task_id}.done"
+agent_id = Task(
+    prompt: "... When done, Write '{marker_path}' with 'done' ...",
+    run_in_background: true
+)
+
+# Poll for marker file - minimal context per check
+WHILE Glob(marker_path).length == 0:
+    Bash("sleep 5")
+
+# Read outcome from handoff file
+handoff = readTaskJournalHandoff(task_id)
 ```
 
-**CRITICAL**: The `AgentOutputTool` returns the agent's full conversation, NOT just status.
-Storing its result in a variable pulls the entire conversation into orchestrator context.
-Call it to wait, but do NOT assign to a variable. Read outcomes from files instead.
+**CRITICAL**: Do NOT use `AgentOutputTool` at all. Even without assignment, the tool
+response (full agent conversation) is added to message history = context bloat.
+
+Instead, agents create completion marker files when done, and the orchestrator polls
+for those files using `Glob` (which returns only file paths, not content).
 
 **Orchestrator context budget:**
 

@@ -847,14 +847,20 @@ session_state.running_agents.append({
 
 WRITE session_state.md
 
-# Wait for agent to complete using AgentOutputTool
-# IMPORTANT: AgentOutputTool may return the full agent conversation.
-# The orchestrator MUST NOT echo, process, or store this content.
-AgentOutputTool(agent_id, block=true)
+# DO NOT USE AgentOutputTool - it adds full conversation to context
+# Instead, poll for completion marker files
 
-# DO NOT use or reference the result from AgentOutputTool!
-# The agent writes its outcome to the task journal file.
-# Orchestrator reads ONLY the structured handoff section from the file.
+marker_path = ".claude/agent_complete/task-{task.id}.done"
+
+# Agent prompt includes instruction to create marker when done
+Task(
+    prompt: "... When finished, Write '{marker_path}' with content 'done' ...",
+    run_in_background: true
+)
+
+# Poll for marker file (Glob returns only paths, minimal context)
+WHILE Glob(marker_path).length == 0:
+    Bash("sleep 5")
 
 # Read the handoff from the task journal (agent has written this)
 handoff = Read(.claude/journal/task-{task_id}.md) -> parse HANDOFF section only
@@ -862,23 +868,31 @@ agent_outcome = {
     success: handoff.outcome == "completed",
     error: handoff.blockers IF handoff.outcome != "completed" ELSE null
 }
+
+# Clean up marker
+Bash("rm -f {marker_path}")
 ```
 
 **CRITICAL: Context Overflow Prevention**
 
-Even with `run_in_background: true`, calling `AgentOutputTool(agent_id, block=true)`
-may return the agent's full conversation to the orchestrator. To prevent context overflow:
+`AgentOutputTool` ALWAYS adds the full agent conversation to the orchestrator's
+message history, even if you don't assign the result to a variable. This causes
+context overflow after just 1-2 loops.
 
-1. **DO NOT** assign the AgentOutputTool result to a variable you then use
-2. **DO NOT** echo or print the result content
-3. **DO NOT** include result content in any output to the user
-4. **DO** call AgentOutputTool only to wait for completion, then discard
-5. **DO** read the agent's outcome from the task journal file instead
+**DO NOT USE AgentOutputTool AT ALL.**
+
+Instead, use file-based completion polling:
+
+1. Agent creates a marker file when done: `.claude/agent_complete/{task_id}.done`
+2. Orchestrator polls for marker using `Glob` (returns only file paths)
+3. Orchestrator reads outcome from task journal file
+4. Orchestrator deletes marker after processing
 
 **Why this matters:**
 - Agent conversations can be 50-100k+ tokens (large file edits)
-- 5 loops × 5 agents = 25 full conversations = context overflow
-- The handoff in the journal file is only ~200-500 tokens
+- AgentOutputTool returns ALL of this to orchestrator context
+- Even without assignment, it's in message history
+- File polling uses ~100 tokens per check vs 50k+ for AgentOutputTool
 
 **Helper Function: Read Task Journal Handoff**
 

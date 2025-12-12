@@ -1079,31 +1079,36 @@ orchestrator's context.
 
 **If you see this warning:**
 
-This indicates the orchestrator protocol has a context leak. Common causes:
+This indicates the orchestrator protocol has a context leak. The most common cause:
 
-1. **AgentOutputTool result stored**: The `AgentOutputTool` returns the **full agent
-   conversation**, not just status. If the result is assigned to a variable
-   (`result = AgentOutputTool(...)`), the entire conversation fills orchestrator context.
+**Using `AgentOutputTool` at all**: Even without storing the result, `AgentOutputTool`
+adds the **full agent conversation** (50-100k+ tokens) to the orchestrator's message
+history. This fills context after just 1-2 loops.
 
-2. **Missing background flag**: Agents not spawned with `run_in_background: true`.
-
-**Correct pattern:**
+**Correct pattern - File-based polling (no AgentOutputTool):**
 ```
-# Spawn agent in background
-agent_id = Task(..., run_in_background: true)
+# Agent creates completion marker when done
+marker_path = ".claude/agent_complete/{task_id}.done"
 
-# Wait for completion - DO NOT store the result
-AgentOutputTool(agent_id, block=true)  # No assignment!
+agent_id = Task(
+    prompt: "... When done, Write '{marker_path}' with 'done' ...",
+    run_in_background: true
+)
 
-# Read outcome from file instead
+# Poll for marker file (Glob returns only paths = minimal context)
+WHILE Glob(marker_path).length == 0:
+    Bash("sleep 5")
+
+# Read outcome from file
 handoff = Read(".claude/journal/task-{id}.md") -> parse HANDOFF section
 ```
 
 **How it should work:**
 - Agents run in background (`run_in_background: true`)
-- `AgentOutputTool` called to wait, but result is **NOT stored**
-- Agent writes outcome to task journal file
-- Orchestrator reads only the handoff section from file
+- Agents create marker file `.claude/agent_complete/{id}.done` when finished
+- Orchestrator polls for marker using `Glob` (~100 tokens per check)
+- Orchestrator reads outcome from task journal file (~500 tokens)
+- **AgentOutputTool is NEVER used**
 - Orchestrator context stays lean (~2k tokens per loop)
 
 **Expected context usage:**

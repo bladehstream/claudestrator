@@ -20,6 +20,22 @@
     ]
   },
   "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(.claude/**)",
+      "Glob(**)",
+      "Grep(**)",
+      "Task(**)",
+      "Bash(mkdir:*)",
+      "Bash(sleep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(while*)"
+    ],
     "deny": [
       "Bash(sudo:*)",
       "Bash(su:*)",

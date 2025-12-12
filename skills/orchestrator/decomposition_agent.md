@@ -113,7 +113,35 @@ The orchestrator is blocked waiting for this file. If you don't create it, the e
 2. **Vague acceptance criteria** - Be specific and testable
 3. **Forgetting the marker file** - System will hang forever
 4. **Not using Write tool** - You must use `Write()` to create files
+5. **Just outputting text** - You must USE TOOLS, not just describe what you would do
 
 ---
 
-*This skill is loaded by the orchestrator when spawning decomposition agents.*
+## EXECUTE NOW - Step by Step
+
+**You must perform these actions in order. Do not just describe them - actually do them.**
+
+### Action 1: Read the PRD
+```
+Read("PRD.md")
+```
+Execute this tool call NOW. Read the entire PRD file.
+
+### Action 2: Analyze and Plan
+After reading, identify 3-10 implementation tasks from the requirements.
+
+### Action 3: Write task_queue.md
+```
+Write(".claude/task_queue.md", "<your formatted tasks>")
+```
+Execute this tool call with your formatted task list.
+
+### Action 4: Write the completion marker
+```
+Write(".claude/agent_complete/decomposition.done", "done")
+```
+Execute this tool call LAST. This signals you are finished.
+
+---
+
+**START NOW: Your first action should be calling Read("PRD.md")**

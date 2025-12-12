@@ -1,9 +1,8 @@
 # /orchestrate
 
-> **Runtime**: Load `.claudestrator/orchestrator_runtime.md` for execution logic.
 > **Version**: MVP - No journalling, no knowledge graph, minimal context overhead.
 
-You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
+You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool. **Never write code yourself.**
 
 ## Usage
 
@@ -21,126 +20,138 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 3. Ask autonomy level (if loops > 0):
    - Full Autonomy → user approves first spawn, then "Trust for session"
    - Supervised → approve each agent spawn
-4. Read `.claudestrator/orchestrator_runtime.md` for loop logic
+
+---
 
 ## Initial Run (First `/orchestrate`)
 
-```
-# Step 1: Spawn Decomposition Agent (reads PRD, writes task_queue.md)
+### Step 1: Spawn Decomposition Agent
 
-# First, read the skill file to include in prompt
-decomp_skill = Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+**You must do these actions in order:**
 
-Task(
-    subagent_type: "general-purpose",
-    model: "opus",
-    prompt: """
-        {decomp_skill}
+1. **Read the skill file first.** Use the Read tool:
+   ```
+   Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+   ```
 
-        ---
+2. **Copy the ENTIRE content** of that skill file. You will paste it into the Task prompt.
 
-        ## Your Task
+3. **Spawn the agent** using the Task tool. The prompt parameter must contain:
+   - The FULL text of the skill file you just read (not a reference like `{decomp_skill}`)
+   - Followed by the task-specific instructions below
 
-        Read PRD.md and create .claude/task_queue.md with implementation tasks.
-        Follow the process defined in the skill above.
+   Use these Task parameters:
+   - `subagent_type`: "general-purpose"
+   - `model`: "opus"
+   - `run_in_background`: true
+   - `prompt`: [Full skill file content] + the following:
 
-        Source document: PRD.md
-        Output file: .claude/task_queue.md
-        Completion marker: .claude/agent_complete/decomposition.done
-    """,
-    run_in_background: true
-)
-Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   ```
+   ---
 
-# Step 2: Execute each task from task_queue.md
-tasks = parse(".claude/task_queue.md", status="pending")
-FOR task IN tasks:
-    marker = ".claude/agent_complete/{task.id}.done"
-    Task(
-        subagent_type: "general-purpose",
-        model: select_model(task.complexity),
-        prompt: """
-            Task: {task.id}
-            Objective: {task.objective}
-            Acceptance: {task.acceptance_criteria}
-            CRITICAL: When finished, you MUST create the completion marker:
-            Use the Write tool: Write("{marker}", "done")
-            The orchestrator is waiting for this file.
-        """,
-        run_in_background: true
-    )
-    Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
-    Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
+   ## Your Task
 
-Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
-Bash("git add -A && git commit -m 'Initial build complete'")
-```
+   Read PRD.md and create .claude/task_queue.md with implementation tasks.
+   Follow the process defined in the skill above.
+
+   Source document: PRD.md
+   Output file: .claude/task_queue.md
+   Completion marker: .claude/agent_complete/decomposition.done
+
+   CRITICAL: You MUST use the Write tool to create the completion marker when done:
+   Write(".claude/agent_complete/decomposition.done", "done")
+   ```
+
+4. **Wait for completion** with a single blocking Bash call:
+   ```
+   Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   ```
+
+### Step 2: Execute Implementation Tasks
+
+1. **Read task_queue.md** to get the list of pending tasks
+
+2. **For each task with status "pending"**, spawn an agent:
+   - Read the task's ID, objective, acceptance criteria, and complexity
+   - Select model based on complexity: easy→haiku, normal→sonnet, complex→opus
+   - Spawn with Task tool:
+     ```
+     Task(
+       subagent_type: "general-purpose",
+       model: [selected model],
+       run_in_background: true,
+       prompt: "Task: [TASK-ID]
+                Objective: [objective from task_queue.md]
+                Acceptance Criteria: [criteria from task_queue.md]
+
+                CRITICAL: When finished, create the completion marker:
+                Write('.claude/agent_complete/[TASK-ID].done', 'done')"
+     )
+     ```
+   - Wait for completion:
+     ```
+     Bash("while [ ! -f '.claude/agent_complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+     ```
+   - Update task status in task_queue.md from "pending" to "completed"
+
+3. **After all tasks complete:**
+   ```
+   Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
+   Bash("git add -A && git commit -m 'Initial build complete'")
+   ```
+
+---
 
 ## Improvement Loops (`/orchestrate N`)
 
+For each loop from 1 to N:
+
+### Loop Step 1: Research Agent (if initial tasks complete)
+
+Check `.claude/session_state.md` for `initial_prd_tasks_complete: true`. If true:
+
 ```
-FOR loop IN 1..N:
+Task(
+  subagent_type: "general-purpose",
+  model: "opus",
+  run_in_background: true,
+  prompt: "Analyze the codebase for improvements, bugs, security issues.
+           Write findings to .claude/issue_queue.md in this format:
 
-    # 1. Research Agent (finds issues, writes to issue_queue.md)
-    IF initial_complete:
-        Task(
-            subagent_type: "general-purpose",
-            model: "opus",
-            prompt: """
-                Analyze the codebase for improvements, bugs, security issues.
-                Write findings to .claude/issue_queue.md in standard format.
-                When done: Write ".claude/agent_complete/research-{loop}.done" with "done"
-            """,
-            run_in_background: true
-        )
-        Bash("while [ ! -f '.claude/agent_complete/research-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+           ### ISSUE-001
+           | Field | Value |
+           |-------|-------|
+           | Status | pending |
+           | Complexity | normal |
 
-    # 2. Decomposition Agent (reads issue_queue.md, writes task_queue.md)
-    decomp_skill = Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
+           **Summary:** [description]
+           **Acceptance Criteria:** [bullet list]
 
-    Task(
-        subagent_type: "general-purpose",
-        model: "opus",
-        prompt: """
-            {decomp_skill}
+           ---
 
-            ---
-
-            ## Your Task
-
-            Read .claude/issue_queue.md and create tasks in .claude/task_queue.md.
-            Follow the process defined in the skill above.
-            Use task IDs: TASK-{loop}-001, TASK-{loop}-002, etc.
-
-            Source document: .claude/issue_queue.md
-            Output file: .claude/task_queue.md
-            Completion marker: .claude/agent_complete/decomp-{loop}.done
-        """,
-        run_in_background: true
-    )
-    Bash("while [ ! -f '.claude/agent_complete/decomp-{loop}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
-
-    # 3. Execute tasks from task_queue.md (max 5 per loop)
-    tasks = parse(".claude/task_queue.md", status="pending", limit=5)
-    FOR task IN tasks:
-        marker = ".claude/agent_complete/{task.id}.done"
-        Task(
-            subagent_type: "general-purpose",
-            model: select_model(task.complexity),
-            prompt: """
-                Task: {task.id}
-                Objective: {task.objective}
-                Acceptance: {task.acceptance_criteria}
-                When DONE: Write "{marker}" with "done"
-            """,
-            run_in_background: true
-        )
-        Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
-        Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
-
-    # 4. Commit
-    Bash("git add -A && git commit -m 'Loop {loop}'")
+           When done: Write('.claude/agent_complete/research-[LOOP].done', 'done')"
+)
+Bash("while [ ! -f '.claude/agent_complete/research-[LOOP].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 ```
+
+### Loop Step 2: Decomposition Agent
+
+Same process as Initial Run Step 1, but:
+- Source document: `.claude/issue_queue.md` (not PRD.md)
+- Completion marker: `.claude/agent_complete/decomp-[LOOP].done`
+- Task IDs should be: `TASK-[LOOP]-001`, `TASK-[LOOP]-002`, etc.
+
+### Loop Step 3: Execute Tasks (max 5 per loop)
+
+Same as Initial Run Step 2, but limit to 5 tasks per loop.
+
+### Loop Step 4: Commit
+
+```
+Bash("git add -A && git commit -m 'Improvement loop [LOOP]'")
+```
+
+---
 
 ## Model Selection
 
@@ -150,55 +161,22 @@ FOR loop IN 1..N:
 | normal | sonnet | Features, refactoring |
 | complex | opus | Architecture, security |
 
-## Autonomy (Session Only)
+## Critical Rules
 
-Autonomy is per-session only. NEVER modify settings.json.
-
-When user selects "Full Autonomy":
-```
-INFORM user:
-    "Full Autonomy selected. When prompted, choose 'Trust for session' to
-    auto-approve agent spawns for this session only."
-```
-
-When user selects "Supervised":
-```
-INFORM user:
-    "Supervised mode. You'll approve each agent spawn individually."
-```
-
-No files are modified. Setting is forgotten when session ends.
-
-## Critical Rules (MVP)
-
-1. **NEVER use AgentOutputTool** - adds 50-100k tokens to context
+1. **NEVER use TaskOutput** - adds 50-100k tokens to context
 2. **ONE blocking Bash per agent** - not a polling loop
-3. **NO journal reading** - just check marker exists
-4. **NO handoff processing** - just update issue status field
-5. **NO knowledge graph queries** - deferred to future Memory Agent
-6. **You are a manager** - never write code directly
+3. **You are a manager** - never write code directly
+4. **Include full skill content in prompts** - not variable references
 
 ## Waiting for Agents
 
 ```bash
-# ✅ CORRECT - ONE tool call
+# CORRECT - ONE blocking tool call
 Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
-# ❌ WRONG - fills context
-WHILE Glob(marker).length == 0: Bash("sleep 5")
+# WRONG - fills context with repeated tool calls
+while file doesn't exist: Bash("sleep 5")
 ```
-
-## Context Budget (MVP)
-
-| Per Agent | Tokens |
-|-----------|--------|
-| Blocking wait | ~100 |
-| Status update | ~50 |
-| **Total** | **~150** |
-
-5 agents × 10 loops = 50 agents × 150 tokens = **7,500 tokens total**
-
-Compare to full journalling: 50 agents × 3,500 tokens = 175,000 tokens
 
 ## File Paths
 
@@ -211,18 +189,4 @@ Compare to full journalling: 50 agents × 3,500 tokens = 175,000 tokens
 
 ---
 
-## Future: Memory Agent (v2)
-
-> **Not implemented.** After MVP stable, add Memory Agent for learning.
-
-The Memory Agent runs BETWEEN loops in its own context:
-- Reads git diff from completed loop
-- Extracts patterns/gotchas from code changes
-- Updates knowledge graph
-- Writes 500-token loop summary
-
-Orchestrator reads ONLY the summary, keeping context minimal.
-
----
-
-*MVP Version: 1.0*
+*MVP Version: 1.1*

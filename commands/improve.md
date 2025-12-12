@@ -8,8 +8,81 @@ Run iterative improvement cycles that analyze current state, identify enhancemen
 /improve                      Run 1 improvement cycle
 /improve 5                    Run 5 improvement cycles
 /improve --continuous         Run until stopped (Ctrl+C)
-/improve 10 --focus "performance"   Focus improvements on specific area
+/improve 10 --focus "performance"   Focus on single area
 /improve 3 --skip-tests       Skip test runs between cycles (faster, riskier)
+/improve UI, authentication, security    Focus on multiple areas (comma-separated)
+/improve new features                    Creative mode with deep research
+/improve 5 security, new features        Mix targeted fixes with creative research
+```
+
+### Multi-Focus Syntax
+
+Specify multiple improvement areas as comma-separated values:
+
+```
+/improve [cycles] <area1>, <area2>, <area3>...
+```
+
+Areas can be:
+- **Predefined**: `bugs`, `performance`, `security`, `UI`, `UX`, `authentication`, `testing`, `documentation`, `accessibility`, `dependencies`, `refactoring`
+- **Custom**: Any free-text description (e.g., `database optimization`, `error handling`)
+- **Special**: `new features` - triggers creative research mode (see below)
+
+---
+
+## Working Copies
+
+After each cycle, a snapshot is saved to `.claude/improve_snapshots/`:
+
+```
+.claude/improve_snapshots/
+├── cycle-001/
+│   ├── CHANGES.md           # Summary of changes made
+│   ├── REVIEW.md            # Invite to review + /issue instructions
+│   └── diff.patch           # Git diff of all changes
+├── cycle-002/
+│   └── ...
+└── latest/                  # Symlink to most recent cycle
+```
+
+### Reviewing Between Cycles
+
+While `/improve` runs (especially with `--continuous`), you can:
+
+1. **Open a second terminal**
+2. **Browse snapshots**: `ls .claude/improve_snapshots/latest/`
+3. **Review changes**: `cat .claude/improve_snapshots/latest/CHANGES.md`
+4. **Provide feedback**: `/issue The auth changes in cycle-003 break SSO`
+
+The orchestrator polls for new issues and incorporates them into the next cycle.
+
+### CHANGES.md Format
+
+```markdown
+# Cycle 3 Changes - 2025-12-12T15:30:00Z
+
+## Improvements Made
+1. ✅ Refactored UserService authentication flow
+2. ✅ Added rate limiting to API endpoints
+3. ✅ Fixed XSS vulnerability in search input
+4. ⚠️ Database index optimization - partial
+5. ❌ OAuth2 PKCE implementation - blocked
+
+## Files Changed
+- src/services/UserService.ts (47 lines)
+- src/middleware/rateLimit.ts (new file)
+- src/components/Search.tsx (12 lines)
+- migrations/add_indexes.sql (created, not applied)
+
+## Test Results
+- 156 passing, 0 failing
+- Coverage: 78% → 81%
+
+## To Provide Feedback
+Run in Terminal 2:
+  /issue <your feedback about these changes>
+
+Issues will be addressed in the next cycle.
 ```
 
 ---
@@ -222,7 +295,7 @@ FUNCTION verifyNoRegressions():
     RETURN results
 ```
 
-### Phase 7: Commit
+### Phase 7: Commit & Snapshot
 
 ```
 FUNCTION commitCycleResults(cycle_number, improvements, results):
@@ -257,6 +330,69 @@ FUNCTION commitCycleResults(cycle_number, improvements, results):
 
     # Update improvement log
     appendToImprovementLog(cycle_number, improvements, results)
+
+    # Create working copy snapshot
+    createCycleSnapshot(cycle_number, improvements, results)
+
+
+FUNCTION createCycleSnapshot(cycle_number, improvements, results):
+    cycle_id = formatCycleId(cycle_number)  # e.g., "cycle-003"
+    snapshot_dir = ".claude/improve_snapshots/{cycle_id}"
+
+    # Create snapshot directory
+    RUN: mkdir -p {snapshot_dir}
+
+    # Generate diff patch
+    RUN: git diff HEAD~1 > {snapshot_dir}/diff.patch
+
+    # Generate CHANGES.md
+    changes_content = generateChangesMarkdown(cycle_number, improvements, results)
+    WRITE: {snapshot_dir}/CHANGES.md
+
+    # Generate REVIEW.md with feedback instructions
+    review_content = """
+    # Review Cycle {cycle_number}
+
+    Changes from this improvement cycle are ready for review.
+
+    ## Quick Commands
+
+    View changes:
+        cat .claude/improve_snapshots/{cycle_id}/CHANGES.md
+
+    View full diff:
+        cat .claude/improve_snapshots/{cycle_id}/diff.patch
+
+    Apply diff to compare in editor:
+        git apply --check .claude/improve_snapshots/{cycle_id}/diff.patch
+
+    ## Provide Feedback
+
+    If you see issues with these changes, report them:
+
+        /issue <description of problem>
+
+    Examples:
+        /issue The new rate limiter is too aggressive, 10 req/min is too low
+        /issue Auth refactor broke remember-me functionality
+        /issue Missing error handling in UserService.updateProfile
+
+    Feedback will be incorporated into the next improvement cycle.
+
+    ## Revert This Cycle
+
+    If this cycle's changes are unacceptable:
+
+        git revert HEAD --no-edit
+
+    """
+    WRITE: {snapshot_dir}/REVIEW.md
+
+    # Update 'latest' symlink
+    RUN: rm -f .claude/improve_snapshots/latest
+    RUN: ln -s {cycle_id} .claude/improve_snapshots/latest
+
+    REPORT: "📁 Snapshot saved: .claude/improve_snapshots/{cycle_id}/"
 ```
 
 ---
@@ -297,18 +433,215 @@ Persistent record at `.claude/improvement_log.md`:
 
 ## Focus Areas
 
-When using `--focus`, improvements are filtered to specific areas:
+When using focus areas, improvements are filtered to specific categories:
 
 | Focus | Targets |
 |-------|---------|
 | `bugs` | Broken functionality, error handling, edge cases |
 | `performance` | Speed, memory, bundle size, lazy loading |
 | `security` | Vulnerabilities, auth issues, input validation |
+| `UI` | Visual design, layout, styling, responsiveness |
+| `UX` | User flows, interactions, feedback, accessibility |
+| `authentication` | Login, session management, OAuth, permissions |
 | `testing` | Coverage gaps, flaky tests, missing assertions |
 | `accessibility` | ARIA, keyboard nav, screen readers, contrast |
 | `documentation` | Comments, README, JSDoc, type annotations |
 | `dependencies` | Outdated packages, unused deps, security updates |
 | `refactoring` | Code smells, duplication, pattern consistency |
+| `new features` | **Creative mode** - deep research for novel enhancements |
+
+---
+
+## Creative Research Mode: `new features`
+
+When `new features` is included in the focus areas, a special research phase activates:
+
+```
+/improve new features
+/improve 3 security, new features
+/improve --continuous UI, new features
+```
+
+### How Creative Mode Works
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  CREATIVE RESEARCH PHASE (before normal cycle)                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  1. ANALYZE PROJECT  → Understand purpose, stack, domain                │
+│        ↓                                                                 │
+│  2. DEEP RESEARCH    → Web search for trends, best practices            │
+│        ↓              → Competitor analysis                              │
+│                       → Industry standards                               │
+│        ↓                                                                 │
+│  3. IDEATE           → Generate 10+ creative improvement ideas          │
+│        ↓                                                                 │
+│  4. EVALUATE         → Score by impact, feasibility, novelty            │
+│        ↓                                                                 │
+│  5. SELECT           → Pick top 2-3 for implementation                  │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Research Agent Configuration
+
+Creative mode uses a high-complexity model for maximum insight:
+
+```
+RESEARCH_AGENT:
+    model: opus                    # Highest capability for creative thinking
+    complexity: complex            # Extended context and reasoning
+    tools:
+        - WebSearch               # Industry trends, best practices
+        - WebFetch                # Documentation, competitor sites
+        - Read                    # Understand current codebase
+        - Grep                    # Find patterns and opportunities
+
+    research_queries:
+        - "{project_type} best practices 2025"
+        - "{project_type} common features users expect"
+        - "{tech_stack} advanced patterns"
+        - "innovative {domain} features"
+        - "{competitor} features comparison"
+
+    time_budget: 5-10 minutes     # Deep research takes time
+```
+
+### Creative Improvement Categories
+
+The research agent looks for opportunities in:
+
+| Category | Example Ideas |
+|----------|---------------|
+| **Missing Standards** | "Most React apps have dark mode, this one doesn't" |
+| **UX Enhancements** | "Add keyboard shortcuts for power users" |
+| **Performance Wins** | "Implement virtual scrolling for large lists" |
+| **Modern Patterns** | "Convert to server components for better SEO" |
+| **Developer Tools** | "Add Storybook for component documentation" |
+| **Accessibility** | "Add skip-to-content links, focus trapping" |
+| **Internationalization** | "Prepare for i18n with extraction tooling" |
+| **Analytics** | "Add privacy-respecting usage analytics" |
+| **Security Hardening** | "Implement CSP headers, SRI for scripts" |
+
+### Example Creative Session
+
+```
+$ claude /improve 2 new features
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPROVEMENT MODE: 2 cycles, focus: new features (creative research enabled)
+═══════════════════════════════════════════════════════════════════════════════
+
+🔬 CREATIVE RESEARCH PHASE
+───────────────────────────────────────────────────────────────────────────────
+
+📖 Analyzing project...
+   Type: React e-commerce application
+   Stack: React 18, TypeScript, Tailwind, Zustand
+   Domain: Online retail / shopping
+
+🌐 Researching industry trends...
+   ├─ Searching: "e-commerce UX best practices 2025"
+   ├─ Searching: "React e-commerce features users expect"
+   ├─ Searching: "modern shopping cart patterns"
+   ├─ Fetching: competitor sites for feature comparison
+   └─ Duration: 4 minutes
+
+💡 Generated 12 creative ideas:
+   1. Add wishlist/save-for-later functionality
+   2. Implement product comparison feature
+   3. Add "recently viewed" products section
+   4. Progressive image loading with blur placeholder
+   5. Quick-view modal for products
+   6. Advanced filtering with URL persistence
+   7. Estimated delivery date calculator
+   8. Stock alerts / back-in-stock notifications
+   9. Social proof: "X people viewing this"
+   10. Size guide with measurement converter
+   11. AR product preview (for applicable items)
+   12. Guest checkout optimization
+
+📊 Evaluating ideas...
+   Selected for implementation:
+   ├─ #1 Wishlist (high impact, medium effort)
+   ├─ #4 Progressive images (high impact, low effort)
+   └─ #5 Quick-view modal (high impact, medium effort)
+
+─── CYCLE 1/2 ─────────────────────────────────────────────────────────────────
+
+🔍 Improvements from research:
+   1. Implement wishlist with localStorage persistence
+   2. Add blur-up progressive image loading
+   3. Create quick-view product modal
+
+🔧 Implementing...
+   ✅ Wishlist functionality (4 files)
+   ✅ Progressive image component (2 files)
+   ✅ Quick-view modal (3 files)
+
+✓ Verifying...
+   Tests: 89 passing
+   Build: success
+
+💾 Committed: improve(cycle-1): 3 creative enhancements
+📁 Snapshot saved: .claude/improve_snapshots/cycle-001/
+
+─── CYCLE 2/2 ─────────────────────────────────────────────────────────────────
+
+🔍 Continuing from research backlog:
+   1. Add "recently viewed" section
+   2. URL-persisted filters
+   3. Estimated delivery calculator
+
+🔧 Implementing...
+   ✅ Recently viewed products (3 files)
+   ✅ Filter URL persistence (2 files)
+   ⚠️ Delivery calculator - partial (needs shipping API)
+
+✓ Verifying...
+   Tests: 94 passing (+5 new)
+   Build: success
+
+💾 Committed: improve(cycle-2): 3 creative enhancements
+📁 Snapshot saved: .claude/improve_snapshots/cycle-002/
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPROVEMENT COMPLETE
+═══════════════════════════════════════════════════════════════════════════════
+
+Summary:
+  Creative ideas generated: 12
+  Ideas implemented: 6 (5 complete, 1 partial)
+  Remaining in backlog: 6 (saved for future cycles)
+
+Backlog saved: .claude/improve_backlog.md
+```
+
+### Creative Backlog
+
+Unimplemented ideas are saved for future cycles:
+
+```markdown
+# Improvement Backlog
+
+## From Creative Research (2025-12-12)
+
+### High Priority
+- [ ] Estimated delivery date calculator (needs shipping API integration)
+- [ ] Stock alerts / back-in-stock notifications
+
+### Medium Priority
+- [ ] Social proof: "X people viewing this"
+- [ ] Size guide with measurement converter
+- [ ] Guest checkout optimization
+
+### Future Consideration
+- [ ] AR product preview (requires significant infrastructure)
+
+---
+Run `/improve new features` to continue implementing from this backlog.
+```
 
 ---
 

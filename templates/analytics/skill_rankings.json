@@ -1,0 +1,15 @@
+{
+  "last_updated": null,
+  "sessions_analyzed": 0,
+  "total_tasks_analyzed": 0,
+  "baseline_success_rate": null,
+  "rankings": {
+    "top_performers": [],
+    "average_performers": [],
+    "needs_improvement": []
+  },
+  "skill_details": {},
+  "skill_gaps": [],
+  "skill_combinations": [],
+  "recommendations": []
+}

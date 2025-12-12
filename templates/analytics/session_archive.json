@@ -1,0 +1,63 @@
+{
+  "session_id": "",
+  "project": "",
+  "archived_at": null,
+  "run_number": null,
+  "started_at": null,
+  "completed_at": null,
+  "duration_ms": null,
+  "summary": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "tasks_failed": 0,
+    "tasks_blocked": 0,
+    "success_rate": null,
+    "first_try_success_count": 0,
+    "first_try_rate": null,
+    "iterations_performed": 0,
+    "issues_processed": 0
+  },
+  "by_model": {
+    "haiku": {
+      "count": 0,
+      "success": 0,
+      "success_rate": null,
+      "avg_duration_ms": null,
+      "total_tokens": 0,
+      "estimated_cost": null
+    },
+    "sonnet": {
+      "count": 0,
+      "success": 0,
+      "success_rate": null,
+      "avg_duration_ms": null,
+      "total_tokens": 0,
+      "estimated_cost": null
+    },
+    "opus": {
+      "count": 0,
+      "success": 0,
+      "success_rate": null,
+      "avg_duration_ms": null,
+      "total_tokens": 0,
+      "estimated_cost": null
+    }
+  },
+  "by_skill": {},
+  "by_task_type": {},
+  "by_complexity": {},
+  "errors": [],
+  "strategies_applied": [],
+  "strategies_updated": [],
+  "knowledge_nodes_created": 0,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0
+  },
+  "cost": {
+    "estimated": null,
+    "actual": null,
+    "variance_percent": null
+  }
+}

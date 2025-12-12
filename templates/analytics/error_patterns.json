@@ -1,0 +1,44 @@
+{
+  "last_updated": null,
+  "sessions_analyzed": 0,
+  "total_errors": 0,
+  "total_iterations": 0,
+  "categories": {
+    "missing_requirements": {
+      "count": 0,
+      "trend": "stable",
+      "impact": "medium",
+      "examples": []
+    },
+    "type_lint_errors": {
+      "count": 0,
+      "trend": "stable",
+      "impact": "low",
+      "examples": []
+    },
+    "integration_failures": {
+      "count": 0,
+      "trend": "stable",
+      "impact": "high",
+      "examples": []
+    },
+    "performance_issues": {
+      "count": 0,
+      "trend": "stable",
+      "impact": "medium",
+      "examples": []
+    },
+    "security_concerns": {
+      "count": 0,
+      "trend": "stable",
+      "impact": "critical",
+      "examples": []
+    }
+  },
+  "patterns": [],
+  "by_task_type": {},
+  "by_model": {},
+  "root_causes": [],
+  "mitigations": [],
+  "prevention_effectiveness": {}
+}

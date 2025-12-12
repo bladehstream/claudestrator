@@ -1,0 +1,40 @@
+{
+  "project": "",
+  "first_session": null,
+  "last_updated": null,
+  "sessions": [],
+  "learning_metrics": {
+    "success_rate_trend": {
+      "first": null,
+      "latest": null,
+      "improvement": null,
+      "learning_rate_per_run": null
+    },
+    "first_try_rate_trend": {
+      "first": null,
+      "latest": null,
+      "improvement": null
+    },
+    "cost_efficiency_trend": {
+      "first_cost_per_task": null,
+      "latest_cost_per_task": null,
+      "improvement_percent": null
+    },
+    "estimate_accuracy_trend": {
+      "first_error_percent": null,
+      "latest_error_percent": null,
+      "improvement": null
+    }
+  },
+  "learning_score": {
+    "score": null,
+    "grade": null,
+    "breakdown": {
+      "success_improvement": null,
+      "first_try_improvement": null,
+      "cost_efficiency": null,
+      "estimate_accuracy": null,
+      "error_prevention": null
+    }
+  }
+}

@@ -53,6 +53,7 @@ Claudestrator transforms Claude Code from a single assistant into a coordinated 
 | **Dry-Run Mode** | Preview task decomposition, estimates, and dependency graph before executing |
 | **Performance Metrics** | Track token usage, costs, success rates by model/skill; view with `/progress metrics` |
 | **Dependency Visualization** | ASCII dependency graph in `/progress tasks` showing critical path and parallelization |
+| **Learning Analytics** | Track learning over time with `/analytics`; measures success trends, skill effectiveness, error patterns |
 
 ## Architecture
 
@@ -69,6 +70,11 @@ project/.claude/
 ├── journal/
 │   ├── index.md              # Task registry
 │   └── task-*.md             # Task execution logs
+├── analytics/                # Learning analytics data
+│   ├── sessions/             # Archived session metrics
+│   ├── trends.json           # Cross-session trends
+│   ├── skill_rankings.json   # Skill effectiveness
+│   └── error_patterns.json   # Error analysis
 └── config.md                 # User preferences
 ```
 
@@ -138,6 +144,10 @@ Run these **before** starting orchestration in Terminal 1:
 | `/progress agents` | (main) | List running and recent agents |
 | `/progress metrics` | (main) | Show performance metrics and token usage |
 | `/progress <agent-id>` | (main) | Show agent's last output |
+| `/analytics` | (main) | Full learning analytics report |
+| `/analytics trends` | (main) | Success rate trends over time |
+| `/analytics skills` | (main) | Skill effectiveness rankings |
+| `/analytics errors` | (main) | Error pattern analysis |
 | `/skills` | (main) | Show loaded skills |
 | `/checkpoint` | (main) | Save state (continue working) |
 | `/deorchestrate` | (main) | Clean exit with full save |

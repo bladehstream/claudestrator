@@ -1177,13 +1177,287 @@ FUNCTION decomposePRDChanges(changes, archived_context):
     RETURN tasks
 ```
 
-### 5.3 Archive (Standard Completion)
+### 5.3 Archive and Analytics (Standard Completion)
 
 ```
 IF project complete AND NOT restart_queued:
+    # 5.3.1 Archive journal
     Move journal/ to journal/archive/run-{run_number}/
     Keep index.md as historical record
     Increment run_number in index
+
+    # 5.3.2 Archive session for analytics (LEARNING CAPTURE)
+    archiveSessionForAnalytics()
+```
+
+### 5.3.2 Session Archival for Learning Analytics
+
+**Purpose**: Capture session data to measure learning over time.
+
+```
+FUNCTION archiveSessionForAnalytics():
+    session_id = FORMAT(NOW(), "YYYY-MM-DD") + "-run-" + run_number
+
+    # Ensure analytics directory exists
+    ENSURE_DIR .claude/analytics/sessions/
+
+    # Create session archive from current metrics
+    archive = {
+        session_id: session_id,
+        project: project_name,
+        archived_at: NOW(),
+        run_number: run_number,
+        started_at: session_state.started_at,
+        completed_at: NOW(),
+        duration_ms: NOW() - session_state.started_at,
+
+        # Summary metrics
+        summary: {
+            tasks_total: metrics.totals.tasks,
+            tasks_completed: metrics.totals.success,
+            tasks_failed: metrics.totals.failed,
+            success_rate: metrics.totals.success / metrics.totals.tasks,
+            first_try_success_count: countFirstTrySuccess(journal),
+            first_try_rate: first_try_count / metrics.totals.tasks,
+            iterations_performed: countIterations(journal),
+            issues_processed: countProcessedIssues()
+        },
+
+        # Breakdowns
+        by_model: metrics.aggregates.by_model,
+        by_skill: metrics.aggregates.by_skill,
+        by_task_type: metrics.aggregates.by_task_type,
+
+        # Errors and learnings
+        errors: extractErrors(journal),
+        strategies_applied: extractStrategiesApplied(strategy_log),
+        strategies_updated: extractNewStrategies(strategies),
+        knowledge_nodes_created: countNewNodes(knowledge_graph),
+
+        # Cost tracking
+        tokens: metrics.totals.tokens,
+        cost: {
+            estimated: metrics.totals.estimated_cost,
+            actual: calculateActualCost(metrics),
+            variance_percent: calculateVariance(estimated, actual)
+        }
+    }
+
+    # Write session archive
+    WRITE .claude/analytics/sessions/{session_id}.json = archive
+
+    # Update trend data
+    updateTrendData(archive)
+
+    # Update skill rankings
+    updateSkillRankings(archive)
+
+    # Analyze error patterns
+    updateErrorPatterns(archive)
+
+    # Generate learning report
+    generateLearningReport()
+
+    REPORT: "📊 Session archived for learning analytics"
+```
+
+### 5.3.3 Trend Data Update
+
+```
+FUNCTION updateTrendData(archive):
+    READ .claude/analytics/trends.json OR CREATE from template
+
+    # Add session to history
+    session_summary = {
+        id: archive.session_id,
+        date: archive.archived_at,
+        run_number: archive.run_number,
+        tasks_total: archive.summary.tasks_total,
+        tasks_success: archive.summary.tasks_completed,
+        success_rate: archive.summary.success_rate,
+        first_try_rate: archive.summary.first_try_rate,
+        cost_per_task: archive.cost.actual / archive.summary.tasks_total,
+        iterations: archive.summary.iterations_performed
+    }
+
+    trends.sessions.append(session_summary)
+    trends.last_updated = NOW()
+
+    # Calculate learning metrics
+    IF trends.sessions.length >= 2:
+        first = trends.sessions[0]
+        latest = trends.sessions[-1]
+
+        trends.learning_metrics = {
+            success_rate_trend: {
+                first: first.success_rate,
+                latest: latest.success_rate,
+                improvement: latest.success_rate - first.success_rate,
+                learning_rate_per_run: improvement / trends.sessions.length
+            },
+            first_try_rate_trend: {
+                first: first.first_try_rate,
+                latest: latest.first_try_rate,
+                improvement: latest.first_try_rate - first.first_try_rate
+            },
+            cost_efficiency_trend: {
+                first_cost_per_task: first.cost_per_task,
+                latest_cost_per_task: latest.cost_per_task,
+                improvement_percent: (first.cost_per_task - latest.cost_per_task) / first.cost_per_task * 100
+            }
+        }
+
+        # Calculate composite learning score
+        trends.learning_score = calculateLearningScore(trends)
+
+    WRITE .claude/analytics/trends.json
+```
+
+### 5.3.4 Skill Rankings Update
+
+```
+FUNCTION updateSkillRankings(archive):
+    READ .claude/analytics/skill_rankings.json OR CREATE from template
+
+    # Update skill statistics
+    FOR skill, data IN archive.by_skill:
+        IF skill NOT IN rankings.skill_details:
+            rankings.skill_details[skill] = {
+                total_uses: 0,
+                total_success: 0,
+                sessions_used: 0,
+                success_trend: []
+            }
+
+        rankings.skill_details[skill].total_uses += data.count
+        rankings.skill_details[skill].total_success += data.success
+        rankings.skill_details[skill].sessions_used += 1
+        rankings.skill_details[skill].success_trend.append({
+            session: archive.session_id,
+            rate: data.success / data.count
+        })
+
+    # Recalculate rankings
+    baseline = calculateBaselineSuccessRate(rankings)
+    rankings.baseline_success_rate = baseline
+
+    FOR skill, details IN rankings.skill_details:
+        success_rate = details.total_success / details.total_uses
+        impact = success_rate - baseline
+
+        IF success_rate >= 0.90:
+            rankings.rankings.top_performers.add(skill, success_rate, impact)
+        ELSE IF success_rate >= 0.75:
+            rankings.rankings.average_performers.add(skill, success_rate, impact)
+        ELSE:
+            rankings.rankings.needs_improvement.add(skill, success_rate, impact)
+
+    rankings.sessions_analyzed += 1
+    rankings.total_tasks_analyzed += archive.summary.tasks_total
+    rankings.last_updated = NOW()
+
+    WRITE .claude/analytics/skill_rankings.json
+```
+
+### 5.3.5 Error Pattern Analysis
+
+```
+FUNCTION updateErrorPatterns(archive):
+    READ .claude/analytics/error_patterns.json OR CREATE from template
+
+    FOR error IN archive.errors:
+        # Categorize error
+        category = categorizeError(error)
+        patterns.categories[category].count += 1
+        patterns.categories[category].examples.append({
+            session: archive.session_id,
+            task: error.task_id,
+            description: error.description
+        })
+
+        # Track by task type and model
+        task_type = error.task_type
+        model = error.model
+
+        IF task_type NOT IN patterns.by_task_type:
+            patterns.by_task_type[task_type] = { count: 0, patterns: [] }
+        patterns.by_task_type[task_type].count += 1
+
+        IF model NOT IN patterns.by_model:
+            patterns.by_model[model] = { count: 0, rate: 0 }
+        patterns.by_model[model].count += 1
+
+        # Detect recurring patterns
+        detectRecurringPattern(error, patterns)
+
+    # Update trends
+    FOR category IN patterns.categories:
+        patterns.categories[category].trend = calculateTrend(category, archive)
+
+    patterns.sessions_analyzed += 1
+    patterns.total_errors += archive.errors.length
+    patterns.last_updated = NOW()
+
+    WRITE .claude/analytics/error_patterns.json
+```
+
+### 5.3.6 Learning Report Generation
+
+```
+FUNCTION generateLearningReport():
+    READ all analytics files
+
+    report = """
+# Learning Analytics Report
+
+Generated: {NOW()}
+Sessions Analyzed: {trends.sessions.length}
+Total Tasks: {skill_rankings.total_tasks_analyzed}
+
+## Learning Trajectory
+
+Success Rate: {trends.learning_metrics.success_rate_trend.first}% → {latest}%
+  Improvement: +{improvement}%
+  Learning Rate: +{learning_rate_per_run}% per run
+
+First-Try Success: {first_try_trend.first}% → {latest}%
+  Improvement: +{improvement}%
+
+Cost Efficiency: ${first_cost} → ${latest_cost} per task
+  Savings: {improvement_percent}%
+
+## Learning Score: {trends.learning_score.grade}
+
+Breakdown:
+- Success Improvement: {breakdown.success_improvement}
+- First-Try Improvement: {breakdown.first_try_improvement}
+- Cost Efficiency: {breakdown.cost_efficiency}
+- Error Prevention: {breakdown.error_prevention}
+
+## Top Performing Skills
+
+{FOR skill IN rankings.top_performers}
+- {skill.name}: {skill.success_rate}% (+{skill.impact}% vs baseline)
+{END FOR}
+
+## Skills Needing Improvement
+
+{FOR skill IN rankings.needs_improvement}
+- {skill.name}: {skill.success_rate}% (below {baseline}% baseline)
+{END FOR}
+
+## Error Patterns
+
+{FOR category, data IN error_patterns.categories WHERE data.count > 0}
+- {category}: {data.count} occurrences, trend: {data.trend}
+{END FOR}
+
+## Recommendations
+
+{generateRecommendations(trends, rankings, patterns)}
+"""
+
+    WRITE .claude/analytics/learning_report.md
 ```
 
 ---

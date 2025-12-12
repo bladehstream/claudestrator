@@ -136,6 +136,20 @@ IF total_loops > 0:
     FOR loop IN 1..total_loops:
 
         # ═══════════════════════════════════════════════════════════════════
+        # LOOP HEADER - Display at start of each loop
+        # ═══════════════════════════════════════════════════════════════════
+
+        REPORT: ""
+        REPORT: "╔═══════════════════════════════════════════════════════════════════╗"
+        REPORT: "║  LOOP {loop} of {total_loops}                                      ║"
+        REPORT: "║  Focus: {focus_areas OR 'General improvements'}                    ║"
+        REPORT: "╚═══════════════════════════════════════════════════════════════════╝"
+        REPORT: ""
+
+        # Initialize task tracking for this loop
+        loop_tasks = []
+
+        # ═══════════════════════════════════════════════════════════════════
         # PHASE 1: RESEARCH (MANDATORY SUB-AGENT)
         # ═══════════════════════════════════════════════════════════════════
         #
@@ -143,6 +157,12 @@ IF total_loops > 0:
         # The orchestrator does NOT perform research itself.
         #
         # Full prompt: .claudestrator/prompts/research_agent.md
+
+        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
+        REPORT: "│  Phase 1: Research                                                  │"
+        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
+        REPORT: "│  ◐ Analyzing project and identifying improvements...                │"
+        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
 
         research_result = Task(
             subagent_type: "general-purpose",
@@ -159,6 +179,13 @@ IF total_loops > 0:
         # Research agent writes to issue queue with source: generated
         # Orchestrator reads from issue queue, filtering by source and loop
         improvements = readIssueQueue(source: "generated", loop: loop)
+
+        # Update research phase display
+        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
+        REPORT: "│  Phase 1: Research                                                  │"
+        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
+        REPORT: "│  ✓ Research complete - {improvements.length} improvements identified │"
+        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
 
         IF improvements.length == 0:
             REPORT: "═══════════════════════════════════════════════════════════"
@@ -207,7 +234,41 @@ IF total_loops > 0:
         # PHASE 2: IMPLEMENTATION (SUB-AGENTS PER IMPROVEMENT)
         # ═══════════════════════════════════════════════════════════════════
 
-        FOR improvement IN improvements:
+        # Initialize task list for display
+        FOR i, improvement IN enumerate(improvements):
+            loop_tasks.append({
+                index: i + 1,
+                title: improvement.title,
+                status: "pending",  # pending | working | complete | failed
+                complexity: improvement.complexity
+            })
+
+        # Display initial task list
+        FUNCTION displayTaskProgress():
+            REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
+            REPORT: "│  Phase 2: Implementation                                            │"
+            REPORT: "├─────────────────────────────────────────────────────────────────────┤"
+            FOR task IN loop_tasks:
+                icon = CASE task.status:
+                    "pending": "○"
+                    "working": "◐"
+                    "complete": "✓"
+                    "failed": "✗"
+                status_label = CASE task.status:
+                    "pending": ""
+                    "working": " (working...)"
+                    "complete": " ✓"
+                    "failed": " ✗"
+                REPORT: "│  {icon} Task {task.index}/{loop_tasks.length}: {task.title}{status_label}"
+            REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+
+        displayTaskProgress()
+
+        FOR i, improvement IN enumerate(improvements):
+            # Mark task as working and refresh display
+            loop_tasks[i].status = "working"
+            displayTaskProgress()
+
             implementation_result = Task(
                 subagent_type: "general-purpose",
                 model: selectModel(improvement.complexity),
@@ -223,6 +284,15 @@ IF total_loops > 0:
                 """
             )
 
+            # Mark task complete or failed based on result
+            IF implementation_result.success:
+                loop_tasks[i].status = "complete"
+            ELSE:
+                loop_tasks[i].status = "failed"
+
+            # Refresh display after each task
+            displayTaskProgress()
+
             results.append(implementation_result)
 
             # Update issue status in queue
@@ -231,6 +301,12 @@ IF total_loops > 0:
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 3: VERIFICATION (QA SUB-AGENT)
         # ═══════════════════════════════════════════════════════════════════
+
+        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
+        REPORT: "│  Phase 3: Verification                                              │"
+        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
+        REPORT: "│  ◐ Running tests, linter, and build checks...                       │"
+        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
 
         qa_result = Task(
             subagent_type: "general-purpose",
@@ -247,12 +323,47 @@ IF total_loops > 0:
             """
         )
 
+        # Update verification display
+        qa_status = IF qa_result.success THEN "✓ All checks passed" ELSE "⚠ Issues found"
+        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
+        REPORT: "│  Phase 3: Verification                                              │"
+        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
+        REPORT: "│  {qa_status}                                                        │"
+        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 4: COMMIT & SNAPSHOT (Orchestrator handles directly)
         # ═══════════════════════════════════════════════════════════════════
 
+        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
+        REPORT: "│  Phase 4: Commit & Snapshot                                         │"
+        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
+        REPORT: "│  ◐ Creating commit and saving snapshot...                           │"
+        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+
         createCommit(loop, total_loops, improvements, results)
         createSnapshot(loop, total_loops, improvements, results)
+
+        # Count results
+        completed_count = loop_tasks.filter(t => t.status == "complete").length
+        failed_count = loop_tasks.filter(t => t.status == "failed").length
+
+        # Display loop completion summary
+        REPORT: ""
+        REPORT: "╔═══════════════════════════════════════════════════════════════════╗"
+        REPORT: "║  LOOP {loop} of {total_loops} COMPLETE                             ║"
+        REPORT: "╠═══════════════════════════════════════════════════════════════════╣"
+        REPORT: "║  Results:                                                          ║"
+        FOR task IN loop_tasks:
+            icon = IF task.status == "complete" THEN "✓" ELSE "✗"
+            REPORT: "║    {icon} {task.title}                                          ║"
+        REPORT: "╠═══════════════════════════════════════════════════════════════════╣"
+        REPORT: "║  Summary: {completed_count}/{loop_tasks.length} tasks completed    ║"
+        IF failed_count > 0:
+            REPORT: "║           {failed_count} task(s) failed                         ║"
+        REPORT: "║  Commit:  Loop {loop}_{total_loops} {date} ...                     ║"
+        REPORT: "╚═══════════════════════════════════════════════════════════════════╝"
+        REPORT: ""
 
         # Mark completed issues
         FOR improvement IN improvements:

@@ -441,6 +441,58 @@ Each loop follows this pattern:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+#### Loop Progress Display
+
+During loop execution, you'll see real-time progress for each phase and task:
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║  LOOP 1 of 3                                                       ║
+║  Focus: security, performance                                      ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  Phase 1: Research                                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│  ✓ Research complete - 5 improvements identified                    │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  Phase 2: Implementation                                            │
+├─────────────────────────────────────────────────────────────────────┤
+│  ✓ Task 1/5: Add CSRF protection to forms ✓                        │
+│  ✓ Task 2/5: Implement rate limiting ✓                             │
+│  ◐ Task 3/5: Add input validation (working...)                     │
+│  ○ Task 4/5: Optimize database queries                             │
+│  ○ Task 5/5: Add caching layer                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Status icons:**
+- `○` Pending - task not yet started
+- `◐` Working - task currently executing
+- `✓` Complete - task finished successfully
+- `✗` Failed - task encountered an error
+
+When a loop completes, you'll see a summary:
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║  LOOP 1 of 3 COMPLETE                                              ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Results:                                                          ║
+║    ✓ Add CSRF protection to forms                                  ║
+║    ✓ Implement rate limiting                                       ║
+║    ✓ Add input validation                                          ║
+║    ✓ Optimize database queries                                     ║
+║    ✗ Add caching layer                                             ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  Summary: 4/5 tasks completed                                      ║
+║           1 task(s) failed                                         ║
+║  Commit:  Loop 1_3 2025-12-12 Security and performance fixes       ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
 #### Research Agent
 
 The research agent (Opus model) runs at the start of each loop:

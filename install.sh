@@ -274,7 +274,7 @@ detect_local_repo() {
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
     # Check if we're in the repo by looking for key files
-    if [ -f "$script_dir/orchestrator_protocol_v3.md" ] && [ -d "$script_dir/skills" ]; then
+    if [ -f "$script_dir/orchestrator_runtime.md" ] && [ -d "$script_dir/skills" ]; then
         LOCAL_REPO="$script_dir"
         log_verbose "Detected local repo at: $LOCAL_REPO"
         return 0

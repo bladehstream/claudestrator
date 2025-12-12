@@ -137,17 +137,23 @@ FOR loop IN 1..N:
 
 ## Autonomy Hook Setup
 
-When user selects "Full Autonomy":
+When user selects "Full Autonomy", ASK if they want it permanent:
 ```
-IF NOT exists(".claude/hooks/safe-autonomy.sh"):
-    Copy from .claudestrator/templates/hooks/safe-autonomy.sh
-    chmod +x
+AskUserQuestion: "Make Full Autonomy permanent for this project?"
+  - "Yes, save to settings.json" → Install hook permanently
+  - "No, just this session" → Do NOT modify settings.json, manually approve spawns
 
-Add to .claude/settings.json:
-    hooks.PermissionRequest = [{
-        matcher: "",
-        hooks: [{ type: "command", command: ".claude/hooks/safe-autonomy.sh" }]
-    }]
+IF user wants permanent:
+    IF NOT exists(".claude/hooks/safe-autonomy.sh"):
+        Copy from .claudestrator/templates/hooks/safe-autonomy.sh
+        chmod +x
+    Add to .claude/settings.json:
+        hooks.PermissionRequest = [{
+            matcher: "",
+            hooks: [{ type: "command", command: ".claude/hooks/safe-autonomy.sh" }]
+        }]
+ELSE:
+    Inform user they'll need to approve each agent spawn manually
 ```
 
 ## Critical Rules (MVP)

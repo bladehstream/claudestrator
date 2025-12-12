@@ -90,13 +90,34 @@ For each task with `Status | pending` in task_queue.md:
 
 ---
 
-## Step 3: Finalize
+## Step 3: Finalize Initial Build
 
-After all tasks complete:
+After all PRD tasks complete:
 
 ```
 Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
 Bash("git add -A && git commit -m 'Initial build complete'")
+```
+
+---
+
+## Improvement Loops (`/orchestrate N`)
+
+If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the initial build:
+
+### For each loop 1..N:
+
+**1. Check for issues** - Read `.claude/issue_queue.md` for `Status | pending` issues
+
+**2. Convert issues to tasks** - For each pending issue:
+   - Create a task entry in task_queue.md with same format as Step 1
+   - Set issue status to `Status | in_progress`
+
+**3. Execute tasks** - Same as Step 2 above
+
+**4. Commit:**
+```
+Bash("git add -A && git commit -m 'Improvement loop [N]'")
 ```
 
 ---
@@ -113,6 +134,7 @@ Bash("git add -A && git commit -m 'Initial build complete'")
 | Purpose | Path |
 |---------|------|
 | Task Queue | `.claude/task_queue.md` |
+| Issue Queue | `.claude/issue_queue.md` |
 | Markers | `.claude/agent_complete/{id}.done` |
 | State | `.claude/session_state.md` |
 

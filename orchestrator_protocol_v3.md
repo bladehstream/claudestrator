@@ -801,6 +801,44 @@ FUNCTION constructPrompt(task, skills, context, model):
         4. APPEND your execution log to: {task.file_path}
         5. Use the standard journal entry format (Actions, Files Modified, Errors, Reasoning, Outcome, Handoff)
 
+        ## Confidence Check & Self-Sourcing
+
+        Before implementing, assess your confidence for each requirement:
+        - **HIGH**: You have clear skill guidance or strong domain knowledge
+        - **MEDIUM**: General understanding but some specifics unclear
+        - **LOW**: Unfamiliar technology, API, or pattern
+
+        **If confidence is LOW on any requirement:**
+
+        1. Use WebSearch to find official documentation
+        2. Use WebFetch to retrieve specific pages
+        3. Evaluate source quality using this hierarchy:
+
+           | Source Type | Weight | Examples |
+           |-------------|--------|----------|
+           | Official vendor docs | HIGH | docs.stripe.com, react.dev, developer.mozilla.org |
+           | Official GitHub repos | HIGH | github.com/{vendor}/* README, examples |
+           | Peer-reviewed/RFC specs | HIGH | RFC documents, W3C specs |
+           | Reputable tech blogs | MEDIUM | Official company engineering blogs |
+           | Tutorial sites | MEDIUM | DigitalOcean, Auth0 guides (when current) |
+           | Stack Overflow answers | LOW | Use for hints, verify against official docs |
+           | Forums/Reddit | LOW | Community discussion, may be outdated/wrong |
+           | AI-generated content | VERY LOW | Verify everything against primary sources |
+
+        4. Save key findings to `.claude/research/{task.id}/` for reference:
+           - `sources.md` - URLs consulted with quality rating
+           - `notes.md` - Relevant excerpts and findings
+
+        5. Proceed only after confidence reaches MEDIUM or higher
+
+        **If confidence remains LOW after research:**
+        - Document the uncertainty in your task journal under "Blockers"
+        - Flag for human review in handoff: `Needs Review: [specific area]`
+        - Implement your best attempt but mark it clearly as uncertain
+
+        **Do NOT over-research.** If your skills cover the requirement and you have
+        HIGH confidence, skip research entirely. Only self-source when genuinely uncertain.
+
         ## Critical Rules
         - Complete ONLY this task, nothing more
         - Document ALL actions taken

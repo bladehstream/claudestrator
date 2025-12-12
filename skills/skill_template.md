@@ -8,6 +8,7 @@ task_types: [type1, type2]
 keywords: [keyword1, keyword2, keyword3]
 complexity: [easy, normal, complex]
 pairs_with: [other_skill_id1, other_skill_id2]
+external_dependencies: []  # See External Dependencies section below
 ---
 
 # [Skill Name]
@@ -97,6 +98,72 @@ When this skill is applied, the agent should:
 | keywords | Matching keywords | Any relevant terms |
 | complexity | Complexity levels supported | easy, normal, complex |
 | pairs_with | Complementary skill IDs | Other skill IDs |
+| external_dependencies | External APIs/services/env vars required | See External Dependencies section |
+
+### External Dependencies Field
+
+Skills that require external APIs, services, or environment variables must declare them in the `external_dependencies` array and include a **Pre-Flight Check** section.
+
+**Dependency Types:**
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `env_var` | Environment variable (API key, token) | `OPENAI_API_KEY`, `GEMINI_API_KEY` |
+| `service` | Running service (database, server) | PostgreSQL, Redis, local server |
+| `cli_tool` | Command-line tool | `ffmpeg`, `imagemagick`, `docker` |
+| `npm_package` | Node.js package (global) | `typescript`, `eslint` |
+| `python_package` | Python package | `pandas`, `numpy` |
+
+**Frontmatter Format:**
+
+```yaml
+external_dependencies:
+  - type: env_var
+    name: GEMINI_API_KEY
+    description: Google Gemini API key for image/code generation
+    setup_url: https://aistudio.google.com/apikey
+    required: true
+  - type: cli_tool
+    name: ffmpeg
+    description: Video/audio processing
+    setup_url: https://ffmpeg.org/download.html
+    required: false  # Optional dependency
+```
+
+**Pre-Flight Check Section:**
+
+Skills with external dependencies MUST include a "Pre-Flight Check" section immediately after the Capabilities/Role section:
+
+```markdown
+## Pre-Flight Check (MANDATORY)
+
+**You MUST run this check before using this skill. Do NOT skip.**
+
+\`\`\`bash
+# Check for required API key
+if [ -n "$REQUIRED_VAR" ]; then
+    echo "✓ REQUIRED_VAR is set"
+else
+    echo "✗ REQUIRED_VAR is NOT set - CANNOT PROCEED"
+    echo ""
+    echo "This skill requires [description]."
+    echo "Setup instructions:"
+    echo "  1. [Step 1]"
+    echo "  2. [Step 2]"
+    echo "  3. Set: export REQUIRED_VAR=\"your-value\""
+    echo ""
+    echo "STOP: Report this task as BLOCKED with the above instructions."
+    exit 1
+fi
+\`\`\`
+
+**If the check fails:**
+1. Do NOT attempt to proceed with the task
+2. Do NOT try workarounds or alternative approaches
+3. Report the task as **BLOCKED** in your handoff
+4. Include the setup instructions in your blocker notes
+5. The orchestrator will surface this to the user
+```
 
 ### Category Field
 

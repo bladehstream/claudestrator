@@ -49,12 +49,45 @@ Generate UI mockups and production-ready frontend code using Google's Gemini API
 3. **Text-to-Code**: Generate React Native, HTML/CSS, or React components from descriptions
 4. **Style Transfer**: Apply design systems to generated components
 
-## Prerequisites
+## External Dependencies
 
-Requires `GEMINI_API_KEY` environment variable. If not set, instruct user to:
-1. Visit https://aistudio.google.com/apikey
-2. Create API key (enable billing for Nano Banana Pro)
-3. Set: `export GEMINI_API_KEY="your-key"`
+```yaml
+requires:
+  - type: env_var
+    name: GEMINI_API_KEY
+    description: Google Gemini API key for image/code generation
+    setup_url: https://aistudio.google.com/apikey
+    required: true
+```
+
+## Pre-Flight Check (MANDATORY)
+
+**You MUST run this check before using this skill. Do NOT skip.**
+
+```bash
+# Check for required API key
+if [ -n "$GEMINI_API_KEY" ]; then
+    echo "✓ GEMINI_API_KEY is set"
+else
+    echo "✗ GEMINI_API_KEY is NOT set - CANNOT PROCEED"
+    echo ""
+    echo "This skill requires a Google Gemini API key."
+    echo "Setup instructions:"
+    echo "  1. Visit https://aistudio.google.com/apikey"
+    echo "  2. Create API key (enable billing for Nano Banana Pro)"
+    echo "  3. Set: export GEMINI_API_KEY=\"your-key\""
+    echo ""
+    echo "STOP: Report this task as BLOCKED with the above instructions."
+    exit 1
+fi
+```
+
+**If the check fails:**
+1. Do NOT attempt to proceed with the task
+2. Do NOT try workarounds or alternative approaches
+3. Report the task as **BLOCKED** in your handoff
+4. Include the setup instructions in your blocker notes
+5. The orchestrator will surface this to the user
 
 ## Quick Start
 

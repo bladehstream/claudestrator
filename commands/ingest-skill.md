@@ -193,6 +193,48 @@ Analyze the skill content to suggest appropriate metadata:
 | `keywords` | Extract key terms that should trigger this skill |
 | `complexity` | Assess based on scope and depth |
 | `pairs_with` | Which existing skills complement this one? |
+| `external_dependencies` | External APIs, services, or tools required |
+
+**Detecting External Dependencies:**
+
+Analyze the skill content for indicators of external dependencies:
+
+| Pattern | Indicates | Dependency Type |
+|---------|-----------|-----------------|
+| `$ENV_VAR`, `process.env.`, `os.environ` | Environment variable | `env_var` |
+| API endpoints, `fetch()`, `requests.` | External API | `env_var` (for API key) |
+| `ffmpeg`, `imagemagick`, `docker` commands | CLI tool | `cli_tool` |
+| `npm install -g`, global package refs | NPM package | `npm_package` |
+| `pip install`, package imports | Python package | `python_package` |
+| Database connection strings | Service | `service` |
+
+**If external dependencies are detected:**
+
+1. Add `external_dependencies` array to frontmatter
+2. Generate a Pre-Flight Check section
+3. Warn user about the dependency requirements
+
+```
+⚠️  EXTERNAL DEPENDENCIES DETECTED
+══════════════════════════════════
+
+This skill requires external resources:
+
+  1. [env_var] GEMINI_API_KEY
+     Description: API key for Google Gemini
+     Setup: https://aistudio.google.com/apikey
+     Required: Yes
+
+  2. [cli_tool] ffmpeg
+     Description: Video processing tool
+     Setup: https://ffmpeg.org/download.html
+     Required: No (optional feature)
+
+A Pre-Flight Check section will be added to ensure agents
+verify these dependencies before proceeding with tasks.
+
+Continue with ingestion? [Y/n]
+```
 
 **Categories:**
 - `implementation` - Building/coding features (html5_canvas, game_feel, data_visualization)
@@ -232,7 +274,75 @@ Accept this metadata? [Y/n/edit]
 
 If user chooses "edit", use AskUserQuestion to let them modify specific fields.
 
-### Step 5: Conflict Detection
+### Step 5: Generate Pre-Flight Check (If Dependencies Detected)
+
+If external dependencies were identified in Step 4, generate a Pre-Flight Check section:
+
+**Generate bash check script:**
+
+```bash
+## Pre-Flight Check (MANDATORY)
+
+**You MUST run this check before using this skill. Do NOT skip.**
+
+\`\`\`bash
+# Auto-generated pre-flight check
+
+# Check environment variables
+{for each env_var dependency}
+if [ -n "${dependency.name}" ]; then
+    echo "✓ {dependency.name} is set"
+else
+    echo "✗ {dependency.name} is NOT set - CANNOT PROCEED"
+    echo ""
+    echo "{dependency.description}"
+    echo "Setup: {dependency.setup_url}"
+    exit 1
+fi
+{end for}
+
+# Check CLI tools
+{for each cli_tool dependency}
+if command -v {dependency.name} &> /dev/null; then
+    echo "✓ {dependency.name} is available"
+else
+    echo "✗ {dependency.name} is NOT installed"
+    {if dependency.required}
+    echo "CANNOT PROCEED - required tool missing"
+    echo "Install: {dependency.setup_url}"
+    exit 1
+    {else}
+    echo "Warning: Optional feature unavailable"
+    {end if}
+fi
+{end for}
+
+echo ""
+echo "All pre-flight checks passed ✓"
+\`\`\`
+
+**If the check fails:**
+1. Do NOT attempt to proceed with the task
+2. Do NOT try workarounds or alternative approaches
+3. Report the task as **BLOCKED** in your handoff
+4. Include the setup instructions in your blocker notes
+5. The orchestrator will surface this to the user
+```
+
+**Insert location:** Place the Pre-Flight Check section immediately after the skill's Role/Capabilities section.
+
+**Report to user:**
+```
+Generated Pre-Flight Check for {N} dependencies:
+  - {dependency.name} ({dependency.type})
+  - {dependency.name} ({dependency.type})
+
+Review the generated check? [Y/n]
+```
+
+If user wants to review, show the generated script and allow edits before finalizing.
+
+### Step 6: Conflict Detection
 
 Check if a skill with the same `id` already exists in `.claude/skills/`:
 
@@ -263,7 +373,7 @@ Are you sure you want to overwrite '[existing name]'? This cannot be undone. [y/
 
 Only proceed if both confirmations are "y" or "yes".
 
-### Step 6: Write Skill Files
+### Step 7: Write Skill Files
 
 1. **Determine target directory:** `.claude/skills/{category}/`
 
@@ -286,7 +396,7 @@ Only proceed if both confirmations are "y" or "yes".
    Written: .claude/skills/{category}/{id}/lib/helpers.js
    ```
 
-### Step 7: Handle Dependencies
+### Step 8: Handle Dependencies
 
 If `package.json` or `requirements.txt` was included:
 
@@ -303,7 +413,7 @@ If user confirms:
 
 Report success or failure.
 
-### Step 8: Update Skill Manifest
+### Step 9: Update Skill Manifest
 
 Append the new skill to `.claude/skills/skill_manifest.md`:
 
@@ -316,7 +426,7 @@ Append the new skill to `.claude/skills/skill_manifest.md`:
 - **Source:** {original URL/path}
 ```
 
-### Step 9: Summary
+### Step 10: Summary
 
 After processing all skills, provide a summary:
 
@@ -333,6 +443,11 @@ Processed: [N] skill(s)
 Security warnings: [N]
 Conflicts resolved: [N]
 Dependencies installed: [Y/N]
+External dependencies: [N] skills require external APIs/tools
+
+⚠️  Skills with external dependencies:
+  - [skill_name]: Requires GEMINI_API_KEY (env_var)
+  - [skill_name]: Requires ffmpeg (cli_tool)
 
 Run /audit-skills to verify the new skills are correctly configured.
 ```

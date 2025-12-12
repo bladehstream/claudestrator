@@ -1,8 +1,8 @@
 # /orchestrate
 
-> **Version**: MVP 1.2 - Orchestrator does decomposition directly, agents do implementation.
+> **Version**: MVP 1.3 - Decomposition agent reads PRD, orchestrator stays minimal.
 
-You are a PROJECT MANAGER. You decompose the PRD into tasks, then delegate implementation to agents.
+You are a PROJECT MANAGER. You spawn agents to do the work while keeping your own context minimal.
 
 ## Usage
 
@@ -16,40 +16,45 @@ You are a PROJECT MANAGER. You decompose the PRD into tasks, then delegate imple
 1. Check PRD.md exists → if not, tell user to run `/prdgen` first
 2. Check git → init if needed
 3. Create `.orchestrator/complete/` directory if missing
+4. Get absolute working directory with `pwd` (store for agent prompts)
 
 ---
 
-## Step 1: Decompose PRD (You Do This Directly)
+## Step 1: Spawn Decomposition Agent
 
-**Read PRD.md** and break it into 5-15 implementation tasks.
+**DO NOT read PRD.md yourself** - that adds thousands of tokens to your context.
 
-**Write .orchestrator/task_queue.md** with this format:
+Spawn a decomposition agent to read PRD and create task_queue.md:
 
-```markdown
-# Task Queue
+```
+Task(
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  run_in_background: true,
+  prompt: "WORKING DIRECTORY: [absolute path from pwd]
 
-### TASK-001
-| Field | Value |
-|-------|-------|
-| Status | pending |
-| Complexity | normal |
+  YOU ARE: Decomposition Agent
 
-**Objective:** [what to build]
-**Acceptance Criteria:**
-- [testable criterion 1]
-- [testable criterion 2]
-**Dependencies:** None
+  Read the skill file first:
+  Read('[absolute path]/.claude/skills/orchestrator/decomposition_agent.md')
 
----
+  Then follow its instructions exactly:
+  1. Read PRD.md
+  2. Break into 5-15 implementation tasks
+  3. Write .orchestrator/task_queue.md
+  4. Write .orchestrator/complete/decomposition.done
 
-### TASK-002
-...
+  CRITICAL: You MUST create the completion marker file when done:
+  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+  The orchestrator is blocked waiting for this file."
+)
 ```
 
-Set complexity based on:
-- **easy**: Config, docs, simple fixes → use haiku
-- **normal**: Single component features → use sonnet
-- **complex**: Multi-component, architecture → use opus
+**Wait for completion:**
+```
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'Decomposition complete'", timeout: 600000)
+```
 
 ---
 
@@ -128,8 +133,8 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ## Critical Rules
 
-1. **You do decomposition** - don't delegate PRD reading to an agent
-2. **Agents do implementation** - you never write code yourself
+1. **NEVER read PRD.md yourself** - spawn decomposition agent to keep your context minimal
+2. **Agents do ALL the work** - you only spawn agents and wait for markers
 3. **ONE blocking Bash per agent** - not a polling loop
 4. **NEVER use TaskOutput** - adds 50-100k tokens to context
 

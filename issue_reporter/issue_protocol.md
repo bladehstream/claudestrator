@@ -297,7 +297,7 @@ Before writing to the queue, check for potential duplicates:
 
 ```
 FUNCTION checkDuplicates(new_issue):
-    READ .claude/issue_queue.md
+    READ .orchestrator/issue_queue.md
 
     pending_issues = issues.filter(i => i.status == 'pending')
 
@@ -342,7 +342,7 @@ Format: `ISSUE-YYYYMMDD-NNN`
 FUNCTION generateIssueId():
     today = FORMAT(NOW(), "YYYYMMDD")
 
-    READ .claude/issue_queue.md
+    READ .orchestrator/issue_queue.md
     today_issues = issues.filter(i => i.id.startsWith("ISSUE-" + today))
     sequence = today_issues.length + 1
 
@@ -401,7 +401,7 @@ Examples:
 
 ```
 FUNCTION writeToQueue(issue):
-    queue_path = ".claude/issue_queue.md"
+    queue_path = ".orchestrator/issue_queue.md"
 
     IF NOT EXISTS queue_path:
         CREATE from template
@@ -461,7 +461,7 @@ FUNCTION mergeIssue(existing, new_details):
 ### Queue File Missing
 
 ```
-IF .claude/issue_queue.md NOT EXISTS:
+IF .orchestrator/issue_queue.md NOT EXISTS:
     CREATE from templates/issue_queue.md
     CONTINUE with issue submission
 ```

@@ -396,10 +396,10 @@ Users report issues in Terminal 2 while orchestration runs in Terminal 1. If the
 
 ```
 FUNCTION pollIssueQueue():
-    IF NOT EXISTS .claude/issue_queue.md:
+    IF NOT EXISTS .orchestrator/issue_queue.md:
         RETURN  # No queue, nothing to do
 
-    issues = PARSE .claude/issue_queue.md
+    issues = PARSE .orchestrator/issue_queue.md
     pending = issues.filter(i => i.status == 'pending')
 
     IF pending.length == 0:
@@ -435,7 +435,7 @@ FUNCTION pollIssueQueue():
         issue.accepted_at = NOW()
 
     # Update queue file
-    WRITE .claude/issue_queue.md
+    WRITE .orchestrator/issue_queue.md
     UPDATE queue status counts
     UPDATE "Last Polled" timestamp
 
@@ -504,7 +504,7 @@ AFTER task completes:
             issue.status = 'complete'
             issue.completed_at = NOW()
             issue.resolution = task.outcome
-            WRITE .claude/issue_queue.md
+            WRITE .orchestrator/issue_queue.md
 ```
 
 When a task sourced from an issue starts:
@@ -515,7 +515,7 @@ WHEN task starts execution:
         issue = findIssueById(task.source)
         IF issue AND issue.status == 'accepted':
             issue.status = 'in_progress'
-            WRITE .claude/issue_queue.md
+            WRITE .orchestrator/issue_queue.md
 ```
 
 ### 3.1 Select Next Task
@@ -796,7 +796,7 @@ FUNCTION constructPrompt(task, skills, context, model):
         All paths are relative to this directory:
         - PRD: ./PRD.md (in project root, NOT in .claude/)
         - Journal: .claude/journal/
-        - State: .claude/session_state.md
+        - State: .orchestrator/session_state.md
 
         ## Instructions
         1. Read any referenced files you need for context
@@ -892,7 +892,7 @@ WRITE session_state.md
 # DO NOT USE AgentOutputTool - it adds full conversation to context
 # Instead, poll for completion marker files
 
-marker_path = ".claude/agent_complete/task-{task.id}.done"
+marker_path = ".orchestrator/complete/task-{task.id}.done"
 
 # Agent prompt includes instruction to create marker when done
 Task(
@@ -925,7 +925,7 @@ context overflow after just 1-2 loops.
 
 Instead, use file-based completion polling:
 
-1. Agent creates a marker file when done: `.claude/agent_complete/{task_id}.done`
+1. Agent creates a marker file when done: `.orchestrator/complete/{task_id}.done`
 2. Orchestrator polls for marker using `Glob` (returns only file paths)
 3. Orchestrator reads outcome from task journal file
 4. Orchestrator deletes marker after processing
@@ -966,7 +966,7 @@ independent_tasks = pending_tasks.filter(
 
 # Spawn up to MAX_PARALLEL agents in one message, ALL in background
 FOR task IN independent_tasks.slice(0, MAX_PARALLEL):
-    marker_path = ".claude/agent_complete/task-{task.id}.done"
+    marker_path = ".orchestrator/complete/task-{task.id}.done"
     Task(
         prompt: "... When finished, Write '{marker_path}' with content 'done' ...",
         run_in_background: true

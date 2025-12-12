@@ -191,7 +191,7 @@ If focus areas were specified ({focus_areas}), prioritize gaps in those areas.
 If "new features" is specified:
 - Go beyond fixing gaps to proposing novel enhancements
 - Re-read PRD.md to understand user personas and stated goals
-- Check .claude/issue_queue.md for user-reported issues (source: user)
+- Check .orchestrator/issue_queue.md for user-reported issues (source: user)
 - Synthesize what customers actually need based on both sources
 - Research what similar products offer as standard features
 
@@ -268,7 +268,7 @@ When "new features" is specified, conduct deeper customer-centric research:
    - Account for platform limitations (offline capability, permissions, hardware access)
    - If multi-platform, note which platforms a feature applies to
 
-3. **Analyze User-Reported Issues** (.claude/issue_queue.md)
+3. **Analyze User-Reported Issues** (.orchestrator/issue_queue.md)
    - Filter for `source: user` issues only (not agent-generated)
    - Look for patterns in user complaints/requests
    - Identify frequently requested capabilities
@@ -336,7 +336,7 @@ Select the top 5 improvements for this loop based on:
 PHASE 5: WRITE TO ISSUE QUEUE
 ═══════════════════════════════════════════════════════════════════════════════
 
-Write your 5 selected improvements to .claude/issue_queue.md
+Write your 5 selected improvements to .orchestrator/issue_queue.md
 
 ### 5.1 Issue Format
 

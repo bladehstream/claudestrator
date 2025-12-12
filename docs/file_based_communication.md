@@ -13,7 +13,7 @@
 
 **Purpose**: Signal agent has finished
 
-**Path**: `.claude/agent_complete/{task_id}.done`
+**Path**: `.orchestrator/complete/{task_id}.done`
 
 **Writer**: Agent (when done)
 **Reader**: Orchestrator (blocking wait)
@@ -21,7 +21,7 @@
 **Pattern**:
 ```bash
 # Orchestrator waits (SINGLE blocking call):
-Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 ```
 
 **Context cost**: ~100 tokens
@@ -32,7 +32,7 @@ Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && ec
 
 **Purpose**: Track pending/completed tasks
 
-**Path**: `.claude/issue_queue.md`
+**Path**: `.orchestrator/issue_queue.md`
 
 **Writer**: Research agent, user via `/issue`
 **Reader**: Orchestrator (get pending tasks)
@@ -61,7 +61,7 @@ Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && ec
 
 **Purpose**: Track orchestration progress
 
-**Path**: `.claude/session_state.md`
+**Path**: `.orchestrator/session_state.md`
 
 **Structure**:
 ```markdown

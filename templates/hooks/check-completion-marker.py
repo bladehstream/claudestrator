@@ -40,8 +40,8 @@ def find_expected_marker_in_transcript(transcript_path):
         with open(transcript_path, 'r') as f:
             content = f.read()
 
-        # Look for .claude/agent_complete/*.done path in transcript
-        matches = re.findall(r'[\'"]?([^\s\'"]*\.claude/agent_complete/[^\s\'"]+\.done)[\'"]?', content)
+        # Look for .orchestrator/complete/*.done path in transcript
+        matches = re.findall(r'[\'"]?([^\s\'"]*\.orchestrator/complete/[^\s\'"]+\.done)[\'"]?', content)
         if matches:
             return matches[0]
 
@@ -69,7 +69,7 @@ def check_marker_written_in_transcript(transcript_path):
                         if tool == 'Write':
                             input_data = entry.get('input', {})
                             file_path = input_data.get('file_path', '')
-                            if '.done' in file_path and 'agent_complete' in file_path:
+                            if '.done' in file_path and 'orchestrator/complete' in file_path:
                                 return True
                 except json.JSONDecodeError:
                     continue
@@ -126,7 +126,7 @@ Do this IMMEDIATELY. The system is blocked until this file exists."""
 
     # If we found a task ID but no explicit marker path, construct it
     if task_id:
-        marker_path = os.path.join(cwd, '.claude', 'agent_complete', f'{task_id}.done')
+        marker_path = os.path.join(cwd, '.orchestrator', 'complete', f'{task_id}.done')
 
         if os.path.exists(marker_path):
             # Marker exists, allow stop
@@ -138,10 +138,10 @@ Do this IMMEDIATELY. The system is blocked until this file exists."""
                 "reason": f"""CRITICAL: You have NOT created the completion marker file!
 
 Your task was: {task_id}
-The orchestrator is waiting for: .claude/agent_complete/{task_id}.done
+The orchestrator is waiting for: .orchestrator/complete/{task_id}.done
 
 You MUST create it NOW using:
-Write(".claude/agent_complete/{task_id}.done", "done")
+Write(".orchestrator/complete/{task_id}.done", "done")
 
 Do this IMMEDIATELY. The system is blocked until this file exists."""
             }
@@ -153,8 +153,8 @@ Do this IMMEDIATELY. The system is blocked until this file exists."""
         # Looks like they tried to write it, allow stop
         sys.exit(0)
 
-    # Couldn't determine task, but check if agent_complete has any recent files
-    agent_complete_dir = os.path.join(cwd, '.claude', 'agent_complete')
+    # Couldn't determine task, but check if complete dir has any recent files
+    agent_complete_dir = os.path.join(cwd, '.orchestrator', 'complete')
     if os.path.isdir(agent_complete_dir):
         # If there are .done files, maybe it worked
         done_files = [f for f in os.listdir(agent_complete_dir) if f.endswith('.done')]

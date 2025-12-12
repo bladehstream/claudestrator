@@ -46,10 +46,10 @@ This document describes the Claudestrator MVP architecture focused on minimal or
 | File | Written By | Read By | Size |
 |------|------------|---------|------|
 | `PRD.md` | User / PRDGen | Decomposition Agent ONLY | 5-10k tokens |
-| `.claude/issue_queue.md` | Research Agent | Decomposition Agent ONLY | Variable |
-| `.claude/task_queue.md` | Decomposition Agent | **Orchestrator** | ~500 tokens |
-| `.claude/session_state.md` | Orchestrator | Orchestrator | ~100 tokens |
-| `.claude/agent_complete/*.done` | All agents | Orchestrator (via Bash) | ~10 tokens |
+| `.orchestrator/issue_queue.md` | Research Agent | Decomposition Agent ONLY | Variable |
+| `.orchestrator/task_queue.md` | Decomposition Agent | **Orchestrator** | ~500 tokens |
+| `.orchestrator/session_state.md` | Orchestrator | Orchestrator | ~100 tokens |
+| `.orchestrator/complete/*.done` | All agents | Orchestrator (via Bash) | ~10 tokens |
 
 ---
 
@@ -86,7 +86,7 @@ Orchestrator uses a **single blocking Bash command** - not a polling loop:
 
 ```bash
 # ✅ CORRECT - ONE tool call, blocks until file exists
-Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
 # ❌ WRONG - Creates 100+ tool calls that fill context
 WHILE Glob(marker).length == 0:
@@ -131,8 +131,8 @@ Read("issue_queue.md")   # Decomposition Agent reads this
 Read("knowledge_graph.json")  # Not used in MVP
 
 # ❌ NEVER - outputs fill context
-Bash("ls .claude/agent_complete/")
-Bash("cat .claude/task_queue.md")
+Bash("ls .orchestrator/complete/")
+Bash("cat .orchestrator/task_queue.md")
 ```
 
 ---

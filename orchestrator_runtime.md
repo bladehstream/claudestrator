@@ -29,15 +29,15 @@
 
    ## Your Task
 
-   Read PRD.md and create .claude/task_queue.md with implementation tasks.
+   Read PRD.md and create .orchestrator/task_queue.md with implementation tasks.
    Follow the process defined in the skill above.
 
    Source document: PRD.md
-   Output file: .claude/task_queue.md
-   Completion marker: .claude/agent_complete/decomposition.done
+   Output file: .orchestrator/task_queue.md
+   Completion marker: .orchestrator/complete/decomposition.done
 
    CRITICAL: You MUST use the Write tool to create the completion marker when done:
-   Write(".claude/agent_complete/decomposition.done", "done")
+   Write(".orchestrator/complete/decomposition.done", "done")
    ```
 
    Task parameters:
@@ -47,12 +47,12 @@
 
 3. Wait for completion:
    ```
-   Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
    ```
 
 ### Step 2: Execute Tasks
 
-For each pending task in `.claude/task_queue.md`:
+For each pending task in `.orchestrator/task_queue.md`:
 
 1. Spawn agent:
    ```
@@ -65,20 +65,20 @@ For each pending task in `.claude/task_queue.md`:
               Acceptance Criteria: [from task_queue.md]
 
               CRITICAL: When finished, create the completion marker:
-              Write('.claude/agent_complete/[TASK-ID].done', 'done')"
+              Write('.orchestrator/complete/[TASK-ID].done', 'done')"
    )
    ```
 
 2. Wait:
    ```
-   Bash("while [ ! -f '.claude/agent_complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
    ```
 
 3. Update task status to "completed" in task_queue.md
 
 4. After all tasks:
    ```
-   Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
+   Write(".orchestrator/session_state.md", "initial_prd_tasks_complete: true")
    Bash("git add -A && git commit -m 'Initial build complete'")
    ```
 
@@ -95,17 +95,17 @@ Task(
   subagent_type: "general-purpose",
   model: "opus",
   run_in_background: true,
-  prompt: "Analyze codebase for improvements. Write to .claude/issue_queue.md.
-           When done: Write('.claude/agent_complete/research-[LOOP].done', 'done')"
+  prompt: "Analyze codebase for improvements. Write to .orchestrator/issue_queue.md.
+           When done: Write('.orchestrator/complete/research-[LOOP].done', 'done')"
 )
-Bash("while [ ! -f '.claude/agent_complete/research-[LOOP].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/research-[LOOP].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 ```
 
 ### 2. Decomposition Agent
 
 Same as Initial Step 1, but:
-- Source: `.claude/issue_queue.md`
-- Marker: `.claude/agent_complete/decomp-[LOOP].done`
+- Source: `.orchestrator/issue_queue.md`
+- Marker: `.orchestrator/complete/decomp-[LOOP].done`
 
 ### 3. Execute Tasks (max 5)
 
@@ -131,10 +131,10 @@ Bash("git add -A && git commit -m 'Loop [LOOP]'")
 
 | Purpose | Path |
 |---------|------|
-| Task Queue | `.claude/task_queue.md` |
-| Issue Queue | `.claude/issue_queue.md` |
-| Completion | `.claude/agent_complete/{id}.done` |
-| State | `.claude/session_state.md` |
+| Task Queue | `.orchestrator/task_queue.md` |
+| Issue Queue | `.orchestrator/issue_queue.md` |
+| Completion | `.orchestrator/complete/{id}.done` |
+| State | `.orchestrator/session_state.md` |
 
 ## CRITICAL RULES
 
@@ -147,7 +147,7 @@ Bash("git add -A && git commit -m 'Loop [LOOP]'")
 
 ```bash
 # CORRECT - single blocking call
-Bash("while [ ! -f '.claude/agent_complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
 # WRONG - fills context
 while not exists: Bash("sleep 5")

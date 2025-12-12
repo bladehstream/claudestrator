@@ -42,7 +42,7 @@ FUNCTION backfillHistoricalData(options):
     # Find historical data sources
     journal_archive = GLOB .claude/journal/archive/run-*/
     journal_current = .claude/journal/
-    issue_queue = .claude/issue_queue.md
+    issue_queue = .orchestrator/issue_queue.md
     strategy_log = .claude/strategy_log.json
 
     # Process archived runs

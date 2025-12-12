@@ -15,7 +15,7 @@ You are a PROJECT MANAGER. You decompose the PRD into tasks, then delegate imple
 
 1. Check PRD.md exists → if not, tell user to run `/prdgen` first
 2. Check git → init if needed
-3. Create `.claude/agent_complete/` directory if missing
+3. Create `.orchestrator/complete/` directory if missing
 
 ---
 
@@ -23,7 +23,7 @@ You are a PROJECT MANAGER. You decompose the PRD into tasks, then delegate imple
 
 **Read PRD.md** and break it into 5-15 implementation tasks.
 
-**Write .claude/task_queue.md** with this format:
+**Write .orchestrator/task_queue.md** with this format:
 
 ```markdown
 # Task Queue
@@ -72,9 +72,9 @@ For each task with `Status | pending` in task_queue.md:
 
      COMPLETION REQUIREMENT (MANDATORY):
      When you finish implementation, you MUST create this file:
-     [absolute path]/.claude/agent_complete/[TASK-ID].done
+     [absolute path]/.orchestrator/complete/[TASK-ID].done
 
-     Use: Write('[absolute path]/.claude/agent_complete/[TASK-ID].done', 'done')
+     Use: Write('[absolute path]/.orchestrator/complete/[TASK-ID].done', 'done')
 
      The orchestrator is blocked waiting for this file. If you don't create it,
      the system hangs forever.
@@ -85,7 +85,7 @@ For each task with `Status | pending` in task_queue.md:
 
 2. **Wait for completion:**
    ```
-   Bash("while [ ! -f '.claude/agent_complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
    ```
 
 3. **Update task_queue.md** - change `Status | pending` to `Status | completed`
@@ -99,7 +99,7 @@ For each task with `Status | pending` in task_queue.md:
 After all PRD tasks complete:
 
 ```
-Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
+Write(".orchestrator/session_state.md", "initial_prd_tasks_complete: true")
 Bash("git add -A && git commit -m 'Initial build complete'")
 ```
 
@@ -111,7 +111,7 @@ If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the i
 
 ### For each loop 1..N:
 
-**1. Check for issues** - Read `.claude/issue_queue.md` for `Status | pending` issues
+**1. Check for issues** - Read `.orchestrator/issue_queue.md` for `Status | pending` issues
 
 **2. Convert issues to tasks** - For each pending issue:
    - Create a task entry in task_queue.md with same format as Step 1
@@ -137,10 +137,10 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 | Purpose | Path |
 |---------|------|
-| Task Queue | `.claude/task_queue.md` |
-| Issue Queue | `.claude/issue_queue.md` |
-| Markers | `.claude/agent_complete/{id}.done` |
-| State | `.claude/session_state.md` |
+| Task Queue | `.orchestrator/task_queue.md` |
+| Issue Queue | `.orchestrator/issue_queue.md` |
+| Markers | `.orchestrator/complete/{id}.done` |
+| State | `.orchestrator/session_state.md` |
 
 ---
 

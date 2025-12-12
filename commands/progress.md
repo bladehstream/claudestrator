@@ -17,7 +17,7 @@ Display orchestrator progress, tasks, agents, and metrics.
 ## /progress (No Arguments)
 
 Read and display information from:
-- `.claude/session_state.md`
+- `.orchestrator/session_state.md`
 - `.claude/journal/index.md`
 
 ```
@@ -228,7 +228,7 @@ FUNCTION findParallelizable(tasks):
 
 List all running and recently completed agents from the current session.
 
-Read from `.claude/session_state.md` (running_agents section).
+Read from `.orchestrator/session_state.md` (running_agents section).
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -251,7 +251,7 @@ Usage: /progress <agent-id> to see last agent output
 
 **Implementation:**
 1. Read `session_state.md` for `running_agents` and `completed_agents` arrays
-2. For running agents, check if completion marker exists: `Glob(".claude/agent_complete/{task_id}.done")`
+2. For running agents, check if completion marker exists: `Glob(".orchestrator/complete/{task_id}.done")`
 3. Display agent ID, task reference, and elapsed time
 
 **NOTE:** Do NOT use `AgentOutputTool` - it adds full agent conversation to context.

@@ -23,7 +23,7 @@ You are a senior technical project manager who excels at:
 ```
 Use the Read tool to load the source:
 - For initial run: Read("PRD.md")
-- For improvement loops: Read(".claude/issue_queue.md")
+- For improvement loops: Read(".orchestrator/issue_queue.md")
 ```
 
 ### Step 2: Analyze Requirements
@@ -47,7 +47,7 @@ Break down into tasks that are:
 
 ```
 Use the Write tool:
-Write(".claude/task_queue.md", content)
+Write(".orchestrator/task_queue.md", content)
 ```
 
 Format each task as:
@@ -79,7 +79,7 @@ Format each task as:
 
 ```
 Use the Write tool:
-Write(".claude/agent_complete/decomposition.done", "done")
+Write(".orchestrator/complete/decomposition.done", "done")
 ```
 
 The orchestrator is blocked waiting for this file. If you don't create it, the entire system hangs.
@@ -132,13 +132,13 @@ After reading, identify 3-10 implementation tasks from the requirements.
 
 ### Action 3: Write task_queue.md
 ```
-Write(".claude/task_queue.md", "<your formatted tasks>")
+Write(".orchestrator/task_queue.md", "<your formatted tasks>")
 ```
 Execute this tool call with your formatted task list.
 
 ### Action 4: Write the completion marker
 ```
-Write(".claude/agent_complete/decomposition.done", "done")
+Write(".orchestrator/complete/decomposition.done", "done")
 ```
 Execute this tool call LAST. This signals you are finished.
 

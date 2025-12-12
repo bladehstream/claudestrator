@@ -138,11 +138,11 @@ Run /progress agent-abc123 for agent output.
 
 ```
 FUNCTION displayIssues(filter):
-    IF NOT EXISTS .claude/issue_queue.md:
+    IF NOT EXISTS .orchestrator/issue_queue.md:
         OUTPUT: "No issue queue found. Run /issue to report an issue."
         RETURN
 
-    issues = PARSE .claude/issue_queue.md
+    issues = PARSE .orchestrator/issue_queue.md
 
     IF filter == "pending":
         issues = issues.filter(i => i.status == "pending")

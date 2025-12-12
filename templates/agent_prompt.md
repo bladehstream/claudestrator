@@ -38,7 +38,7 @@ Project root. Key locations:
 
 **Write the completion marker:**
 ```
-Write(".claude/agent_complete/{{task_id}}.done", "done")
+Write(".orchestrator/complete/{{task_id}}.done", "done")
 ```
 
 This is the LAST thing you do. The orchestrator waits for this file.

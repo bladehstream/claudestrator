@@ -609,7 +609,7 @@ Reading src/config/auth.config.ts for token expiry settings.
 ### How It Works
 
 - Orchestrator tracks agents in `session_state.md`
-- Running agents signal completion via marker files (`.claude/agent_complete/{id}.done`)
+- Running agents signal completion via marker files (`.orchestrator/complete/{id}.done`)
 - Task progress is tracked in `task_queue.md`
 - Agent IDs persist for the session
 
@@ -684,7 +684,7 @@ The Issue Reporter uses your description as a starting point and asks targeted f
 ### How Issues Become Tasks
 
 1. You run `/issue` and complete the interview
-2. Issue is written to `.claude/issue_queue.md`
+2. Issue is written to `.orchestrator/issue_queue.md`
 3. Orchestrator polls the queue:
    - Every 10 minutes during active orchestration
    - After each agent completes a task
@@ -1087,7 +1087,7 @@ history. This fills context after just 1-2 loops.
 **Correct pattern - Blocking Bash wait (no AgentOutputTool):**
 ```
 # Agent creates completion marker when done
-marker_path = ".claude/agent_complete/{task_id}.done"
+marker_path = ".orchestrator/complete/{task_id}.done"
 
 agent_id = Task(
     prompt: "... When done, Write '{marker_path}' with 'done' ...",
@@ -1098,12 +1098,12 @@ agent_id = Task(
 Bash("while [ ! -f '{marker_path}' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
 
 # Update task status in task_queue.md
-Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
+Edit(".orchestrator/task_queue.md", "Status | pending" -> "Status | completed", task section)
 ```
 
 **How it should work:**
 - Agents run in background (`run_in_background: true`)
-- Agents create marker file `.claude/agent_complete/{id}.done` when finished
+- Agents create marker file `.orchestrator/complete/{id}.done` when finished
 - Orchestrator waits via single blocking Bash (~100 tokens total)
 - Task status updated in `task_queue.md`
 - **AgentOutputTool is NEVER used**
@@ -1120,8 +1120,8 @@ Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task s
 | 10+ | ~55k+ | Sustainable with background agents |
 
 **If state is lost:**
-1. Check `.claude/session_state.md` for loop progress
-2. Check `.claude/task_queue.md` for task states
+1. Check `.orchestrator/session_state.md` for loop progress
+2. Check `.orchestrator/task_queue.md` for task states
 3. Run `/orchestrate` to resume - it detects and continues the run
 
 ---

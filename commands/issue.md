@@ -47,7 +47,7 @@ This command spawns a dedicated Issue Reporter agent that:
 2. **Categorizes** by type (bug, performance, enhancement, etc.)
 3. **Prioritizes** based on impact and urgency
 4. **Detects duplicates** against pending issues
-5. **Writes** standardized entry to `.claude/issue_queue.md`
+5. **Writes** standardized entry to `.orchestrator/issue_queue.md`
 
 The orchestrator polls this queue and creates tasks automatically.
 
@@ -86,7 +86,7 @@ Task(
         Read and follow: .claudestrator/issue_reporter/issue_protocol.md
 
         ## Key Files
-        - Issue queue: .claude/issue_queue.md
+        - Issue queue: .orchestrator/issue_queue.md
         - Queue template: .claudestrator/templates/issue_queue.md
 
         ## Interview Flow (REQUIRED STEPS)
@@ -132,12 +132,12 @@ Task(
         Accept 'submit', 's', 'no', 'none' as signals to proceed without this info.
 
         ## Duplicate Detection
-        Before writing, check .claude/issue_queue.md for similar pending issues.
+        Before writing, check .orchestrator/issue_queue.md for similar pending issues.
         If found, ask user if it's the same issue or different.
 
         ## Writing to Queue
         Generate issue ID: ISSUE-YYYYMMDD-NNN
-        Write formatted entry to .claude/issue_queue.md
+        Write formatted entry to .orchestrator/issue_queue.md
 
         ## Completion Message
         After writing the issue, display:
@@ -269,7 +269,7 @@ This command is designed to run independently of the orchestrator:
 
 ## Queue Location
 
-Issues are written to: `.claude/issue_queue.md`
+Issues are written to: `.orchestrator/issue_queue.md`
 
 This file is project-specific and created from template if missing.
 
@@ -295,7 +295,7 @@ Use `/issue reject` to mark an issue as "won't fix":
 
 ```
 FUNCTION rejectIssue(issue_id, reason):
-    READ .claude/issue_queue.md
+    READ .orchestrator/issue_queue.md
 
     issue = issues.find(i => i.id == issue_id)
 
@@ -318,7 +318,7 @@ FUNCTION rejectIssue(issue_id, reason):
         UPDATE journal task to cancelled
         issue.notes += "\nLinked task {issue.task_ref} cancelled."
 
-    WRITE .claude/issue_queue.md
+    WRITE .orchestrator/issue_queue.md
 
     OUTPUT:
         "═══════════════════════════════════════════════════════════
@@ -344,7 +344,7 @@ FUNCTION rejectIssue(issue_id, reason):
 
 ### Reversing Rejection
 
-To un-reject an issue (reopen), manually edit `.claude/issue_queue.md`:
+To un-reject an issue (reopen), manually edit `.orchestrator/issue_queue.md`:
 - Change `status: wont_fix` back to `status: pending`
 - Remove `rejected_at` and `rejection_reason` fields
 

@@ -44,7 +44,9 @@ Task(
         - [criterion]
         ---
 
-        When done: Write ".claude/agent_complete/decomposition.done" with "done"
+        CRITICAL: When finished, you MUST create the completion marker file:
+        Use the Write tool: Write(".claude/agent_complete/decomposition.done", "done")
+        The orchestrator is waiting for this file to exist.
     """,
     run_in_background: true
 )
@@ -61,7 +63,9 @@ FOR task IN tasks:
             Task: {task.id}
             Objective: {task.objective}
             Acceptance: {task.acceptance_criteria}
-            When DONE: Write "{marker}" with "done"
+            CRITICAL: When finished, you MUST create the completion marker:
+            Use the Write tool: Write("{marker}", "done")
+            The orchestrator is waiting for this file.
         """,
         run_in_background: true
     )
@@ -99,7 +103,7 @@ FOR loop IN 1..N:
             Read .claude/issue_queue.md for pending issues.
             Create implementation tasks in .claude/task_queue.md.
             Format: TASK-{loop}-{n} with objective and acceptance criteria.
-            When done: Write ".claude/agent_complete/decomp-{loop}.done" with "done"
+            CRITICAL: When finished, use Write tool: Write(".claude/agent_complete/decomp-{loop}.done", "done")
         """,
         run_in_background: true
     )

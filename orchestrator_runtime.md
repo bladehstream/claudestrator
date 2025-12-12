@@ -26,7 +26,9 @@ Task(
         - [criterion 2]
         ---
 
-        When done: Write ".claude/agent_complete/decomposition.done" with "done"
+        CRITICAL: When finished, you MUST create the completion marker file:
+        Use the Write tool: Write(".claude/agent_complete/decomposition.done", "done")
+        The orchestrator is waiting for this file to exist.
     """,
     run_in_background: true
 )
@@ -69,7 +71,7 @@ FOR loop IN 1..N:
     Task(
         prompt: "Read .claude/issue_queue.md (pending issues).
                  Create tasks in .claude/task_queue.md for each issue.
-                 When done: Write '.claude/agent_complete/decomp-{loop}.done' with 'done'",
+                 CRITICAL: When finished, use Write tool: Write('.claude/agent_complete/decomp-{loop}.done', 'done')",
         model: "opus",
         run_in_background: true
     )

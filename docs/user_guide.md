@@ -415,62 +415,90 @@ After implementation tasks complete:
 - Issues found become new tasks
 - Iteration continues until all criteria pass
 
-### Phase 5: Iteration & Extension
+### Phase 5: Loop Mode (Iteration & Improvement)
 
-When all tasks complete, running `/orchestrate` again offers three options:
-
-| Option | When to Use |
-|--------|-------------|
-| **Iterate** | You've tested the output and want improvements |
-| **Extend** | You want to add new features |
-| **Archive** | You're done and want to start fresh |
-
-#### Iteration Mode
-
-Iterate when you want to improve existing functionality:
+For iterative improvement, use **loop mode** instead of running `/orchestrate` multiple times manually:
 
 ```
-1. Orchestrator shows run summary (files created, features built)
-2. You select improvement categories:
-   - Performance issues
-   - UX/UI improvements
-   - Bug fixes
-   - Feature enhancements
-   - Code quality
-3. You describe specific issues for each category
-4. New tasks are created with links to original tasks
-5. PRD is updated with iteration notes
-6. Tasks execute as normal
+/orchestrate 5                    # Run 5 improvement loops
+/orchestrate 3 security           # 3 loops focused on security
+/orchestrate 5 UI, performance    # 5 loops on UI and performance
 ```
 
-#### Extension Mode
+#### How Loop Mode Works
 
-Extend when you want to add new features:
-
-```
-1. Orchestrator shows current project state
-2. You choose how to add requirements:
-   - /prdgen for large features (separate interview)
-   - Inline description for small additions
-3. PRD is archived and updated with new requirements
-4. Tasks are created with integration analysis
-5. Tasks execute as normal
-```
-
-#### PRD Versioning
-
-Each iteration or extension automatically archives the current PRD:
+Each loop follows this pattern:
 
 ```
-project/
-├── PRD.md                      # Current/active PRD
-└── PRD-history/
-    ├── v1-initial.md           # Original PRD
-    ├── v2-iteration-1.md       # After first iteration
-    └── v3-extension-1.md       # After extension
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LOOP N of M                                                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│  1. RESEARCH    → Research agent analyzes project, identifies 5 fixes  │
+│  2. IMPLEMENT   → Implementation agents execute each improvement       │
+│  3. VERIFY      → QA agent verifies no regressions                     │
+│  4. COMMIT      → Auto-commit: "Loop 1_5 2025-12-12 <summary>"        │
+│  5. SNAPSHOT    → Save CHANGES.md, diff.patch to snapshot folder      │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-This provides an audit trail of how requirements evolved.
+#### Research Agent
+
+The research agent (Opus model) runs at the start of each loop:
+- Analyzes current project state
+- Searches web for best practices and industry standards
+- Identifies 5 specific improvements
+- Writes improvements to issue queue with `source: generated`
+
+#### Focus Areas
+
+Optionally focus improvements on specific areas:
+
+| Focus | What It Targets |
+|-------|-----------------|
+| `bugs` | Broken functionality, error handling |
+| `performance` | Speed, memory, bundle size |
+| `security` | Vulnerabilities, auth issues |
+| `UI` | Visual design, layout, styling |
+| `UX` | User flows, interactions |
+| `testing` | Coverage gaps, flaky tests |
+| `documentation` | Comments, README, API docs |
+| `new features` | Creative research for novel enhancements |
+
+#### Loop Snapshots
+
+Each loop saves a snapshot for review:
+
+```
+.claude/loop_snapshots/
+├── run-2025-12-12-001/
+│   ├── loop-01_05/
+│   │   ├── CHANGES.md      # What changed
+│   │   ├── REVIEW.md       # Review instructions
+│   │   ├── diff.patch      # Git diff
+│   │   └── manifest.json   # Metadata
+│   ├── loop-02_05/
+│   └── ...
+├── SUMMARY.md              # Full run summary
+└── SUMMARY.html            # Visual dashboard
+```
+
+#### Early Exit
+
+Loop mode exits early to save tokens when:
+- No improvements found (project in good shape)
+- Diminishing returns (2 consecutive loops with <2 improvements)
+
+#### Commit Format
+
+Loop commits follow a standard format for easy navigation:
+
+```
+Loop 1_5 2025-12-12 Security hardening and input validation
+Loop 2_5 2025-12-12 Performance optimization and caching
+Loop 3_5 2025-12-12 UI improvements and accessibility
+```
+
+To revert a specific loop: `git revert <commit-sha>`
 
 ---
 
@@ -1174,6 +1202,8 @@ Signal the orchestrator to reload resources.
 /refresh cancel      # Cancel queued restart
 ```
 
+**Important:** `/refresh` requires an argument. Running `/refresh` alone shows usage help.
+
 **Important:** `/refresh prd` is queued, not immediate. The orchestrator:
 1. Completes all tasks in the current run
 2. Archives the completed run
@@ -1233,11 +1263,49 @@ Shows:
 - Total cost estimates by model
 - Warnings about skill gaps or complex tasks
 
+### Loop Mode (`/orchestrate N`)
+
+Run multiple improvement loops with research agent:
+
+```
+/orchestrate 5                    # 5 loops with research
+/orchestrate 3 security           # 3 loops focused on security
+/orchestrate 5 UI, new features   # Mix focus with creative research
+```
+
+**Key differences from standard `/orchestrate`:**
+
+| Command | Research Agent | Behavior |
+|---------|----------------|----------|
+| `/orchestrate` | ❌ No | Standard PRD-based execution |
+| `/orchestrate 5` | ✅ Yes | Research agent at each loop start |
+
+**Autonomy prompt:** When starting loop mode, you'll be asked to select:
+- **Full Autonomy** (recommended) - Auto-approve safe operations
+- **Supervised** - Approve agent spawns
+- **Manual** - Approve everything
+
+**High iteration warning:** Loops >10 show cost estimate and require confirmation.
+
+### Analytics Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/progress metrics` | Current session stats (tokens, costs, success rates) |
+| `/analytics` | Cross-session trends and learning analysis |
+| `/dashboard` | Generate visual HTML dashboard |
+
+**When to use which:**
+- Use `/progress metrics` during a run to see current session stats
+- Use `/analytics` after runs to see trends across sessions
+- Use `/dashboard` to generate a shareable visual report
+
 ### Other Commands
 
 | Command | Description |
 |---------|-------------|
-| `/orchestrate` | Initialize or resume orchestrator |
+| `/orchestrate` | Initialize or resume orchestrator (standard mode) |
+| `/orchestrate N` | Run N improvement loops with research agent |
 | `/checkpoint` | Save current state (continue working) |
 | `/skills` | Show loaded skills |
 | `/deorchestrate` | Clean exit with full save |

@@ -15,7 +15,7 @@ A multi-agent orchestration framework for Claude Code that enables complex, mult
 - [How It Works](#how-it-works)
 - [Model Selection](#model-selection)
 - [Documentation](#documentation)
-- [v2 Improvements](#new-in-v2-research-based-improvements)
+- [Architecture Details](#architecture-details)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -448,36 +448,28 @@ For each task:
 ### 5. Verification
 QA agent validates all acceptance criteria. Issues become new tasks for iteration.
 
-### 6. Iteration & Extension (Post-Completion)
+### 6. Loop Mode (Iterative Improvement)
 
-When a run completes, `/orchestrate` offers three options:
+For iterative improvement, use **loop mode** instead of running `/orchestrate` multiple times:
 
-| Option | Use Case | What Happens |
-|--------|----------|--------------|
-| **Iterate** | Improve existing features | Gather feedback → create improvement tasks → execute |
-| **Extend** | Add new features | Add requirements → decompose → execute |
-| **Archive** | Start fresh | Archive current run → begin new project |
-
-**Iteration workflow:**
 ```
-1. Review run summary (files, features, decisions)
-2. Select improvement categories (performance, UX, bugs, etc.)
-3. Describe specific issues
-4. New tasks created with "Improves: task-XXX" links
-5. PRD updated with iteration notes
-6. Execute iteration tasks
+/orchestrate 5                    # Run 5 improvement loops
+/orchestrate 3 security           # 3 loops focused on security
+/orchestrate 5 UI, new features   # 5 loops on UI and creative research
 ```
 
-**Extension workflow:**
-```
-1. View current project state
-2. Choose: /prdgen for large features OR inline for small additions
-3. PRD versioned and updated
-4. New tasks created with integration analysis
-5. Execute extension tasks
-```
+Each loop:
+1. **Research Agent** (Opus) analyzes project and identifies 5 improvements
+2. **Implementation Agents** execute each improvement
+3. **QA Agent** verifies no regressions
+4. **Auto-commit** with standardized message: "Loop 1_5 2025-12-12 <summary>"
+5. **Snapshot** saved for review and rollback
 
-**PRD versioning:** Each iteration/extension archives the current PRD to `PRD-history/` before updating.
+**Early exit:** Loops exit automatically when no improvements found or diminishing returns detected (2 consecutive loops with <2 improvements).
+
+**Focus areas:** `bugs`, `performance`, `security`, `UI`, `UX`, `testing`, `documentation`, `new features`
+
+See [User Guide: Loop Mode](docs/user_guide.md#phase-5-loop-mode-iteration--improvement) for full documentation.
 
 ## Model Selection
 
@@ -510,7 +502,7 @@ When a run completes, `/orchestrate` offers three options:
 ### Guides
 - [User Guide](docs/user_guide.md) - Comprehensive usage documentation
 
-## New in v2: Research-Based Improvements
+## Architecture Details
 
 ### Knowledge Graph
 

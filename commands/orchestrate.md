@@ -57,25 +57,29 @@ Set complexity based on:
 
 For each task with `Status | pending` in task_queue.md:
 
-1. **Spawn an agent** with Task tool:
+1. **Spawn an agent** with Task tool. Get the absolute working directory first with `pwd`, then include it in the prompt:
    ```
    Task(
      subagent_type: "general-purpose",
      model: [haiku|sonnet|opus based on complexity],
      run_in_background: true,
-     prompt: "You are implementing: [TASK-ID]
+     prompt: "WORKING DIRECTORY: [absolute path from pwd]
 
-     Objective: [from task_queue.md]
-
-     Acceptance Criteria:
+     TASK: [TASK-ID]
+     OBJECTIVE: [from task_queue.md]
+     ACCEPTANCE CRITERIA:
      [from task_queue.md]
 
-     Instructions:
-     1. Implement the requirement
-     2. When DONE, create completion marker:
-        Write('.claude/agent_complete/[TASK-ID].done', 'done')
+     COMPLETION REQUIREMENT (MANDATORY):
+     When you finish implementation, you MUST create this file:
+     [absolute path]/.claude/agent_complete/[TASK-ID].done
 
-     START NOW."
+     Use: Write('[absolute path]/.claude/agent_complete/[TASK-ID].done', 'done')
+
+     The orchestrator is blocked waiting for this file. If you don't create it,
+     the system hangs forever.
+
+     NOW: Implement the task, then create the completion marker."
    )
    ```
 

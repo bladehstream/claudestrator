@@ -23,10 +23,59 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
    - Supervised → approve agent spawns
 4. Read `.claudestrator/orchestrator_runtime.md` for loop logic
 
-## Main Loop (MVP)
+## Initial Run (First `/orchestrate`)
 
 ```
-FOR loop IN 1..total_loops:
+# Step 1: Spawn Decomposition Agent (reads PRD, writes task_queue.md)
+Task(
+    subagent_type: "general-purpose",
+    model: "opus",
+    prompt: """
+        Read PRD.md and create .claude/task_queue.md with implementation tasks.
+
+        Format:
+        ### TASK-001
+        | Field | Value |
+        |-------|-------|
+        | Status | pending |
+        | Complexity | [easy/normal/complex] |
+        **Objective:** [what to implement]
+        **Acceptance Criteria:**
+        - [criterion]
+        ---
+
+        When done: Write ".claude/agent_complete/decomposition.done" with "done"
+    """,
+    run_in_background: true
+)
+Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+# Step 2: Execute each task from task_queue.md
+tasks = parse(".claude/task_queue.md", status="pending")
+FOR task IN tasks:
+    marker = ".claude/agent_complete/{task.id}.done"
+    Task(
+        subagent_type: "general-purpose",
+        model: select_model(task.complexity),
+        prompt: """
+            Task: {task.id}
+            Objective: {task.objective}
+            Acceptance: {task.acceptance_criteria}
+            When DONE: Write "{marker}" with "done"
+        """,
+        run_in_background: true
+    )
+    Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+    Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
+
+Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
+Bash("git add -A && git commit -m 'Initial build complete'")
+```
+
+## Improvement Loops (`/orchestrate N`)
+
+```
+FOR loop IN 1..N:
 
     # 1. Research phase (only after initial PRD complete)
     IF initial_complete AND (loop == 1 OR no_pending_issues):
@@ -44,7 +93,6 @@ FOR loop IN 1..total_loops:
     # 3. Execute each issue
     FOR issue IN issues:
         marker = ".claude/agent_complete/{issue.id}.done"
-
         Task(
             subagent_type: "general-purpose",
             model: select_model(issue.complexity),
@@ -52,17 +100,12 @@ FOR loop IN 1..total_loops:
                 Task: {issue.id} - {issue.summary}
                 Details: {issue.details}
                 Acceptance: {issue.acceptance_criteria}
-
-                When DONE: Write "{marker}" with content "done"
+                When DONE: Write "{marker}" with "done"
             """,
             run_in_background: true
         )
-
-        # SINGLE blocking wait
         Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
-
-        # Update issue status (single field, no handoff reading)
-        Edit(".claude/issue_queue.md", "Status | pending" -> "Status | completed", issue.id section)
+        Edit(".claude/issue_queue.md", "Status | pending" -> "Status | completed", issue section)
 
     # 4. Commit
     Bash("git add -A && git commit -m 'Loop {loop}'")
@@ -126,7 +169,8 @@ Compare to full journalling: 50 agents × 3,500 tokens = 175,000 tokens
 
 | Purpose | Path |
 |---------|------|
-| Issues | `.claude/issue_queue.md` |
+| Task Queue | `.claude/task_queue.md` |
+| Issue Queue | `.claude/issue_queue.md` |
 | Markers | `.claude/agent_complete/{id}.done` |
 | State | `.claude/session_state.md` |
 

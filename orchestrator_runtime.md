@@ -5,20 +5,48 @@
 
 ## Initial Run (`/orchestrate`)
 
-Decompose PRD into tasks, execute them sequentially.
+**Step 1: Spawn Decomposition Agent** (reads PRD, writes task_queue.md)
 
 ```
-tasks = decompose_prd_into_tasks()
+Task(
+    subagent_type: "general-purpose",
+    model: "opus",
+    prompt: """
+        Read PRD.md and create .claude/task_queue.md with tasks.
+
+        Format each task as:
+        ### TASK-001
+        | Field | Value |
+        |-------|-------|
+        | Status | pending |
+        | Complexity | normal |
+        **Objective:** [single sentence]
+        **Acceptance Criteria:**
+        - [criterion 1]
+        - [criterion 2]
+        ---
+
+        When done: Write ".claude/agent_complete/decomposition.done" with "done"
+    """,
+    run_in_background: true
+)
+Bash("while [ ! -f '.claude/agent_complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+```
+
+**Step 2: Execute Tasks** (orchestrator reads task_queue.md, spawns agents)
+
+```
+tasks = parse(".claude/task_queue.md", status="pending")
 FOR task IN tasks:
     marker = ".claude/agent_complete/{task.id}.done"
 
     Task(
-        prompt: <agent_prompt>,
+        prompt: <agent_prompt with task.objective and task.acceptance_criteria>,
         run_in_background: true
     )
 
-    # SINGLE blocking wait
     Bash("while [ ! -f '{marker}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+    Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
 
 Write(".claude/session_state.md", "initial_prd_tasks_complete: true")
 ```
@@ -75,7 +103,8 @@ If LOW confidence on implementation approach: WebSearch for official docs first.
 
 | Purpose | Path |
 |---------|------|
-| Issues | `.claude/issue_queue.md` |
+| Task Queue | `.claude/task_queue.md` |
+| Issue Queue | `.claude/issue_queue.md` |
 | Completion | `.claude/agent_complete/{id}.done` |
 | State | `.claude/session_state.md` |
 

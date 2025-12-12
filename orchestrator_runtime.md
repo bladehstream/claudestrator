@@ -3,43 +3,42 @@
 > **Full reference**: See `orchestrator_protocol_v3.md` for detailed documentation.
 > **This file**: ~2k tokens - load this, not the full protocol.
 
-## Core Loop
+## Single Run Mode (`/orchestrate`)
+
+No research agent. Execute existing issues from queue or PRD requirements.
+
+```
+issues = read_pending_issues() OR decompose_prd()
+FOR issue IN issues:
+    execute_issue(issue)
+    # Poll: WHILE Glob(marker).length == 0: Bash("sleep 5")
+```
+
+## Loop Mode (`/orchestrate N`)
+
+Research agent generates issues each loop.
 
 ```
 FOR loop IN 1..total_loops:
-    # 1. Research (first loop only or if no pending issues)
-    IF loop == 1 OR issue_queue_empty:
-        spawn_research_agent(loop)
-        wait_for_completion()
+    # 1. Research phase (generates 5 issues)
+    spawn_research_agent(loop, focus_areas)
+    WHILE Glob(research_marker).length == 0: Bash("sleep 5")
 
-    # 2. Process issue queue
-    issues = read_pending_issues()
-
-    # 3. Execute each issue
-    FOR issue IN issues.slice(0, 5):
+    # 2. Execute issues (max 5 per loop)
+    FOR issue IN read_pending_issues().slice(0, 5):
         marker = ".claude/agent_complete/{issue.id}.done"
+        Task(..., run_in_background: true)
 
-        Task(
-            subagent_type: "general-purpose",
-            model: select_model(issue.complexity),
-            prompt: build_prompt(issue),
-            run_in_background: true
-        )
+        # Poll SILENTLY - no ls output
+        WHILE Glob(marker).length == 0:
+            Bash("sleep 5")
 
-        # Poll for completion (NOT AgentOutputTool)
-        WHILE NOT file_exists(marker):
-            sleep(5)
-
-        # Read result from journal
         handoff = read_handoff(issue.id)
-        update_issue_status(issue, handoff)
+        update_issue(issue, handoff)
 
-    # 4. Commit if git enabled
-    IF git_enabled:
-        git add -A && git commit
-
-    # 5. Save snapshot
-    save_loop_snapshot(loop)
+    # 3. Commit & snapshot
+    git add -A && git commit
+    save_snapshot(loop)
 ```
 
 ## Model Selection

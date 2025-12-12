@@ -29,15 +29,17 @@ You are a PROJECT MANAGER. Delegate all implementation to agents via Task tool.
 ```
 FOR loop IN 1..total_loops:
 
-    # 1. Research phase (generates issues)
-    IF loop == 1 OR no_pending_issues:
+    # 1. Research phase (ONLY in loop mode with N > 0)
+    IF total_loops > 0 AND (loop == 1 OR no_pending_issues):
         marker = ".claude/agent_complete/research-{loop}.done"
         Task(
             prompt: <research_agent_prompt from prompts/research_agent.md>,
             model: "opus",
             run_in_background: true
         )
-        WHILE NOT Glob(marker): Bash("sleep 5")
+        # Poll silently with Glob, not Bash
+        WHILE Glob(marker).length == 0:
+            Bash("sleep 5")  # Just sleep, no output
 
     # 2. Get pending issues (max 5 per loop)
     issues = parse(".claude/issue_queue.md", status="pending", limit=5)
@@ -61,8 +63,9 @@ FOR loop IN 1..total_loops:
             run_in_background: true
         )
 
-        # Poll for completion (NEVER use AgentOutputTool)
-        WHILE NOT Glob(marker): Bash("sleep 5")
+        # Poll silently for completion (NEVER use AgentOutputTool)
+        WHILE Glob(marker).length == 0:
+            Bash("sleep 5")  # Just sleep, no ls or other output
 
         # Read only handoff section (~500 tokens)
         handoff = read_section(".claude/journal/task-{issue.id}.md", "## Handoff")

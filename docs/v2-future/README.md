@@ -45,6 +45,7 @@ The orchestrator never loads these features directly - only reads the Memory Age
 
 | Document | Description |
 |----------|-------------|
+| [orchestrator_protocol_v3.md](orchestrator_protocol_v3.md) | Full protocol with journalling (replaced by MVP runtime) |
 | [computed_context.md](computed_context.md) | Dynamic context computation per-agent |
 | [handoff_schema.md](handoff_schema.md) | YAML schema for structured agent handoffs |
 | [knowledge_graph.md](knowledge_graph.md) | Tag-based retrieval of project knowledge |

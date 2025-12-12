@@ -1,5 +1,9 @@
 # Orchestrator Protocol v3
 
+> **DEFERRED TO V2** - This is the full protocol with journalling, knowledge graph, computed context, and handoff processing. MVP uses `orchestrator_runtime.md` instead to keep context minimal. This file is preserved for future Memory Agent implementation.
+
+---
+
 ## Overview
 
 The Orchestrator Protocol defines how a primary Claude agent coordinates complex, multi-step projects by:

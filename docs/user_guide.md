@@ -609,16 +609,15 @@ Reading src/config/auth.config.ts for token expiry settings.
 ### How It Works
 
 - Orchestrator tracks agents in `session_state.md`
-- Running agents can be polled for latest output via `AgentOutputTool`
-- Completed agents store their final output for later inspection
-- Agent IDs persist for the session, allowing lookup after completion
+- Running agents signal completion via marker files (`.claude/agent_complete/{id}.done`)
+- Task progress is tracked in `task_queue.md`
+- Agent IDs persist for the session
 
 ### Tips
 
 - Use `/progress agents` to see "what's happening right now"
-- Use `/progress <agent-id>` when an agent seems to be taking long
-- Agent output is truncated to ~500 characters for readability
-- Full task details are always in `journal/task-*.md`
+- Use `/progress tasks` to see task completion status
+- Check `task_queue.md` for detailed task status
 
 ---
 
@@ -1085,7 +1084,7 @@ This indicates the orchestrator protocol has a context leak. The most common cau
 adds the **full agent conversation** (50-100k+ tokens) to the orchestrator's message
 history. This fills context after just 1-2 loops.
 
-**Correct pattern - File-based polling (no AgentOutputTool):**
+**Correct pattern - Blocking Bash wait (no AgentOutputTool):**
 ```
 # Agent creates completion marker when done
 marker_path = ".claude/agent_complete/{task_id}.done"
@@ -1095,21 +1094,21 @@ agent_id = Task(
     run_in_background: true
 )
 
-# Poll for marker file (Glob returns only paths = minimal context)
-WHILE Glob(marker_path).length == 0:
-    Bash("sleep 5")
+# Single blocking Bash command - NOT a polling loop
+Bash("while [ ! -f '{marker_path}' ]; do sleep 10; done && echo 'done'", timeout: 600000)
 
-# Read outcome from file
-handoff = Read(".claude/journal/task-{id}.md") -> parse HANDOFF section
+# Update task status in task_queue.md
+Edit(".claude/task_queue.md", "Status | pending" -> "Status | completed", task section)
 ```
 
 **How it should work:**
 - Agents run in background (`run_in_background: true`)
 - Agents create marker file `.claude/agent_complete/{id}.done` when finished
-- Orchestrator polls for marker using `Glob` (~100 tokens per check)
-- Orchestrator reads outcome from task journal file (~500 tokens)
+- Orchestrator waits via single blocking Bash (~100 tokens total)
+- Task status updated in `task_queue.md`
 - **AgentOutputTool is NEVER used**
-- Orchestrator context stays lean (~2k tokens per loop)
+- **Glob polling loop is NOT used** (fills context with tool calls)
+- Orchestrator context stays lean (~150 tokens per agent)
 
 **Expected context usage:**
 
@@ -1122,7 +1121,7 @@ handoff = Read(".claude/journal/task-{id}.md") -> parse HANDOFF section
 
 **If state is lost:**
 1. Check `.claude/session_state.md` for loop progress
-2. Check `.claude/journal/index.md` for task states
+2. Check `.claude/task_queue.md` for task states
 3. Run `/orchestrate` to resume - it detects and continues the run
 
 ---

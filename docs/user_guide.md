@@ -443,55 +443,45 @@ Each loop follows this pattern:
 
 #### Loop Progress Display
 
-During loop execution, you'll see real-time progress for each phase and task:
+During loop execution, you'll see compact progress updates for each phase:
 
 ```
-╔═══════════════════════════════════════════════════════════════════╗
-║  LOOP 1 of 3                                                       ║
-║  Focus: security, performance                                      ║
-╚═══════════════════════════════════════════════════════════════════╝
+═══ LOOP 1/3 ═══ Focus: security, performance
 
-┌─────────────────────────────────────────────────────────────────────┐
-│  Phase 1: Research                                                  │
-├─────────────────────────────────────────────────────────────────────┤
-│  ✓ Research complete - 5 improvements identified                    │
-└─────────────────────────────────────────────────────────────────────┘
+Phase 1: Research - analyzing project...
+  → 5 improvements identified
 
-┌─────────────────────────────────────────────────────────────────────┐
-│  Phase 2: Implementation                                            │
-├─────────────────────────────────────────────────────────────────────┤
-│  ✓ Task 1/5: Add CSRF protection to forms ✓                        │
-│  ✓ Task 2/5: Implement rate limiting ✓                             │
-│  ◐ Task 3/5: Add input validation (working...)                     │
-│  ○ Task 4/5: Optimize database queries                             │
-│  ○ Task 5/5: Add caching layer                                     │
-└─────────────────────────────────────────────────────────────────────┘
+Phase 2: Implementation - 5 tasks
+  [1/5] Starting: Add CSRF protection to forms
+  [2/5] Starting: Implement rate limiting
+  [3/5] Starting: Add input validation
+  [4/5] Starting: Optimize database queries
+  [5/5] Starting: Add caching layer
+  ✓ [1] Add CSRF protection to forms
+  ✓ [2] Implement rate limiting
+  ✓ [3] Add input validation
+  ✓ [4] Optimize database queries
+  ✗ [5] Add caching layer
+
+Phase 3: Verification - running checks...
+  → Verification passed
+
+Phase 4: Commit & Snapshot
+───────────────────────────────────────
+LOOP 1/3 COMPLETE: 4/5 tasks
+  1 failed
+───────────────────────────────────────
 ```
 
 **Status icons:**
-- `○` Pending - task not yet started
-- `◐` Working - task currently executing
 - `✓` Complete - task finished successfully
 - `✗` Failed - task encountered an error
 
-When a loop completes, you'll see a summary:
+**Why compact output?**
 
-```
-╔═══════════════════════════════════════════════════════════════════╗
-║  LOOP 1 of 3 COMPLETE                                              ║
-╠═══════════════════════════════════════════════════════════════════╣
-║  Results:                                                          ║
-║    ✓ Add CSRF protection to forms                                  ║
-║    ✓ Implement rate limiting                                       ║
-║    ✓ Add input validation                                          ║
-║    ✓ Optimize database queries                                     ║
-║    ✗ Add caching layer                                             ║
-╠═══════════════════════════════════════════════════════════════════╣
-║  Summary: 4/5 tasks completed                                      ║
-║           1 task(s) failed                                         ║
-║  Commit:  Loop 1_3 2025-12-12 Security and performance fixes       ║
-╚═══════════════════════════════════════════════════════════════════╝
-```
+The orchestrator uses minimal output to preserve context for long runs. Detailed task
+logs are written to journal files, not displayed inline. This allows 10+ loops without
+context overflow.
 
 #### Research Agent
 
@@ -1077,7 +1067,9 @@ Add entry to `skill_manifest.md`:
 
 ### "Context low" warnings during loop mode
 
-**Cause**: Multi-loop runs consume significant context. This warning appears when the context window is filling up.
+**Cause**: This warning should NOT appear if the orchestrator is following protocol correctly.
+All agents must run with `run_in_background: true` to keep their outputs isolated from the
+orchestrator's context.
 
 **Example warning:**
 ```
@@ -1085,21 +1077,27 @@ Add entry to `skill_manifest.md`:
   ⎿  Context low · Run /compact to compact & continue
 ```
 
-**Solutions**:
-1. **Run `/compact`** - Compacts history while preserving state; loop continues automatically
-2. **Let it auto-compact** - Claude Code will handle it if you don't respond
-3. **Check `/progress`** - After compacting, verify orchestrator state is intact
+**If you see this warning:**
 
-**Context risk by loop count:**
+This indicates the orchestrator is not spawning agents in background mode. The protocol
+has been updated to fix this - make sure you have the latest version.
 
-| Loops | Risk | Notes |
-|-------|------|-------|
-| 1-3 | Low | Usually completes without compaction |
-| 4-7 | Medium | May need 1 compaction |
-| 8-10 | High | Expect 1-2 compactions |
-| 10+ | Very High | Consider splitting into multiple runs |
+**How it should work:**
+- Agents run in background (`run_in_background: true`)
+- Orchestrator only retrieves completion status via `AgentOutputTool`
+- Agent outputs stay in isolated context, not orchestrator's messages
+- Orchestrator context stays lean (~2k tokens per loop)
 
-**If state is lost after compaction:**
+**Expected context usage:**
+
+| Loops | Context Used | Notes |
+|-------|--------------|-------|
+| 1-3 | ~25k | Well within limits |
+| 4-7 | ~35k | Still comfortable |
+| 8-10 | ~45k | No issues |
+| 10+ | ~55k+ | Sustainable with background agents |
+
+**If state is lost:**
 1. Check `.claude/session_state.md` for loop progress
 2. Check `.claude/journal/index.md` for task states
 3. Run `/orchestrate` to resume - it detects and continues the run

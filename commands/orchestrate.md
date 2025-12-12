@@ -136,15 +136,11 @@ IF total_loops > 0:
     FOR loop IN 1..total_loops:
 
         # ═══════════════════════════════════════════════════════════════════
-        # LOOP HEADER - Display at start of each loop
+        # LOOP HEADER - Compact display to minimize context usage
         # ═══════════════════════════════════════════════════════════════════
 
         REPORT: ""
-        REPORT: "╔═══════════════════════════════════════════════════════════════════╗"
-        REPORT: "║  LOOP {loop} of {total_loops}                                      ║"
-        REPORT: "║  Focus: {focus_areas OR 'General improvements'}                    ║"
-        REPORT: "╚═══════════════════════════════════════════════════════════════════╝"
-        REPORT: ""
+        REPORT: "═══ LOOP {loop}/{total_loops} ═══ Focus: {focus_areas OR 'General'}"
 
         # Initialize task tracking for this loop
         loop_tasks = []
@@ -158,13 +154,10 @@ IF total_loops > 0:
         #
         # Full prompt: .claudestrator/prompts/research_agent.md
 
-        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
-        REPORT: "│  Phase 1: Research                                                  │"
-        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
-        REPORT: "│  ◐ Analyzing project and identifying improvements...                │"
-        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+        REPORT: "Phase 1: Research - analyzing project..."
 
-        research_result = Task(
+        # Spawn research agent IN BACKGROUND to prevent context bloat
+        research_agent_id = Task(
             subagent_type: "general-purpose",
             model: "opus",                    # High capability for deep analysis
             prompt: loadPrompt("prompts/research_agent.md", {
@@ -173,19 +166,19 @@ IF total_loops > 0:
                 focus_areas: focus_areas OR "General improvements",
                 summary_of_previous_loops: getPreviousLoopSummary(loop),
                 current_year: 2025
-            })
+            }),
+            run_in_background: true  # CRITICAL: Keep agent output out of orchestrator context
         )
+
+        # Wait for completion, retrieve only status (not full output)
+        research_result = AgentOutputTool(research_agent_id, block=true)
+        REPORT: "Phase 1: Research complete"
 
         # Research agent writes to issue queue with source: generated
         # Orchestrator reads from issue queue, filtering by source and loop
         improvements = readIssueQueue(source: "generated", loop: loop)
 
-        # Update research phase display
-        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
-        REPORT: "│  Phase 1: Research                                                  │"
-        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
-        REPORT: "│  ✓ Research complete - {improvements.length} improvements identified │"
-        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+        REPORT: "  → {improvements.length} improvements identified"
 
         IF improvements.length == 0:
             REPORT: "═══════════════════════════════════════════════════════════"
@@ -233,43 +226,27 @@ IF total_loops > 0:
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 2: IMPLEMENTATION (SUB-AGENTS PER IMPROVEMENT)
         # ═══════════════════════════════════════════════════════════════════
+        #
+        # CONTEXT MANAGEMENT: All agents run in background to prevent
+        # orchestrator context from filling up with agent outputs.
 
-        # Initialize task list for display
+        REPORT: "Phase 2: Implementation - {improvements.length} tasks"
+
+        # Initialize task tracking (minimal - just for journal)
         FOR i, improvement IN enumerate(improvements):
             loop_tasks.append({
                 index: i + 1,
                 title: improvement.title,
-                status: "pending",  # pending | working | complete | failed
+                status: "pending",
                 complexity: improvement.complexity
             })
 
-        # Display initial task list
-        FUNCTION displayTaskProgress():
-            REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
-            REPORT: "│  Phase 2: Implementation                                            │"
-            REPORT: "├─────────────────────────────────────────────────────────────────────┤"
-            FOR task IN loop_tasks:
-                icon = CASE task.status:
-                    "pending": "○"
-                    "working": "◐"
-                    "complete": "✓"
-                    "failed": "✗"
-                status_label = CASE task.status:
-                    "pending": ""
-                    "working": " (working...)"
-                    "complete": " ✓"
-                    "failed": " ✗"
-                REPORT: "│  {icon} Task {task.index}/{loop_tasks.length}: {task.title}{status_label}"
-            REPORT: "└─────────────────────────────────────────────────────────────────────┘"
-
-        displayTaskProgress()
-
+        # Spawn all implementation agents IN BACKGROUND
+        agent_ids = []
         FOR i, improvement IN enumerate(improvements):
-            # Mark task as working and refresh display
-            loop_tasks[i].status = "working"
-            displayTaskProgress()
+            REPORT: "  [{i+1}/{improvements.length}] Starting: {improvement.title}"
 
-            implementation_result = Task(
+            agent_id = Task(
                 subagent_type: "general-purpose",
                 model: selectModel(improvement.complexity),
                 prompt: """
@@ -281,34 +258,38 @@ IF total_loops > 0:
                     {improvement.criteria}
 
                     Files to modify: {improvement.files}
-                """
+
+                    IMPORTANT: Write your results to the task journal file.
+                    The orchestrator will read only the Handoff section.
+                """,
+                run_in_background: true  # CRITICAL: Prevents context bloat
             )
+            agent_ids.append({id: agent_id, index: i, improvement: improvement})
+            loop_tasks[i].status = "working"
 
-            # Mark task complete or failed based on result
-            IF implementation_result.success:
-                loop_tasks[i].status = "complete"
+        # Wait for all agents to complete, polling periodically
+        # This keeps orchestrator context lean - only status checks, not full outputs
+        FOR agent_info IN agent_ids:
+            result = AgentOutputTool(agent_info.id, block=true)
+
+            # Update status based on result (minimal data extraction)
+            IF result.status == "completed":
+                loop_tasks[agent_info.index].status = "complete"
+                REPORT: "  ✓ [{agent_info.index+1}] {agent_info.improvement.title}"
             ELSE:
-                loop_tasks[i].status = "failed"
-
-            # Refresh display after each task
-            displayTaskProgress()
-
-            results.append(implementation_result)
+                loop_tasks[agent_info.index].status = "failed"
+                REPORT: "  ✗ [{agent_info.index+1}] {agent_info.improvement.title}"
 
             # Update issue status in queue
-            updateIssueStatus(improvement.issue_id, "in_progress")
+            updateIssueStatus(agent_info.improvement.issue_id, "in_progress")
 
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 3: VERIFICATION (QA SUB-AGENT)
         # ═══════════════════════════════════════════════════════════════════
 
-        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
-        REPORT: "│  Phase 3: Verification                                              │"
-        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
-        REPORT: "│  ◐ Running tests, linter, and build checks...                       │"
-        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+        REPORT: "Phase 3: Verification - running checks..."
 
-        qa_result = Task(
+        qa_agent_id = Task(
             subagent_type: "general-purpose",
             model: "sonnet",
             prompt: """
@@ -320,26 +301,19 @@ IF total_loops > 0:
 
                 Report any issues found as:
                 /issue [generated] <issue details>
-            """
+            """,
+            run_in_background: true  # CRITICAL: Prevents context bloat
         )
 
-        # Update verification display
-        qa_status = IF qa_result.success THEN "✓ All checks passed" ELSE "⚠ Issues found"
-        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
-        REPORT: "│  Phase 3: Verification                                              │"
-        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
-        REPORT: "│  {qa_status}                                                        │"
-        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+        qa_result = AgentOutputTool(qa_agent_id, block=true)
+        qa_status = IF qa_result.status == "completed" THEN "passed" ELSE "issues found"
+        REPORT: "  → Verification {qa_status}"
 
         # ═══════════════════════════════════════════════════════════════════
         # PHASE 4: COMMIT & SNAPSHOT (Orchestrator handles directly)
         # ═══════════════════════════════════════════════════════════════════
 
-        REPORT: "┌─────────────────────────────────────────────────────────────────────┐"
-        REPORT: "│  Phase 4: Commit & Snapshot                                         │"
-        REPORT: "├─────────────────────────────────────────────────────────────────────┤"
-        REPORT: "│  ◐ Creating commit and saving snapshot...                           │"
-        REPORT: "└─────────────────────────────────────────────────────────────────────┘"
+        REPORT: "Phase 4: Commit & Snapshot"
 
         createCommit(loop, total_loops, improvements, results)
         createSnapshot(loop, total_loops, improvements, results)
@@ -348,21 +322,12 @@ IF total_loops > 0:
         completed_count = loop_tasks.filter(t => t.status == "complete").length
         failed_count = loop_tasks.filter(t => t.status == "failed").length
 
-        # Display loop completion summary
-        REPORT: ""
-        REPORT: "╔═══════════════════════════════════════════════════════════════════╗"
-        REPORT: "║  LOOP {loop} of {total_loops} COMPLETE                             ║"
-        REPORT: "╠═══════════════════════════════════════════════════════════════════╣"
-        REPORT: "║  Results:                                                          ║"
-        FOR task IN loop_tasks:
-            icon = IF task.status == "complete" THEN "✓" ELSE "✗"
-            REPORT: "║    {icon} {task.title}                                          ║"
-        REPORT: "╠═══════════════════════════════════════════════════════════════════╣"
-        REPORT: "║  Summary: {completed_count}/{loop_tasks.length} tasks completed    ║"
+        # Compact loop summary (reduced from verbose box drawing)
+        REPORT: "───────────────────────────────────────"
+        REPORT: "LOOP {loop}/{total_loops} COMPLETE: {completed_count}/{loop_tasks.length} tasks"
         IF failed_count > 0:
-            REPORT: "║           {failed_count} task(s) failed                         ║"
-        REPORT: "║  Commit:  Loop {loop}_{total_loops} {date} ...                     ║"
-        REPORT: "╚═══════════════════════════════════════════════════════════════════╝"
+            REPORT: "  {failed_count} failed"
+        REPORT: "───────────────────────────────────────"
         REPORT: ""
 
         # Mark completed issues
@@ -464,65 +429,53 @@ IF loops > 10:
 
 ### Context Management During Long Runs
 
-Multi-loop runs consume significant context. When you see warnings like:
+**CRITICAL: Background Agent Execution**
+
+To enable hands-off multi-loop runs, all agents MUST be spawned with `run_in_background: true`.
+This prevents agent outputs from accumulating in the orchestrator's context.
+
+**Why this matters:**
+- Each agent can generate 5-20k tokens of output
+- 5 improvements × 5 loops = 25 agents = potential 250k+ tokens
+- Without background execution, orchestrator context fills up after ~2 loops
+- With background execution, orchestrator stays lean indefinitely
+
+**How it works:**
 
 ```
-● Task Output a198902
-  ⎿  Task is still running…
-  ⎿  Context low · Run /compact to compact & continue
+# BAD - Agent output fills orchestrator context
+result = Task(prompt: "...", subagent_type: "general-purpose")
+# result contains full agent conversation → context bloat
 
-● Agent "ISSUE-009 Accessibility WCAG" completed.
-  ⎿  Context low · Run /compact to compact & continue
+# GOOD - Agent output stays isolated
+agent_id = Task(prompt: "...", subagent_type: "general-purpose", run_in_background: true)
+status = AgentOutputTool(agent_id, block=true)
+# status contains only completion status → context stays lean
 ```
 
-**What "Context low" means:**
-- The orchestrator's context window is filling up with agent outputs
-- Claude Code will soon need to summarize older content to make room
-- This is normal for long-running multi-loop sessions
+**Orchestrator context budget:**
 
-**How to respond:**
+| Component | Target | Notes |
+|-----------|--------|-------|
+| System prompt | ~4k | Fixed |
+| Tools | ~15k | Fixed |
+| Loop state | ~2k per loop | Compact summaries only |
+| Agent results | ~0 | All in background |
+| **Total per loop** | ~2k | Sustainable for 10+ loops |
 
-1. **Run `/compact` when prompted** - This compacts the conversation history while preserving essential state. The orchestrator will continue from where it left off.
+**If context warnings still appear:**
 
-2. **Let it auto-compact** - If you don't intervene, Claude Code will automatically compact when necessary. The loop will continue.
+This indicates a protocol violation - agents are not running in background.
+Check that all Task() calls include `run_in_background: true`.
 
-3. **Check `/progress`** - After compacting, run `/progress` to verify the orchestrator state is intact.
+**State persistence:**
 
-**Automatic handling:**
+All essential state is written to files, not kept in messages:
+- `.claude/session_state.md` - Current loop, task status
+- `.claude/journal/index.md` - Task registry
+- `.claude/issue_queue.md` - Improvements queue
 
-```
-ON context_low_warning:
-    # Orchestrator should proactively checkpoint before compaction
-    IF context_usage > 80%:
-        REPORT: "⚠️ Context running low - checkpointing state..."
-        updateSessionState()  # Save current loop progress
-        updateJournal()       # Ensure task states are persisted
-
-    # After compaction, orchestrator can resume
-    ON resume_after_compact:
-        READ session_state.md
-        READ journal/index.md
-        REPORT: "✓ Resumed from checkpoint"
-        REPORT: "  Loop: {current_loop} of {total_loops}"
-        REPORT: "  Last completed task: {last_task}"
-        CONTINUE from current position
-```
-
-**Best practices for long runs:**
-
-| Loops | Context Risk | Recommendation |
-|-------|--------------|----------------|
-| 1-3 | Low | Should complete without compaction |
-| 4-7 | Medium | May need 1 compaction; monitor warnings |
-| 8-10 | High | Expect 1-2 compactions; save checkpoints |
-| 10+ | Very High | Consider splitting into multiple runs |
-
-**If something goes wrong after compaction:**
-
-1. Check `.claude/session_state.md` for current loop state
-2. Check `.claude/journal/index.md` for task progress
-3. Run `/progress` to see orchestrator status
-4. If needed, resume with `/orchestrate` - it will detect and continue the run
+If the orchestrator is interrupted, `/orchestrate` will resume from file state.
 
 ---
 

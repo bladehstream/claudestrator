@@ -816,16 +816,23 @@ FUNCTION constructPrompt(task, skills, context, model):
 
 > **Apply**: [skills/orchestrator/agent_construction.md](skills/orchestrator/agent_construction.md) for model selection, skill composition, and context budgeting.
 
+**CRITICAL: Context Management**
+
+To prevent orchestrator context from filling up during long runs, agents MUST be spawned
+with `run_in_background: true`. This keeps agent outputs out of the orchestrator's
+message history.
+
 ```
 # Generate unique agent ID
 agent_id = "agent-" + generateShortId()
 
-# Spawn the agent
+# Spawn the agent IN BACKGROUND to prevent context bloat
 Task(
     subagent_type: "general-purpose",
     model: selectModel(task),
     prompt: constructPrompt(task, skills, context, model),
-    description: task.name
+    description: task.name,
+    run_in_background: true  # CRITICAL: Prevents agent output from filling orchestrator context
 )
 
 # Track agent in session state for /progress monitoring
@@ -839,7 +846,26 @@ session_state.running_agents.append({
 })
 
 WRITE session_state.md
+
+# Wait for agent to complete using AgentOutputTool
+# This retrieves ONLY the final status, not the full conversation
+result = AgentOutputTool(agent_id, block=true)
+
+# Extract minimal data needed - DO NOT store full output
+agent_outcome = {
+    success: result.status == "completed",
+    error: result.error IF result.status == "error" ELSE null
+}
+
+# Agent writes its own detailed output to task journal file
+# Orchestrator reads ONLY the structured handoff section, not full output
 ```
+
+**Why run_in_background:**
+- Agent's full conversation stays isolated, not added to orchestrator context
+- Only the final result summary is retrieved
+- Orchestrator context stays lean even across many agents
+- Essential for multi-loop runs (5+ loops can spawn 25+ agents)
 
 **Parallel Agent Spawning:**
 
@@ -850,13 +876,18 @@ independent_tasks = pending_tasks.filter(
     t => t.dependencies.all(d => d.status == 'completed')
 )
 
-# Spawn up to MAX_PARALLEL agents in one message
+# Spawn up to MAX_PARALLEL agents in one message, ALL in background
 FOR task IN independent_tasks.slice(0, MAX_PARALLEL):
-    # Each Task() call in same message runs concurrently
-    Task(...)
+    Task(..., run_in_background: true)
     session_state.running_agents.append(...)
 
-# All agents run concurrently, orchestrator waits for all to complete
+# Poll for completion without blocking on full output
+WHILE any_agents_running:
+    FOR agent IN running_agents:
+        status = AgentOutputTool(agent.id, block=false)
+        IF status.completed:
+            processMinimalResult(agent, status)
+            move agent to completed_agents
 ```
 
 **Checking Agent Status (for /progress command):**
@@ -866,7 +897,7 @@ FUNCTION getAgentStatus(agent_id):
     result = AgentOutputTool(agent_id, block=false)
     RETURN {
         status: result.status,  # running | completed | error
-        output: result.output.slice(-500)  # Last 500 chars
+        # DO NOT return full output - it stays in agent's isolated context
     }
 ```
 
@@ -875,25 +906,33 @@ FUNCTION getAgentStatus(agent_id):
 > **See**: [handoff_schema.md](handoff_schema.md) for structured handoff format.
 > **See**: [strategy_evolution.md](strategy_evolution.md) for feedback processing.
 
+**CRITICAL: Minimize Context Usage**
+
+The orchestrator MUST NOT store agent outputs in its own context. All detailed information
+is written to files by the agent. The orchestrator only tracks minimal metadata.
+
 ```
 AFTER agent completes:
     # Move agent from running to completed in session state
+    # IMPORTANT: Store ONLY metadata, NOT output content
     agent = session_state.running_agents.find(a => a.task_id == task.id)
     session_state.running_agents.remove(agent)
     session_state.completed_agents.append({
         ...agent,
         completed_at: NOW(),
         duration: NOW() - agent.started_at,
-        outcome: handoff.outcome,
-        final_output: result.slice(-500)  # Store last 500 chars for /progress
+        outcome: "completed" OR "failed",  # Simple status only
+        # NO final_output - this bloats context!
+        # Agent output is in task journal file if needed
     })
     WRITE session_state.md
 
-    # Read updated task file
-    result = READ task.file_path
+    # Read ONLY the handoff section from task file, not full content
+    task_file = READ task.file_path
+    handoff_section = EXTRACT_YAML_SECTION(task_file, "## Handoff")
 
-    # Parse structured handoff (YAML)
-    handoff = PARSE_YAML(result.handoff)
+    # Parse structured handoff (YAML) - this is small and structured
+    handoff = PARSE_YAML(handoff_section)
 
     # Update journal index
     IF handoff.outcome == 'completed':

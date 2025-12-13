@@ -82,7 +82,33 @@ Map the high-level structure:
 PHASE 2: EXTERNAL RESEARCH (Use WebSearch, WebFetch, web_research_agent)
 ═══════════════════════════════════════════════════════════════════════════════
 
+**IMPORTANT: You MUST use web search.** Do not rely solely on training data.
+Technology moves fast - your training data may be outdated. Always verify
+current best practices via web search.
+
 Now that you understand the project, research what "great" looks like for this type of application.
+
+### Source Quality Weighting
+
+When evaluating search results, weight sources by reliability:
+
+| Source Type | Weight | Examples | Notes |
+|-------------|--------|----------|-------|
+| Official vendor docs | **HIGH** | docs.stripe.com, react.dev, developer.mozilla.org | Primary source of truth |
+| Official GitHub repos | **HIGH** | github.com/facebook/react, examples, READMEs | Vendor-maintained code |
+| RFC/Specifications | **HIGH** | RFC documents, W3C specs, ECMA specs | Authoritative standards |
+| Reputable tech blogs | MEDIUM | Official company engineering blogs (Netflix, Airbnb, etc.) | Verified real-world experience |
+| Tutorial sites | MEDIUM | DigitalOcean, Auth0 guides | Good when current, verify dates |
+| Stack Overflow | **LOW** | Answers, comments | Use for hints only, verify against official docs |
+| Forums/Reddit | **LOW** | Community discussions | May be outdated, opinionated, or wrong |
+| AI-generated content | **VERY LOW** | ChatGPT answers, AI blog posts | Verify EVERYTHING against primary sources |
+| Personal blogs (uncited) | **LOW** | Random dev blogs without sources | May be outdated or incorrect |
+
+**When citing research:**
+- Prefer HIGH-weight sources
+- If using MEDIUM/LOW sources, verify claims against HIGH sources
+- Note publication dates - reject anything >2 years old for fast-moving tech
+- Be skeptical of "best practices" that aren't backed by official docs
 
 ### 2.0 Web Research Agent (Visual Capture)
 
@@ -471,6 +497,37 @@ CONSTRAINTS AND GUIDELINES
 Total: ~15 minutes maximum
 
 ═══════════════════════════════════════════════════════════════════════════════
+PHASE 7: WRITE COMPLETION MARKER
+═══════════════════════════════════════════════════════════════════════════════
+
+**CRITICAL - DO NOT SKIP**
+
+After writing to the issue queue and generating your summary, you MUST create
+the completion marker:
+
+```
+Write(".orchestrator/complete/research.done", "done")
+```
+
+The orchestrator is BLOCKED waiting for this file. If you don't create it,
+the entire system hangs indefinitely.
+
+═══════════════════════════════════════════════════════════════════════════════
+EXECUTION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+Before finishing, verify:
+
+- [ ] Read and understood project structure (Phase 1)
+- [ ] Conducted web searches for current best practices (Phase 2)
+- [ ] Used HIGH-weight sources for recommendations
+- [ ] Identified gaps between current state and best practices (Phase 3)
+- [ ] Generated 5 specific, actionable improvements (Phase 4)
+- [ ] Wrote issues to .orchestrator/issue_queue.md (Phase 5)
+- [ ] Generated summary report (Phase 6)
+- [ ] **WROTE THE COMPLETION MARKER FILE** (Phase 7)
+
+═══════════════════════════════════════════════════════════════════════════════
 ```
 
 ---
@@ -482,7 +539,14 @@ The orchestrator spawns this agent using:
 ```
 Task(
     model: "opus",
-    prompt: <contents of this template with variables substituted>
+    prompt: "Read('prompts/research_agent.md') and follow those instructions exactly.
+
+    WORKING_DIR: /path/to/project
+    LOOP: 1 of 3
+    FOCUS: security, performance
+    PREVIOUS_LOOPS: None (first loop)
+
+    When done: Write('.orchestrator/complete/research.done', 'done')"
 )
 ```
 

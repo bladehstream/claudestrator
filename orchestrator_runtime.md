@@ -1,14 +1,28 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 1.1 - Explicit prompt construction, no variable interpolation.
+> **Version**: MVP 3.0 - Category-specific agents with detailed prompt files.
 
-## Key Principle: Full Prompt Content
+## Key Principle: Read Prompt Files
 
-**CRITICAL**: When spawning agents, the prompt must contain the FULL text of any skill files - not variable references like `{decomp_skill}`. Claude does not automatically interpolate variables in strings.
+Agents read their detailed instructions from prompt files. This keeps prompts:
+- **Reusable** - Same prompt file for all tasks of that type
+- **Maintainable** - Update once, applies everywhere
+- **Consistent** - Reliable outputs across runs
 
-**Correct approach:**
-1. Read the skill file with Read tool
-2. Include the entire content in the Task prompt parameter
+---
+
+## Prompt Files
+
+| Agent Type | Prompt File |
+|------------|-------------|
+| Decomposition | `prompts/decomposition_agent.md` |
+| Research | `prompts/research_agent.md` |
+| Frontend | `prompts/implementation/frontend_agent.md` |
+| Backend | `prompts/implementation/backend_agent.md` |
+| Fullstack | `prompts/implementation/fullstack_agent.md` |
+| DevOps | `prompts/implementation/devops_agent.md` |
+| Testing | `prompts/implementation/testing_agent.md` |
+| Docs | `prompts/implementation/docs_agent.md` |
 
 ---
 
@@ -16,65 +30,102 @@
 
 ### Step 1: Spawn Decomposition Agent
 
-1. Read the skill file:
-   ```
-   Read(".claudestrator/skills/orchestrator/decomposition_agent.md")
-   ```
+```
+Task(
+  model: "sonnet",
+  run_in_background: true,
+  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
 
-2. Call Task tool with prompt containing:
-   - The FULL content of the skill file
-   - Plus these task-specific instructions:
-   ```
-   ---
+  ---
 
-   ## Your Task
+  ## Your Task
 
-   Read PRD.md and create .orchestrator/task_queue.md with implementation tasks.
-   Follow the process defined in the skill above.
+  WORKING_DIR: [absolute path]
+  SOURCE: PRD.md
+  MODE: initial
 
-   Source document: PRD.md
-   Output file: .orchestrator/task_queue.md
-   Completion marker: .orchestrator/complete/decomposition.done
+  Read PRD.md and create .orchestrator/task_queue.md with implementation tasks.
 
-   CRITICAL: You MUST use the Write tool to create the completion marker when done:
-   Write(".orchestrator/complete/decomposition.done", "done")
-   ```
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
 
-   Task parameters:
-   - model: "opus"
-   - run_in_background: true
+  The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
 
-3. Wait for completion:
-   ```
-   Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
-   ```
+  START: Read('PRD.md')"
+)
+```
+
+Wait for completion:
+```
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+```
 
 ### Step 2: Execute Tasks
 
 For each pending task in `.orchestrator/task_queue.md`:
 
-1. Spawn agent:
+1. **Select prompt file by category:**
+   ```
+   Category → Prompt File
+   ─────────────────────────────────────────────
+   frontend  → prompts/implementation/frontend_agent.md
+   backend   → prompts/implementation/backend_agent.md
+   fullstack → prompts/implementation/fullstack_agent.md
+   devops    → prompts/implementation/devops_agent.md
+   testing   → prompts/implementation/testing_agent.md
+   docs      → prompts/implementation/docs_agent.md
+   ```
+
+2. **Select model by complexity:**
+   ```
+   Complexity → Model
+   ─────────────────────────────
+   easy      → haiku
+   normal    → sonnet
+   complex   → opus
+   ```
+
+3. **Spawn agent:**
    ```
    Task(
      model: [haiku|sonnet|opus based on complexity],
      run_in_background: true,
-     prompt: "Task: [TASK-ID]
-              Objective: [from task_queue.md]
-              Acceptance Criteria: [from task_queue.md]
+     prompt: "Read('prompts/implementation/[category]_agent.md') and follow those instructions.
 
-              CRITICAL: When finished, create the completion marker:
-              Write('.orchestrator/complete/[TASK-ID].done', 'done')"
+     ---
+
+     ## Your Task
+
+     WORKING_DIR: [absolute path]
+     TASK_ID: [TASK-XXX]
+     CATEGORY: [from task]
+     COMPLEXITY: [from task]
+
+     OBJECTIVE: [from task_queue.md]
+
+     ACCEPTANCE CRITERIA:
+     [from task_queue.md]
+
+     DEPENDENCIES: [from task_queue.md or 'None']
+     NOTES: [from task_queue.md or 'None']
+
+     CRITICAL: Write completion marker when done:
+     Write('[absolute path]/.orchestrator/complete/[TASK-XXX].done', 'done')
+
+     The orchestrator is BLOCKED waiting for this file. Create it when done.
+
+     START NOW."
    )
    ```
 
-2. Wait:
+4. **Wait:**
    ```
    Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
    ```
 
-3. Update task status to "completed" in task_queue.md
+5. **Update task status** to "completed" in task_queue.md
 
-4. After all tasks:
+6. **After all tasks:**
    ```
    Write(".orchestrator/session_state.md", "initial_prd_tasks_complete: true")
    Bash("git add -A && git commit -m 'Initial build complete'")
@@ -92,23 +143,42 @@ For each loop 1..N:
 Task(
   model: "opus",  # Research requires deep analysis
   run_in_background: true,
-  prompt: "Analyze codebase for improvements. Write to .orchestrator/issue_queue.md.
-           When done: Write('.orchestrator/complete/research-[LOOP].done', 'done')"
+  prompt: "Read('prompts/research_agent.md') and follow those instructions.
+
+  ---
+
+  ## Your Task
+
+  WORKING_DIR: [absolute path]
+  LOOP: [N] of [total]
+  MODE: improvement_loop
+
+  Analyze the codebase for improvements and write issues to .orchestrator/issue_queue.md.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/research.done', 'done')
+
+  START: Explore the codebase"
 )
-Bash("while [ ! -f '.orchestrator/complete/research-[LOOP].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done && rm .orchestrator/complete/research.done && echo 'done'", timeout: 900000)
 ```
 
-### 2. Decomposition Agent
+### 2. Convert Issues to Tasks
 
-Same as Initial Step 1, but:
-- Source: `.orchestrator/issue_queue.md`
-- Marker: `.orchestrator/complete/decomp-[LOOP].done`
+Read `.orchestrator/issue_queue.md`, for each pending issue:
+- Create task entry in task_queue.md
+- Copy Category from issue
+- Set issue status to `in_progress`
 
 ### 3. Execute Tasks (max 5)
 
-Same as Initial Step 2, limit 5 per loop.
+Same category-based routing as Initial Step 2, limit 5 per loop.
 
-### 4. Commit
+### 4. Mark Issues Complete
+
+Update corresponding issue to `completed` after task completes.
+
+### 5. Commit
 
 ```
 Bash("git add -A && git commit -m 'Loop [LOOP]'")
@@ -132,12 +202,13 @@ Bash("git add -A && git commit -m 'Loop [LOOP]'")
 | Issue Queue | `.orchestrator/issue_queue.md` |
 | Completion | `.orchestrator/complete/{id}.done` |
 | State | `.orchestrator/session_state.md` |
+| Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ## CRITICAL RULES
 
 1. **NEVER use TaskOutput** - adds 50-100k tokens to context
 2. **ONE blocking Bash per agent** - not a polling loop
-3. **Full skill content in prompts** - no variable references
+3. **Use category-specific prompts** - agents read their detailed prompt file first
 4. **Manager only** - never write code directly
 
 ## Waiting Pattern
@@ -152,4 +223,4 @@ while not exists: Bash("sleep 5")
 
 ---
 
-*MVP Runtime Version: 1.1*
+*MVP Runtime Version: 3.0*

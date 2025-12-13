@@ -1,8 +1,8 @@
 # /orchestrate
 
-> **Version**: MVP 2.2 - Background agents with inline prompts.
+> **Version**: MVP 3.0 - Category-specific agents with detailed prompt files.
 
-You are a PROJECT MANAGER. You spawn background agents with inline instructions and route by complexity.
+You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
 ## Usage
 
@@ -17,6 +17,23 @@ You are a PROJECT MANAGER. You spawn background agents with inline instructions 
 2. Check git → init if needed
 3. Create `.orchestrator/complete/` directory if missing
 4. Get absolute working directory with `pwd` (store for agent prompts)
+
+---
+
+## Prompt Files
+
+Agents read detailed instructions from prompt files:
+
+| Agent Type | Prompt File |
+|------------|-------------|
+| Decomposition | `prompts/decomposition_agent.md` |
+| Research | `prompts/research_agent.md` |
+| Frontend | `prompts/implementation/frontend_agent.md` |
+| Backend | `prompts/implementation/backend_agent.md` |
+| Fullstack | `prompts/implementation/fullstack_agent.md` |
+| DevOps | `prompts/implementation/devops_agent.md` |
+| Testing | `prompts/implementation/testing_agent.md` |
+| Docs | `prompts/implementation/docs_agent.md` |
 
 ---
 
@@ -40,32 +57,20 @@ Select model based on task complexity:
 Task(
   model: "sonnet",
   run_in_background: true,
-  prompt: "WORKING_DIR: [absolute path from pwd]
-
-  YOU ARE: Decomposition Agent
-
-  YOUR TASK:
-  1. Read PRD.md
-  2. Break it into 5-15 implementation tasks
-  3. Write .orchestrator/task_queue.md with this format:
-
-  ### TASK-001
-  | Field | Value |
-  |-------|-------|
-  | Status | pending |
-  | Category | [frontend|backend|fullstack|devops|testing|docs] |
-  | Complexity | [easy|normal|complex] |
-
-  **Objective:** [what to build]
-  **Acceptance Criteria:**
-  - [criterion 1]
-  - [criterion 2]
-  **Dependencies:** None
+  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
 
   ---
 
-  4. CRITICAL: Write completion marker:
-     Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+  ## Your Task
+
+  WORKING_DIR: [absolute path from pwd]
+  SOURCE: PRD.md
+  MODE: initial
+
+  Read PRD.md and create .orchestrator/task_queue.md with implementation tasks.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
 
   The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
 
@@ -86,8 +91,18 @@ Read `.orchestrator/task_queue.md` to get pending tasks.
 
 For each task with `Status | pending`:
 
-### 2a. Select Model by Complexity
+### 2a. Select Model and Prompt by Category
 
+| Category | Prompt File | Default Model |
+|----------|-------------|---------------|
+| frontend | `prompts/implementation/frontend_agent.md` | sonnet |
+| backend | `prompts/implementation/backend_agent.md` | sonnet |
+| fullstack | `prompts/implementation/fullstack_agent.md` | sonnet |
+| devops | `prompts/implementation/devops_agent.md` | sonnet |
+| testing | `prompts/implementation/testing_agent.md` | sonnet |
+| docs | `prompts/implementation/docs_agent.md` | haiku |
+
+**Override model based on Complexity:**
 ```
 Complexity → Model
 ─────────────────────────────
@@ -96,28 +111,34 @@ normal    → sonnet
 complex   → opus
 ```
 
-Include the task's Category in the prompt so the agent knows the domain.
-
-### 2b. Spawn Agent
+### 2b. Spawn Category-Specific Agent
 
 ```
 Task(
   model: [haiku|sonnet|opus based on Complexity],
   run_in_background: true,
-  prompt: "WORKING_DIR: [absolute path]
+  prompt: "Read('prompts/implementation/[category]_agent.md') and follow those instructions.
+
+  ---
+
+  ## Your Task
+
+  WORKING_DIR: [absolute path]
   TASK_ID: [TASK-XXX]
   CATEGORY: [from task]
+  COMPLEXITY: [from task]
 
   OBJECTIVE: [from task_queue.md]
 
   ACCEPTANCE CRITERIA:
   [from task_queue.md]
 
-  INSTRUCTIONS:
-  1. Implement the task following best practices for [category]
-  2. Verify your work compiles/lints without errors
-  3. CRITICAL: Write completion marker when done:
-     Write('[absolute path]/.orchestrator/complete/[TASK-XXX].done', 'done')
+  DEPENDENCIES: [from task_queue.md or 'None']
+
+  NOTES: [from task_queue.md or 'None']
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/[TASK-XXX].done', 'done')
 
   The orchestrator is BLOCKED waiting for this file. Create it when done.
 
@@ -170,33 +191,20 @@ Only spawn research if the issue queue is empty or all issues are completed:
 Task(
   model: "opus",
   run_in_background: true,
-  prompt: "WORKING_DIR: [absolute path]
-  LOOP: [N] of [total]
+  prompt: "Read('prompts/research_agent.md') and follow those instructions.
 
-  YOU ARE: Research Agent
-
-  YOUR TASK:
-  1. Analyze the codebase for improvements
-  2. Look for: bugs, security issues, performance, code quality, missing tests
-  3. Write 3-5 issues to .orchestrator/issue_queue.md with this format:
-
-  ### ISSUE-[YYYYMMDD]-[NNN]
-  | Field | Value |
-  |-------|-------|
-  | Status | pending |
-  | Category | [frontend|backend|testing|etc] |
-  | Type | [bug|security|performance|ux|testing|code_quality] |
-  | Priority | [critical|high|medium|low] |
-  | Complexity | [easy|normal|complex] |
-
-  **Summary:** [title]
-  **Details:** [description]
-  **Acceptance Criteria:**
-  - [criterion 1]
   ---
 
-  4. CRITICAL: Write completion marker:
-     Write('[absolute path]/.orchestrator/complete/research.done', 'done')
+  ## Your Task
+
+  WORKING_DIR: [absolute path]
+  LOOP: [N] of [total]
+  MODE: improvement_loop
+
+  Analyze the codebase for improvements and write issues to .orchestrator/issue_queue.md.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/research.done', 'done')
 
   START: Explore the codebase"
 )
@@ -242,7 +250,7 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 ## Critical Rules
 
 1. **NEVER read PRD.md yourself** - spawn a background agent with decomposition instructions
-2. **Include full instructions in prompt** - agents need explicit directions
+2. **Use category-specific prompts** - agents read their detailed prompt file first
 3. **ONE blocking Bash per agent** - not a polling loop
 4. **NEVER use TaskOutput** - adds 50-100k tokens to context
 
@@ -256,7 +264,8 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 | Issue Queue | `.orchestrator/issue_queue.md` |
 | Markers | `.orchestrator/complete/{id}.done` |
 | State | `.orchestrator/session_state.md` |
+| Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ---
 
-*MVP Version: 2.2*
+*MVP Version: 3.0*

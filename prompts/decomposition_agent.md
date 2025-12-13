@@ -98,6 +98,41 @@ Each task must be:
 3. **Independent** - Minimal dependencies on other tasks
 4. **Appropriately sized** - Not too large (break down) or too small (combine)
 
+### REQUIRED: Final Testing & Verification Task
+
+**CRITICAL**: You MUST always create a final task with Category `testing` that:
+- Depends on ALL other tasks (runs last)
+- Writes tests for the implemented features
+- Creates `.orchestrator/VERIFICATION.md` with user instructions
+
+This task is MANDATORY for every task queue. Example:
+
+```
+### TASK-999 (always the LAST task)
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | testing |
+| Complexity | normal |
+
+**Objective:** Write tests and create verification documentation
+
+**Acceptance Criteria:**
+- Unit/integration tests for critical paths
+- All tests pass
+- Creates .orchestrator/VERIFICATION.md with:
+  - How to install dependencies
+  - How to start the development server
+  - How to run the test suite
+  - Key pages/endpoints to verify manually
+  - Any required environment setup
+
+**Dependencies:** [ALL other TASK IDs]
+
+**Notes:** This task runs last and provides the user with verification instructions.
+```
+
 ### Task Sizing Guidelines
 
 **Too Large** (break down):
@@ -207,6 +242,7 @@ Before finishing, verify:
 - [ ] Each task has clear Objective
 - [ ] Each task has specific, testable Acceptance Criteria
 - [ ] Dependencies noted where applicable
+- [ ] **FINAL TASK is Category: testing with VERIFICATION.md requirement**
 - [ ] Wrote task_queue.md using Write tool
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 

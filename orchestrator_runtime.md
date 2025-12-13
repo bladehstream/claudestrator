@@ -1,6 +1,6 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 3.0 - Category-specific agents with detailed prompt files.
+> **Version**: MVP 3.1 - Category-specific agents with verification output.
 
 ## Key Principle: Read Prompt Files
 
@@ -131,6 +131,12 @@ For each pending task in `.orchestrator/task_queue.md`:
    Bash("git add -A && git commit -m 'Initial build complete'")
    ```
 
+7. **Display verification instructions:**
+   ```
+   Read(".orchestrator/VERIFICATION.md")
+   ```
+   Output the contents to the user with a clear header.
+
 ---
 
 ## Improvement Loops (`/orchestrate N`)
@@ -202,6 +208,7 @@ Bash("git add -A && git commit -m 'Loop [LOOP]'")
 | Issue Queue | `.orchestrator/issue_queue.md` |
 | Completion | `.orchestrator/complete/{id}.done` |
 | State | `.orchestrator/session_state.md` |
+| Verification | `.orchestrator/VERIFICATION.md` |
 | Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ## CRITICAL RULES
@@ -223,4 +230,4 @@ while not exists: Bash("sleep 5")
 
 ---
 
-*MVP Runtime Version: 3.0*
+*MVP Runtime Version: 3.1*

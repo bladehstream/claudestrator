@@ -425,7 +425,7 @@ test('login with valid credentials', async ({ page }) => {
 
 ---
 
-## Phase 7: Verify
+## Phase 7: Verify Tests
 
 ### 7.1 Run Tests
 
@@ -459,9 +459,109 @@ Verify coverage meets targets:
 
 ---
 
-## Phase 8: Complete
+## Phase 8: Write Verification Documentation
+
+**CRITICAL**: Create `.orchestrator/VERIFICATION.md` with instructions for the user to verify the build.
+
+### 8.1 Analyze the Project
+
+Determine the tech stack by reading:
+```
+Read("package.json")           # Node.js projects
+Read("pyproject.toml")         # Python projects
+Read("Cargo.toml")             # Rust projects
+Read("go.mod")                 # Go projects
+```
+
+### 8.2 Write VERIFICATION.md
+
+Create `.orchestrator/VERIFICATION.md` with this structure:
+
+```markdown
+# Verification Guide
+
+## Prerequisites
+
+- [List required tools: Node.js 18+, Python 3.11+, etc.]
+- [List required services: PostgreSQL, Redis, etc.]
+
+## Environment Setup
+
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Install dependencies
+[npm install / pip install -r requirements.txt / etc.]
+
+# Set up database (if applicable)
+[migration commands]
+```
+
+## Start Development Server
+
+```bash
+[npm run dev / python manage.py runserver / cargo run / etc.]
+```
+
+The application will be available at: [http://localhost:PORT]
+
+## Run Tests
+
+```bash
+# Run all tests
+[npm test / pytest / cargo test / etc.]
+
+# Run with coverage
+[npm test -- --coverage / pytest --cov / etc.]
+```
+
+## Manual Verification Checklist
+
+- [ ] [Key feature 1]: Visit [URL/action] and verify [expected behavior]
+- [ ] [Key feature 2]: Visit [URL/action] and verify [expected behavior]
+- [ ] [Key feature 3]: Visit [URL/action] and verify [expected behavior]
+
+## API Endpoints (if applicable)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/... | ... |
+| POST | /api/... | ... |
+
+## Known Issues / Notes
+
+- [Any caveats or known limitations]
+```
+
+### 8.3 Customize for Stack
+
+| Stack | Dev Server Command | Test Command |
+|-------|-------------------|--------------|
+| Node.js/npm | `npm run dev` | `npm test` |
+| Node.js/pnpm | `pnpm dev` | `pnpm test` |
+| Python/Django | `python manage.py runserver` | `pytest` |
+| Python/FastAPI | `uvicorn main:app --reload` | `pytest` |
+| Rust | `cargo run` | `cargo test` |
+| Go | `go run .` | `go test ./...` |
+
+### 8.4 Write the File
+
+```
+Write(".orchestrator/VERIFICATION.md", <content>)
+```
+
+---
+
+## Phase 9: Complete
 
 **CRITICAL - DO NOT SKIP**
+
+Before completing, verify:
+- [ ] Tests are written and passing
+- [ ] `.orchestrator/VERIFICATION.md` exists with complete instructions
+
+Then write the completion marker:
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")
@@ -481,6 +581,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Over-mocking | Tests don't catch real bugs | Mock at boundaries only |
 | Testing happy path only | Errors not caught | Test error cases |
 | Slow tests | Developer frustration | Use unit tests for speed |
+| Forgetting VERIFICATION.md | User can't verify build | Always write verification docs |
 
 ---
 

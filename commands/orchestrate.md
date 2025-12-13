@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.0 - Category-specific agents with detailed prompt files.
+> **Version**: MVP 3.1 - Category-specific agents with verification output.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -173,6 +173,33 @@ Bash("git add -A && git commit -m 'Initial build complete'")
 
 ---
 
+## Step 4: Display Verification Instructions
+
+**After all tasks complete**, read and display the verification guide:
+
+```
+Read(".orchestrator/VERIFICATION.md")
+```
+
+Output to user:
+```
+═══════════════════════════════════════════════════════════════════════════════
+BUILD COMPLETE - VERIFICATION INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+[Contents of VERIFICATION.md]
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+If VERIFICATION.md doesn't exist, warn the user:
+```
+⚠️  Warning: VERIFICATION.md not found. The testing task may have failed.
+    Check .orchestrator/task_queue.md for the testing task status.
+```
+
+---
+
 ## Improvement Loops (`/orchestrate N`)
 
 If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the initial build:
@@ -264,8 +291,9 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 | Issue Queue | `.orchestrator/issue_queue.md` |
 | Markers | `.orchestrator/complete/{id}.done` |
 | State | `.orchestrator/session_state.md` |
+| Verification | `.orchestrator/VERIFICATION.md` |
 | Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ---
 
-*MVP Version: 3.0*
+*MVP Version: 3.1*

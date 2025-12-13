@@ -30,8 +30,9 @@ Pre-configured agents in `.claude/agents/`:
 | `frontend-agent` | frontend | frontend_design, ui-generator | UI, React, styling |
 | `backend-agent` | backend | api_development, database_designer | API, database, server |
 | `qa-agent` | testing | qa_agent, webapp_testing | Tests, validation |
+| `research-agent` | - | web_research_agent, qa_agent | Finding improvements |
 | `general-purpose` | fullstack, devops, docs | (built-in) | Everything else |
-| `Explore` | research | (built-in, read-only) | Codebase analysis |
+| `Explore` | - | (built-in, read-only, Haiku) | Quick codebase search |
 
 ---
 
@@ -128,23 +129,47 @@ If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the i
 
 ### For each loop 1..N:
 
-**1. Spawn Research Agent** (uses built-in Explore agent)
+**1. Check for pending issues**
+
+Read `.orchestrator/issue_queue.md` and check for `Status | pending` issues.
+
+**2. If NO pending issues → Spawn Research Agent**
+
+Only spawn research if the issue queue is empty or all issues are completed:
+
 ```
 Task(
-  subagent_type: "Explore",
-  prompt: "Analyze the codebase for potential improvements.
-  Write findings to .orchestrator/issue_queue.md with Category field."
+  subagent_type: "research-agent",
+  run_in_background: true,
+  prompt: "WORKING_DIR: [absolute path]
+  LOOP: [N] of [total]"
 )
 ```
 
-**2. Convert issues to tasks** - Add to task_queue.md with same format
+Wait for completion:
+```
+Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done && rm .orchestrator/complete/research.done && echo 'Research complete'", timeout: 900000)
+```
 
-**3. Execute tasks** - Same category-based routing as Step 2
+**3. Convert issues to tasks**
 
-**4. Commit:**
+Read `.orchestrator/issue_queue.md`, for each `Status | pending` issue:
+- Create a task entry in task_queue.md with same format
+- Copy Category from issue to task
+- Set issue status to `Status | in_progress`
+
+**4. Execute tasks** - Same category-based routing as Step 2
+
+**5. Mark issues complete**
+
+After task completes, update corresponding issue to `Status | completed`
+
+**6. Commit:**
 ```
 Bash("git add -A && git commit -m 'Improvement loop [N]'")
 ```
+
+**7. Repeat** for next loop
 
 ---
 

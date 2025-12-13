@@ -20,19 +20,24 @@ You are a PROJECT MANAGER. You spawn specialized agents and route tasks by categ
 
 ---
 
-## Agent Catalog
+## Agent Types
 
-Pre-configured agents in `.claude/agents/`:
+**For Task tool automation, always use `subagent_type: "general-purpose"`** with instructions in the prompt.
 
-| Agent | Category | Skills | Use For |
-|-------|----------|--------|---------|
-| `decomposition-agent` | - | decomposition_agent | Breaking PRD into tasks |
-| `frontend-agent` | frontend | frontend_design, ui-generator | UI, React, styling |
-| `backend-agent` | backend | api_development, database_designer | API, database, server |
-| `qa-agent` | testing | qa_agent, webapp_testing | Tests, validation |
-| `research-agent` | - | web_research_agent, qa_agent | Finding improvements |
-| `general-purpose` | fullstack, devops, docs | (built-in) | Everything else |
-| `Explore` | - | (built-in, read-only, Haiku) | Quick codebase search |
+Custom agents in `.claude/agents/` are for interactive use (mentioning by name), not Task tool.
+
+| subagent_type | Model | Use For |
+|---------------|-------|---------|
+| `general-purpose` | sonnet | All implementation tasks (include instructions in prompt) |
+| `Explore` | haiku | Quick read-only codebase search |
+
+**Category → Model mapping:**
+
+| Category | Complexity | Model |
+|----------|------------|-------|
+| Any | easy | haiku |
+| Any | normal | sonnet |
+| Any | complex | opus |
 
 ---
 
@@ -42,9 +47,39 @@ Pre-configured agents in `.claude/agents/`:
 
 ```
 Task(
-  subagent_type: "decomposition-agent",
+  subagent_type: "general-purpose",
+  model: "sonnet",
   run_in_background: true,
-  prompt: "WORKING_DIR: [absolute path from pwd]"
+  prompt: "WORKING_DIR: [absolute path from pwd]
+
+  YOU ARE: Decomposition Agent
+
+  YOUR TASK:
+  1. Read PRD.md
+  2. Break it into 5-15 implementation tasks
+  3. Write .orchestrator/task_queue.md with this format:
+
+  ### TASK-001
+  | Field | Value |
+  |-------|-------|
+  | Status | pending |
+  | Category | [frontend|backend|fullstack|devops|testing|docs] |
+  | Complexity | [easy|normal|complex] |
+
+  **Objective:** [what to build]
+  **Acceptance Criteria:**
+  - [criterion 1]
+  - [criterion 2]
+  **Dependencies:** None
+
+  ---
+
+  4. CRITICAL: Write completion marker:
+     Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+  The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
+
+  START: Read('PRD.md')"
 )
 ```
 
@@ -61,40 +96,45 @@ Read `.orchestrator/task_queue.md` to get pending tasks.
 
 For each task with `Status | pending`:
 
-### 2a. Select Agent by Category
+### 2a. Select Model by Complexity
 
 ```
-Category → Agent
+Complexity → Model
 ─────────────────────────────
-frontend  → frontend-agent
-backend   → backend-agent
-testing   → qa-agent
-fullstack → general-purpose
-devops    → general-purpose
-docs      → general-purpose
+easy      → haiku
+normal    → sonnet
+complex   → opus
 ```
+
+Include the task's Category in the prompt so the agent knows the domain.
 
 ### 2b. Spawn Agent
 
 ```
 Task(
-  subagent_type: "[agent from category mapping]",
+  subagent_type: "general-purpose",
   model: [haiku|sonnet|opus based on Complexity],
   run_in_background: true,
   prompt: "WORKING_DIR: [absolute path]
   TASK_ID: [TASK-XXX]
+  CATEGORY: [from task]
 
   OBJECTIVE: [from task_queue.md]
 
   ACCEPTANCE CRITERIA:
-  [from task_queue.md]"
+  [from task_queue.md]
+
+  INSTRUCTIONS:
+  1. Implement the task following best practices for [category]
+  2. Verify your work compiles/lints without errors
+  3. CRITICAL: Write completion marker when done:
+     Write('[absolute path]/.orchestrator/complete/[TASK-XXX].done', 'done')
+
+  The orchestrator is BLOCKED waiting for this file. Create it when done.
+
+  START NOW."
 )
 ```
-
-The agent profile already includes:
-- Skill loading instructions
-- Completion marker requirements
-- Best practices for its domain
 
 ### 2c. Wait for Completion
 
@@ -139,10 +179,38 @@ Only spawn research if the issue queue is empty or all issues are completed:
 
 ```
 Task(
-  subagent_type: "research-agent",
+  subagent_type: "general-purpose",
+  model: "sonnet",
   run_in_background: true,
   prompt: "WORKING_DIR: [absolute path]
-  LOOP: [N] of [total]"
+  LOOP: [N] of [total]
+
+  YOU ARE: Research Agent
+
+  YOUR TASK:
+  1. Analyze the codebase for improvements
+  2. Look for: bugs, security issues, performance, code quality, missing tests
+  3. Write 3-5 issues to .orchestrator/issue_queue.md with this format:
+
+  ### ISSUE-[YYYYMMDD]-[NNN]
+  | Field | Value |
+  |-------|-------|
+  | Status | pending |
+  | Category | [frontend|backend|testing|etc] |
+  | Type | [bug|security|performance|ux|testing|code_quality] |
+  | Priority | [critical|high|medium|low] |
+  | Complexity | [easy|normal|complex] |
+
+  **Summary:** [title]
+  **Details:** [description]
+  **Acceptance Criteria:**
+  - [criterion 1]
+  ---
+
+  4. CRITICAL: Write completion marker:
+     Write('[absolute path]/.orchestrator/complete/research.done', 'done')
+
+  START: Explore the codebase"
 )
 ```
 

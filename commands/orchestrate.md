@@ -15,24 +15,48 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 
 ### Argument Parsing
 
-**CRITICAL**: Parse arguments strictly:
+**CRITICAL**: Parse arguments in this order:
 
-1. **Look at ONLY the first token**
-2. **If first token is a number** → That's LOOP_COUNT, everything else is RESEARCH_FOCUS
-3. **If first token is NOT a number** → LOOP_COUNT = 0, no focus
+```
+/orchestrate <loops> [<count> <category>]...
+```
 
-| Command | Loop Count | Research Focus |
-|---------|------------|----------------|
-| `/orchestrate` | 0 (initial only) | None |
-| `/orchestrate 3` | 3 | None (general improvements) |
-| `/orchestrate 2 modern UI` | 2 | "modern UI" |
-| `/orchestrate 2 security, modern UI improvements` | 2 | "security, modern UI improvements" |
+1. **First token** → LOOP_COUNT (number of improvement loops)
+2. **Remaining tokens** → Parse as `<count> <category>` pairs (quotas per loop)
+3. **If a token is NOT a number** → Treat as category with no quota (general focus)
 
-**WRONG interpretations to avoid:**
-- `/orchestrate 2 security, 2 modern UI` → Do NOT parse as "2 security loops + 2 UI loops"
-- This is 2 loops with focus "security, 2 modern UI" (the second "2" is part of the text)
+### Parsing Rules
 
-The focus is a single text string passed to ONE Research Agent per loop.
+| Token Pattern | Interpretation |
+|---------------|----------------|
+| `3` (first) | 3 loops |
+| `2 security` | 2 security items per loop |
+| `3 UI` | 3 UI items per loop |
+| `performance` (no number before) | Focus on performance, no quota |
+
+### Examples
+
+| Command | Loops | Per-Loop Quotas | Total Items |
+|---------|-------|-----------------|-------------|
+| `/orchestrate` | 0 | Initial build only | - |
+| `/orchestrate 3` | 3 | General improvements | Variable |
+| `/orchestrate 3 security` | 3 | Security focus (no quota) | Variable |
+| `/orchestrate 3 2 security` | 3 | 2 security | 6 security |
+| `/orchestrate 3 2 security 3 UI` | 3 | 2 security + 3 UI | 6 security + 9 UI |
+| `/orchestrate 2 1 security 2 performance 1 docs` | 2 | 1 sec + 2 perf + 1 docs | 2 + 4 + 2 = 8 |
+
+### Parsed Output
+
+Store as structured data:
+```
+LOOP_COUNT: 3
+QUOTAS: [
+  { category: "security", count: 2 },
+  { category: "UI", count: 3 }
+]
+```
+
+Pass QUOTAS to Research Agent so it knows exactly how many issues to find per category.
 
 ---
 
@@ -234,15 +258,28 @@ Task(
   WORKING_DIR: [absolute path]
   LOOP: [N] of [total]
   MODE: improvement_loop
-  FOCUS: [research focus from command args, or 'general improvements' if none]
 
-  Analyze the codebase for improvements and write issues to .orchestrator/issue_queue.md.
+  ## Quotas (REQUIRED items to find this loop)
 
-  If FOCUS is specified, prioritize finding issues related to that area.
-  Examples:
-  - FOCUS: 'modern UI' → look for UI/UX improvements, outdated patterns, accessibility
-  - FOCUS: 'security' → look for vulnerabilities, auth issues, input validation
-  - FOCUS: 'performance' → look for slow queries, inefficient code, caching opportunities
+  [If QUOTAS were parsed from command:]
+  You MUST find exactly these items:
+  - [count] [category] issues (e.g., "2 security issues")
+  - [count] [category] issues
+  ...
+
+  [If no QUOTAS (general focus):]
+  Find improvements across any category. No specific quota.
+
+  ## Example Quota Format
+
+  QUOTAS:
+  - 2 security
+  - 3 UI
+
+  This means: Find exactly 2 security issues AND 3 UI improvement issues this loop.
+
+  Analyze the codebase and write issues to .orchestrator/issue_queue.md.
+  Each issue must be tagged with its category to match the quota.
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/research.done', 'done')

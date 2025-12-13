@@ -29,24 +29,30 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 
 ## Argument Parsing
 
-**CRITICAL**: Parse ONLY the first token as a number:
+**CRITICAL**: Parse as `<loops> [<count> <category>]...`
 
-1. **First token is a number?** → That's LOOP_COUNT
-2. **Everything after** → RESEARCH_FOCUS (single text string)
-3. **No number?** → LOOP_COUNT = 0, no focus
+1. **First token** → LOOP_COUNT (number of loops)
+2. **Remaining tokens** → Parse as `<count> <category>` pairs (quotas)
+3. **Token without preceding number** → Category with no quota
 
-| Command | Loops | Focus |
-|---------|-------|-------|
-| `/orchestrate` | 0 | None |
-| `/orchestrate 3` | 3 | general |
-| `/orchestrate 2 modern UI` | 2 | "modern UI" |
-| `/orchestrate 2 security, UI improvements` | 2 | "security, UI improvements" |
-
-**WRONG:** `/orchestrate 2 security, 2 UI` is NOT "2+2 loops" - it's 2 loops with focus "security, 2 UI"
+| Command | Loops | Quotas (per loop) |
+|---------|-------|-------------------|
+| `/orchestrate` | 0 | Initial only |
+| `/orchestrate 3` | 3 | General (no quota) |
+| `/orchestrate 3 security` | 3 | Security focus (no quota) |
+| `/orchestrate 3 2 security` | 3 | 2 security per loop |
+| `/orchestrate 3 2 security 3 UI` | 3 | 2 security + 3 UI per loop |
 
 Store parsed values:
-- `LOOP_COUNT` = number of improvement loops (from first token only)
-- `RESEARCH_FOCUS` = everything after the number (single string)
+```
+LOOP_COUNT: 3
+QUOTAS: [
+  { category: "security", count: 2 },
+  { category: "UI", count: 3 }
+]
+```
+
+Pass QUOTAS to Research Agent each loop.
 
 ---
 
@@ -194,11 +200,19 @@ Task(
   WORKING_DIR: [absolute path]
   LOOP: [N] of [total]
   MODE: improvement_loop
-  FOCUS: [RESEARCH_FOCUS from parsed args, or 'general improvements']
 
-  Analyze the codebase for improvements and write issues to .orchestrator/issue_queue.md.
+  ## Quotas (REQUIRED items to find this loop)
 
-  If FOCUS is specified, prioritize issues related to that area.
+  [Include QUOTAS from parsed args, or 'general improvements' if none]
+
+  Example with quotas:
+  QUOTAS:
+  - 2 security
+  - 3 UI
+
+  You MUST find exactly 2 security issues AND 3 UI issues this loop.
+
+  Analyze the codebase and write issues to .orchestrator/issue_queue.md.
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/research.done', 'done')
@@ -392,9 +406,10 @@ Historical Data: .orchestrator/history.csv
 
 | ❌ WRONG | ✅ CORRECT |
 |----------|-----------|
-| Spawn "Security research agent" | Spawn Research Agent with `FOCUS: security` |
-| Spawn "UI improvement agent" | Spawn Research Agent with `FOCUS: UI improvements` |
-| Parse "2 security, 2 UI" as 4 loops | Parse as 2 loops with focus "security, 2 UI" |
+| Spawn "Security research agent" | Spawn Research Agent with quotas |
+| Spawn "UI improvement agent" | Spawn Research Agent with quotas |
+| `/orchestrate 3 2 security 3 UI` = 2 sec + 3 UI total | = 6 sec + 9 UI total (per loop × loops) |
+| Do 2 security in loop 1, 3 UI in loop 2 | Do 2 security + 3 UI in EACH loop |
 | Create agent types not in prompt files | Only use agents listed in Prompt Files table |
 | Improvise steps not in this document | Follow documented steps exactly |
 

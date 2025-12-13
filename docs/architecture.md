@@ -1,42 +1,256 @@
-# Architecture Guide (MVP)
+# Architecture Guide (MVP 2.0)
 
-This document describes the Claudestrator MVP architecture focused on minimal orchestrator context.
-
----
-
-## Core Principle
-
-**The orchestrator only reads `task_queue.md`.** All heavy documents (PRD, issue_queue, codebase) are processed by specialized agents in their own isolated contexts.
+This document describes the Claudestrator MVP 2.0 architecture with pre-configured agent profiles and category-based routing.
 
 ---
 
-## Agent Pipeline
+## Core Principles
 
-### Initial Run (`/orchestrate`)
+1. **Orchestrator stays minimal** - only reads `task_queue.md`, never PRD or codebase
+2. **Pre-configured agents** - agent profiles in `.claude/agents/` with built-in skills
+3. **Category-based routing** - tasks routed to specialized agents by category
+4. **File-based coordination** - agents write `.done` markers, orchestrator waits via blocking Bash
 
-```
-┌──────────┐      ┌─────────────┐      ┌────────────┐      ┌──────────────┐
-│  PRD.md  │─────▶│ DECOMPOSE   │─────▶│ task_queue │─────▶│ IMPLEMENT    │
-│  (user)  │      │   AGENT     │      │    .md     │      │   AGENTS     │
-└──────────┘      └─────────────┘      └────────────┘      └──────────────┘
-   5-10k              isolated            ~500 tokens         per task
-   tokens             context
-```
+---
 
-### Improvement Loops (`/orchestrate N`)
+## Complete Workflow Diagram
 
 ```
-┌──────────┐      ┌─────────────┐      ┌─────────────┐      ┌────────────┐      ┌──────────────┐
-│ Codebase │─────▶│  RESEARCH   │─────▶│ issue_queue │─────▶│ DECOMPOSE  │─────▶│ task_queue   │
-│          │      │   AGENT     │      │     .md     │      │   AGENT    │      │    .md       │
-└──────────┘      └─────────────┘      └─────────────┘      └────────────┘      └──────┬───────┘
-  large              isolated              grows              isolated             ~500 │
-                     context                                  context              tokens│
-                                                                                        ▼
-                                                                              ┌──────────────┐
-                                                                              │ IMPLEMENT    │
-                                                                              │   AGENTS     │
-                                                                              └──────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         /orchestrate WORKFLOW                                │
+│                              (MVP 2.0)                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              ┌─────────────┐
+                              │   START     │
+                              │ /orchestrate│
+                              └──────┬──────┘
+                                     │
+                    ┌────────────────▼────────────────┐
+                    │      STARTUP CHECKLIST          │
+                    │  • PRD.md exists?               │
+                    │  • git init if needed           │
+                    │  • mkdir .orchestrator/complete │
+                    │  • pwd → store WORKING_DIR      │
+                    └────────────────┬────────────────┘
+                                     │
+═══════════════════════════════════════════════════════════════════════════════
+                              INITIAL BUILD
+═══════════════════════════════════════════════════════════════════════════════
+                                     │
+                    ┌────────────────▼────────────────┐
+                    │     STEP 1: DECOMPOSITION       │
+                    │                                 │
+                    │  Task(decomposition-agent)      │
+                    │         │                       │
+                    │         ▼                       │
+                    │  ┌─────────────────────┐        │
+                    │  │ decomposition-agent │        │
+                    │  │  • Read PRD.md      │        │
+                    │  │  • Create tasks     │        │
+                    │  │  • Write task_queue │        │
+                    │  │  • Write .done      │        │
+                    │  └─────────────────────┘        │
+                    │         │                       │
+                    │  while [ ! -f decomposition.done ]
+                    │         │                       │
+                    └────────────────┬────────────────┘
+                                     │
+                    ┌────────────────▼────────────────┐
+                    │     STEP 2: EXECUTE TASKS       │
+                    │                                 │
+                    │  Read task_queue.md             │
+                    │         │                       │
+                    │         ▼                       │
+                    │  ┌─────────────────────────┐    │
+                    │  │ For each pending task:  │    │
+                    │  │                         │    │
+                    │  │  Category → Agent       │    │
+                    │  │  ─────────────────────  │    │
+                    │  │  frontend → frontend-agent   │
+                    │  │  backend  → backend-agent    │
+                    │  │  testing  → qa-agent         │
+                    │  │  *        → general-purpose  │
+                    │  │                         │    │
+                    │  │  Complexity → Model     │    │
+                    │  │  ─────────────────────  │    │
+                    │  │  easy    → haiku        │    │
+                    │  │  normal  → sonnet       │    │
+                    │  │  complex → opus         │    │
+                    │  └───────────┬─────────────┘    │
+                    │              │                  │
+                    │              ▼                  │
+                    │  ┌─────────────────────────┐    │
+                    │  │   Task(selected-agent)  │    │
+                    │  │   while [ ! TASK-XXX.done ]  │
+                    │  │   Update status=completed    │
+                    │  │   Next task...          │    │
+                    │  └─────────────────────────┘    │
+                    └────────────────┬────────────────┘
+                                     │
+                    ┌────────────────▼────────────────┐
+                    │     STEP 3: FINALIZE            │
+                    │                                 │
+                    │  session_state.md = complete    │
+                    │  git commit "Initial build"     │
+                    └────────────────┬────────────────┘
+                                     │
+                         ┌───────────▼───────────┐
+                         │  N improvement loops? │
+                         │      /orchestrate N   │
+                         └───────────┬───────────┘
+                                     │
+                              NO ────┴──── YES
+                              │             │
+                              ▼             ▼
+                           ┌────┐    ┌──────────────┐
+                           │DONE│    │ LOOP 1..N    │
+                           └────┘    └──────┬───────┘
+                                            │
+═══════════════════════════════════════════════════════════════════════════════
+                           IMPROVEMENT LOOPS
+═══════════════════════════════════════════════════════════════════════════════
+                                            │
+                    ┌───────────────────────▼─────────────────────────┐
+                    │              LOOP N START                        │
+                    └───────────────────────┬─────────────────────────┘
+                                            │
+                    ┌───────────────────────▼─────────────────────────┐
+                    │  1. Check issue_queue.md for pending issues     │
+                    └───────────────────────┬─────────────────────────┘
+                                            │
+                         ┌──────────────────┴──────────────────┐
+                         │                                     │
+                   PENDING ISSUES                        NO PENDING
+                      EXIST                                ISSUES
+                         │                                     │
+                         │                    ┌────────────────▼────────────────┐
+                         │                    │  2. SPAWN RESEARCH AGENT        │
+                         │                    │                                 │
+                         │                    │  Task(research-agent)           │
+                         │                    │         │                       │
+                         │                    │         ▼                       │
+                         │                    │  ┌─────────────────────┐        │
+                         │                    │  │   research-agent    │        │
+                         │                    │  │  • Analyze codebase │        │
+                         │                    │  │  • Find improvements│        │
+                         │                    │  │  • Write 3-5 issues │        │
+                         │                    │  │  • Write .done      │        │
+                         │                    │  └─────────────────────┘        │
+                         │                    │         │                       │
+                         │                    │  while [ ! research.done ]      │
+                         │                    │         │                       │
+                         │                    └────────────────┬────────────────┘
+                         │                                     │
+                         └──────────────────┬──────────────────┘
+                                            │
+                    ┌───────────────────────▼─────────────────────────┐
+                    │  3. CONVERT ISSUES → TASKS                       │
+                    │                                                  │
+                    │  For each pending issue in issue_queue.md:       │
+                    │    • Create task in task_queue.md                │
+                    │    • Copy Category from issue                    │
+                    │    • Set issue Status = in_progress              │
+                    └───────────────────────┬─────────────────────────┘
+                                            │
+                    ┌───────────────────────▼─────────────────────────┐
+                    │  4. EXECUTE TASKS (same as Step 2)               │
+                    │                                                  │
+                    │  Route by Category → Agent                       │
+                    │  Select Model by Complexity                      │
+                    └───────────────────────┬─────────────────────────┘
+                                            │
+                    ┌───────────────────────▼─────────────────────────┐
+                    │  5. MARK ISSUES COMPLETE                         │
+                    │                                                  │
+                    │  Update issue Status = completed                 │
+                    └───────────────────────┬─────────────────────────┘
+                                            │
+                    ┌───────────────────────▼─────────────────────────┐
+                    │  6. COMMIT                                       │
+                    │                                                  │
+                    │  git commit "Improvement loop N"                 │
+                    └───────────────────────┬─────────────────────────┘
+                                            │
+                         ┌──────────────────┴──────────────────┐
+                         │                                     │
+                    MORE LOOPS?                           LAST LOOP
+                         │                                     │
+                         ▼                                     ▼
+                    ┌─────────┐                           ┌─────────┐
+                    │ LOOP N+1│                           │  DONE   │
+                    └────┬────┘                           └─────────┘
+                         │
+                         └────────────────► (back to LOOP START)
+```
+
+---
+
+## Agent Catalog
+
+Pre-configured agents in `.claude/agents/`:
+
+| Agent | Model | Skills | Use For |
+|-------|-------|--------|---------|
+| `decomposition-agent` | sonnet | decomposition_agent | Breaking PRD into tasks |
+| `frontend-agent` | sonnet | frontend_design, ui-generator | UI, React, styling |
+| `backend-agent` | sonnet | api_development, database_designer, backend_security | API, database, server |
+| `qa-agent` | sonnet | qa_agent, webapp_testing, playwright_qa_agent | Tests, validation |
+| `research-agent` | sonnet | web_research_agent, qa_agent, security_reviewer | Finding improvements |
+| `general-purpose` | varies | (built-in) | Everything else |
+| `Explore` | haiku | (built-in, read-only) | Quick codebase search |
+
+---
+
+## Agent Routing
+
+```
+                    ┌─────────────────────────────────┐
+                    │         ORCHESTRATOR            │
+                    │   (reads task_queue.md)         │
+                    └────────────────┬────────────────┘
+                                     │
+                         Category field determines route
+                                     │
+        ┌────────────┬───────────────┼───────────────┬────────────┐
+        │            │               │               │            │
+        ▼            ▼               ▼               ▼            ▼
+   ┌─────────┐ ┌─────────┐    ┌─────────┐    ┌─────────┐   ┌─────────┐
+   │frontend │ │backend  │    │ testing │    │fullstack│   │  docs   │
+   │ -agent  │ │ -agent  │    │qa-agent │    │general- │   │general- │
+   │         │ │         │    │         │    │purpose  │   │purpose  │
+   └─────────┘ └─────────┘    └─────────┘    └─────────┘   └─────────┘
+        │            │               │               │            │
+        └────────────┴───────────────┴───────────────┴────────────┘
+                                     │
+                              All agents write
+                         .orchestrator/complete/TASK-XXX.done
+```
+
+---
+
+## File Structure
+
+```
+project/
+├── PRD.md                          # Input: Product requirements
+├── .claude/
+│   └── agents/                     # Pre-configured agent profiles
+│       ├── decomposition-agent.md
+│       ├── frontend-agent.md
+│       ├── backend-agent.md
+│       ├── qa-agent.md
+│       └── research-agent.md
+└── .orchestrator/                  # Runtime data
+    ├── task_queue.md               # Tasks with Category, Complexity
+    ├── issue_queue.md              # Issues from research/user
+    ├── session_state.md            # State tracking
+    └── complete/                   # Completion markers
+        ├── decomposition.done
+        ├── TASK-001.done
+        ├── TASK-002.done
+        ├── research.done
+        └── ...
 ```
 
 ---
@@ -45,9 +259,9 @@ This document describes the Claudestrator MVP architecture focused on minimal or
 
 | File | Written By | Read By | Size |
 |------|------------|---------|------|
-| `PRD.md` | User / PRDGen | Decomposition Agent ONLY | 5-10k tokens |
-| `.orchestrator/issue_queue.md` | Research Agent | Decomposition Agent ONLY | Variable |
-| `.orchestrator/task_queue.md` | Decomposition Agent | **Orchestrator** | ~500 tokens |
+| `PRD.md` | User / PRDGen | decomposition-agent ONLY | 5-10k tokens |
+| `.orchestrator/issue_queue.md` | research-agent, user | Orchestrator | Variable |
+| `.orchestrator/task_queue.md` | decomposition-agent | **Orchestrator** | ~500 tokens |
 | `.orchestrator/session_state.md` | Orchestrator | Orchestrator | ~100 tokens |
 | `.orchestrator/complete/*.done` | All agents | Orchestrator (via Bash) | ~10 tokens |
 
@@ -62,18 +276,25 @@ This document describes the Claudestrator MVP architecture focused on minimal or
 │   ─────────────────────        ────────────────────────                 │
 │                                                                         │
 │   ┌───────────────────┐        ┌───────────────────┐                    │
-│   │ • task_queue.md   │        │ Research Agent    │                    │
-│   │   (~500 tokens)   │        │ • Full codebase   │                    │
+│   │ • task_queue.md   │        │ decomposition     │                    │
+│   │   (~500 tokens)   │        │ • PRD (5-10k)     │                    │
+│   │                   │        │ • skills loaded   │                    │
+│   │ • session_state   │        └───────────────────┘                    │
+│   │   (~100 tokens)   │                                                 │
+│   │                   │        ┌───────────────────┐                    │
+│   │ • Wait results    │        │ research-agent    │                    │
+│   │   (~100/agent)    │        │ • Full codebase   │                    │
 │   │                   │        │ • Web access      │                    │
-│   │ • session_state   │        │ • 50k+ tokens OK  │                    │
-│   │   (~100 tokens)   │        └───────────────────┘                    │
-│   │                   │                                                 │
-│   │ • Wait results    │        ┌───────────────────┐                    │
-│   │   (~100/agent)    │        │ Decomposition     │                    │
-│   │                   │        │ • PRD (5-10k)     │                    │
-│   │ TOTAL: ~1000      │        │ • issue_queue     │                    │
-│   │ tokens/loop       │        │ • 10k+ tokens OK  │                    │
-│   └───────────────────┘        └───────────────────┘                    │
+│   │ TOTAL: ~1000      │        │ • 50k+ tokens OK  │                    │
+│   │ tokens/loop       │        └───────────────────┘                    │
+│   └───────────────────┘                                                 │
+│                                ┌───────────────────┐                    │
+│                                │ frontend-agent    │                    │
+│                                │ backend-agent     │                    │
+│                                │ qa-agent          │                    │
+│                                │ • Task context    │                    │
+│                                │ • Skills loaded   │                    │
+│                                └───────────────────┘                    │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -99,7 +320,7 @@ WHILE Glob(marker).length == 0:
 
 ---
 
-## Context Budget (MVP)
+## Context Budget (MVP 2.0)
 
 | Per Loop | Tokens |
 |----------|--------|
@@ -111,47 +332,6 @@ WHILE Glob(marker).length == 0:
 
 **10 loops × 1,250 = 12,500 tokens total**
 
-Compare to previous architecture with journalling/knowledge graph: 175,000+ tokens
-
----
-
-## Prohibited Patterns
-
-```python
-# ❌ NEVER - adds 50-100k tokens per agent
-AgentOutputTool(agent_id, block=true)
-
-# ❌ NEVER - polling loop fills context
-WHILE Glob(marker).length == 0:
-    Bash("sleep 5")
-
-# ❌ NEVER - orchestrator should not read these
-Read("PRD.md")           # Decomposition Agent reads this
-Read("issue_queue.md")   # Decomposition Agent reads this
-Read("knowledge_graph.json")  # Not used in MVP
-
-# ❌ NEVER - outputs fill context
-Bash("ls .orchestrator/complete/")
-Bash("cat .orchestrator/task_queue.md")
-```
-
----
-
-## Future: Memory Agent (v2)
-
-After MVP is stable, add a Memory Agent that runs between loops:
-
-```
-End of Loop ──▶ MEMORY AGENT ──▶ loop_summary.md ──▶ Next Loop
-                     │
-                     ├── Read git diff
-                     ├── Extract patterns/gotchas
-                     ├── Update knowledge_graph.json
-                     └── Write 500-token summary
-```
-
-Orchestrator reads ONLY the summary, keeping context minimal while enabling learning.
-
 ---
 
 ## Sequence Diagram
@@ -161,15 +341,15 @@ Orchestrator reads ONLY the summary, keeping context minimal while enabling lear
        │                    │                    │                    │
        │  /orchestrate      │                    │                    │
        │                    │                    │                    │
-       │  Spawn ───────────▶│                    │                    │
+       │  Task(decomp...)  ─▶│                    │                    │
        │                    │ Read PRD.md        │                    │
        │  Wait (bash)       │ Write task_queue   │                    │
        │◀───────────────────│ Write .done        │                    │
        │                    │                    │                    │
        │  Read task_queue   │                    │                    │
+       │  Route by Category │                    │                    │
        │                    │                    │                    │
-       │  FOR each task:    │                    │                    │
-       │  Spawn ─────────────────────────────────────────────────────▶│
+       │  Task(agent) ──────────────────────────────────────────────▶│
        │  Wait (bash)       │                    │                    │
        │◀─────────────────────────────────────────────────────────────│
        │  Update status     │                    │                    │
@@ -178,20 +358,102 @@ Orchestrator reads ONLY the summary, keeping context minimal while enabling lear
        │                    │                    │                    │
        │  /orchestrate N    │                    │                    │
        │                    │                    │                    │
-       │  Spawn ────────────────────────────────▶│                    │
+       │  No pending issues?│                    │                    │
+       │  Task(research...) ────────────────────▶│                    │
        │                    │                    │ Analyze codebase   │
        │  Wait (bash)       │                    │ Write issues       │
        │◀───────────────────────────────────────│ Write .done        │
        │                    │                    │                    │
-       │  Spawn ───────────▶│                    │                    │
-       │                    │ Read issue_queue   │                    │
-       │  Wait (bash)       │ Write task_queue   │                    │
-       │◀───────────────────│ Write .done        │                    │
+       │  Convert issues    │                    │                    │
+       │  → tasks           │                    │                    │
        │                    │                    │                    │
-       │  Read task_queue   │                    │                    │
-       │  ... continue ...  │                    │                    │
+       │  Task(agent) ──────────────────────────────────────────────▶│
+       │  Wait (bash)       │                    │                    │
+       │◀─────────────────────────────────────────────────────────────│
+       │                    │                    │                    │
+       │  Git commit        │                    │                    │
+       │  ... next loop ... │                    │                    │
 ```
 
 ---
 
-*MVP Architecture Version: 1.0*
+## Prohibited Patterns
+
+```python
+# ❌ NEVER - adds 50-100k tokens per agent
+TaskOutput(agent_id, block=true)
+
+# ❌ NEVER - polling loop fills context
+WHILE Glob(marker).length == 0:
+    Bash("sleep 5")
+
+# ❌ NEVER - orchestrator should not read these
+Read("PRD.md")           # decomposition-agent reads this
+Read("issue_queue.md")   # research-agent writes, orchestrator converts
+
+# ❌ NEVER - outputs fill context
+Bash("cat .orchestrator/task_queue.md")
+```
+
+---
+
+## Task Format
+
+Tasks in `.orchestrator/task_queue.md` include Category for routing:
+
+```markdown
+### TASK-001
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | backend |
+| Complexity | normal |
+
+**Objective:** Implement user authentication endpoint
+
+**Acceptance Criteria:**
+- POST /auth/login accepts email and password
+- Returns JWT token on success
+- Returns 401 on invalid credentials
+
+**Dependencies:** None
+
+---
+```
+
+---
+
+## Issue Format
+
+Issues in `.orchestrator/issue_queue.md` include Category for task routing:
+
+```markdown
+### ISSUE-20251213-001
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | backend |
+| Type | security |
+| Priority | high |
+| Complexity | normal |
+| Source | research |
+
+**Summary:** Add input validation to user registration
+
+**Details:**
+The POST /api/users endpoint lacks input validation.
+
+**Acceptance Criteria:**
+- Email format validated
+- Password minimum length enforced
+- Returns 400 on invalid input
+
+---
+```
+
+---
+
+*Architecture Version: 2.0*
+*Last Updated: December 2025*

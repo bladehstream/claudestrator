@@ -58,6 +58,7 @@ Format each task as:
 | Field | Value |
 |-------|-------|
 | Status | pending |
+| Category | backend |
 | Complexity | normal |
 
 **Objective:** Implement user authentication endpoint
@@ -72,6 +73,19 @@ Format each task as:
 
 ---
 ```
+
+### Category Guidelines
+
+The orchestrator routes tasks to specialized agents based on Category:
+
+| Category | Routes To | Use For |
+|----------|-----------|---------|
+| frontend | frontend-agent | UI components, React, styling, client logic |
+| backend | backend-agent | API endpoints, database, server logic |
+| fullstack | general-purpose | Features spanning frontend and backend |
+| devops | general-purpose | Docker, CI/CD, deployment, infrastructure |
+| testing | qa-agent | Tests, validation, QA |
+| docs | general-purpose | Documentation, README |
 
 ### Step 5: Write Completion Marker
 
@@ -100,8 +114,9 @@ The orchestrator is blocked waiting for this file. If you don't create it, the e
 
 - [ ] Read the source document (PRD.md or issue_queue.md)
 - [ ] Created task_queue.md with properly formatted tasks
-- [ ] Each task has objective and acceptance criteria
-- [ ] Complexity is set for each task
+- [ ] Each task has Category (for agent routing)
+- [ ] Each task has Complexity (for model selection)
+- [ ] Each task has Objective and Acceptance Criteria
 - [ ] Dependencies noted where applicable
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 

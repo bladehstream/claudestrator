@@ -1,8 +1,8 @@
 # /orchestrate
 
-> **Version**: MVP 1.3 - Decomposition agent reads PRD, orchestrator stays minimal.
+> **Version**: MVP 2.0 - Pre-configured agent profiles with category-based routing.
 
-You are a PROJECT MANAGER. You spawn agents to do the work while keeping your own context minimal.
+You are a PROJECT MANAGER. You spawn specialized agents and route tasks by category.
 
 ## Usage
 
@@ -20,34 +20,30 @@ You are a PROJECT MANAGER. You spawn agents to do the work while keeping your ow
 
 ---
 
+## Agent Catalog
+
+Pre-configured agents in `.claude/agents/`:
+
+| Agent | Category | Skills | Use For |
+|-------|----------|--------|---------|
+| `decomposition-agent` | - | decomposition_agent | Breaking PRD into tasks |
+| `frontend-agent` | frontend | frontend_design, ui-generator | UI, React, styling |
+| `backend-agent` | backend | api_development, database_designer | API, database, server |
+| `qa-agent` | testing | qa_agent, webapp_testing | Tests, validation |
+| `general-purpose` | fullstack, devops, docs | (built-in) | Everything else |
+| `Explore` | research | (built-in, read-only) | Codebase analysis |
+
+---
+
 ## Step 1: Spawn Decomposition Agent
 
 **DO NOT read PRD.md yourself** - that adds thousands of tokens to your context.
 
-Spawn a decomposition agent to read PRD and create task_queue.md:
-
 ```
 Task(
-  subagent_type: "general-purpose",
-  model: "sonnet",
+  subagent_type: "decomposition-agent",
   run_in_background: true,
-  prompt: "WORKING DIRECTORY: [absolute path from pwd]
-
-  YOU ARE: Decomposition Agent
-
-  Read the skill file first:
-  Read('[absolute path]/.claude/skills/orchestrator/decomposition_agent.md')
-
-  Then follow its instructions exactly:
-  1. Read PRD.md
-  2. Break into 5-15 implementation tasks
-  3. Write .orchestrator/task_queue.md
-  4. Write .orchestrator/complete/decomposition.done
-
-  CRITICAL: You MUST create the completion marker file when done:
-  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
-
-  The orchestrator is blocked waiting for this file."
+  prompt: "WORKING_DIR: [absolute path from pwd]"
 )
 ```
 
@@ -60,42 +56,58 @@ Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; d
 
 ## Step 2: Execute Implementation Tasks
 
-For each task with `Status | pending` in task_queue.md:
+Read `.orchestrator/task_queue.md` to get pending tasks.
 
-1. **Spawn an agent** with Task tool. Get the absolute working directory first with `pwd`, then include it in the prompt:
-   ```
-   Task(
-     subagent_type: "general-purpose",
-     model: [haiku|sonnet|opus based on complexity],
-     run_in_background: true,
-     prompt: "WORKING DIRECTORY: [absolute path from pwd]
+For each task with `Status | pending`:
 
-     TASK: [TASK-ID]
-     OBJECTIVE: [from task_queue.md]
-     ACCEPTANCE CRITERIA:
-     [from task_queue.md]
+### 2a. Select Agent by Category
 
-     COMPLETION REQUIREMENT (MANDATORY):
-     When you finish implementation, you MUST create this file:
-     [absolute path]/.orchestrator/complete/[TASK-ID].done
+```
+Category → Agent
+─────────────────────────────
+frontend  → frontend-agent
+backend   → backend-agent
+testing   → qa-agent
+fullstack → general-purpose
+devops    → general-purpose
+docs      → general-purpose
+```
 
-     Use: Write('[absolute path]/.orchestrator/complete/[TASK-ID].done', 'done')
+### 2b. Spawn Agent
 
-     The orchestrator is blocked waiting for this file. If you don't create it,
-     the system hangs forever.
+```
+Task(
+  subagent_type: "[agent from category mapping]",
+  model: [haiku|sonnet|opus based on Complexity],
+  run_in_background: true,
+  prompt: "WORKING_DIR: [absolute path]
+  TASK_ID: [TASK-XXX]
 
-     NOW: Implement the task, then create the completion marker."
-   )
-   ```
+  OBJECTIVE: [from task_queue.md]
 
-2. **Wait for completion:**
-   ```
-   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
-   ```
+  ACCEPTANCE CRITERIA:
+  [from task_queue.md]"
+)
+```
 
-3. **Update task_queue.md** - change `Status | pending` to `Status | completed`
+The agent profile already includes:
+- Skill loading instructions
+- Completion marker requirements
+- Best practices for its domain
 
-4. **Repeat** for next pending task
+### 2c. Wait for Completion
+
+```
+Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo '[TASK-ID] done'", timeout: 1800000)
+```
+
+### 2d. Update Status
+
+Change `Status | pending` to `Status | completed` in task_queue.md.
+
+### 2e. Repeat
+
+Continue with next pending task.
 
 ---
 
@@ -116,13 +128,18 @@ If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the i
 
 ### For each loop 1..N:
 
-**1. Check for issues** - Read `.orchestrator/issue_queue.md` for `Status | pending` issues
+**1. Spawn Research Agent** (uses built-in Explore agent)
+```
+Task(
+  subagent_type: "Explore",
+  prompt: "Analyze the codebase for potential improvements.
+  Write findings to .orchestrator/issue_queue.md with Category field."
+)
+```
 
-**2. Convert issues to tasks** - For each pending issue:
-   - Create a task entry in task_queue.md with same format as Step 1
-   - Set issue status to `Status | in_progress`
+**2. Convert issues to tasks** - Add to task_queue.md with same format
 
-**3. Execute tasks** - Same as Step 2 above
+**3. Execute tasks** - Same category-based routing as Step 2
 
 **4. Commit:**
 ```
@@ -131,17 +148,31 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ---
 
+## Complexity → Model Mapping
+
+| Complexity | Model | Token Cost |
+|------------|-------|------------|
+| easy | haiku | $ |
+| normal | sonnet | $$ |
+| complex | opus | $$$$ |
+
+---
+
 ## Critical Rules
 
-1. **NEVER read PRD.md yourself** - spawn decomposition agent to keep your context minimal
-2. **Agents do ALL the work** - you only spawn agents and wait for markers
-3. **ONE blocking Bash per agent** - not a polling loop
-4. **NEVER use TaskOutput** - adds 50-100k tokens to context
+1. **NEVER read PRD.md yourself** - spawn decomposition-agent
+2. **Route by Category** - use the right specialized agent
+3. **Agents have built-in instructions** - keep prompts minimal
+4. **ONE blocking Bash per agent** - not a polling loop
+5. **NEVER use TaskOutput** - adds 50-100k tokens to context
+
+---
 
 ## File Paths
 
 | Purpose | Path |
 |---------|------|
+| Agent Profiles | `.claude/agents/*.md` |
 | Task Queue | `.orchestrator/task_queue.md` |
 | Issue Queue | `.orchestrator/issue_queue.md` |
 | Markers | `.orchestrator/complete/{id}.done` |
@@ -149,4 +180,4 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ---
 
-*MVP Version: 1.2*
+*MVP Version: 2.0*

@@ -1,5 +1,17 @@
 # /analytics - Learning Analytics and Trend Analysis
 
+> **⚠️ DEPRECATED**: This standalone command is deprecated as of MVP 3.2.
+> Analytics are now automatically generated at the end of each `/orchestrate` run.
+>
+> **New locations:**
+> - `.orchestrator/analytics.html` - Human-readable dashboard
+> - `.orchestrator/analytics.json` - Machine-readable analytics
+> - `.orchestrator/history.csv` - Cumulative historical data
+>
+> The analysis agent runs automatically and aggregates all task reports.
+
+---
+
 Analyze orchestrator learning and performance over time. Tracks how effectively the system adapts based on past experience.
 
 ## Usage

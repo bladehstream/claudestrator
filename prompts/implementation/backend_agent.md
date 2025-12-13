@@ -376,7 +376,32 @@ npm test -- --testPathPattern=users 2>&1 | head -100
 
 ---
 
-## Phase 7: Complete
+## Phase 7: Write Task Report
+
+**CRITICAL**: Before writing the completion marker, write a JSON report.
+
+```
+Bash("mkdir -p .orchestrator/reports")
+```
+
+Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
+- task_id, loop_number, run_id, timestamp
+- category: "backend"
+- complexity (assigned vs actual)
+- model used, timing/duration
+- files created/modified, lines added/removed
+- quality: build_passed, lint_passed, tests_passed
+- acceptance criteria met (count and details)
+- errors, workarounds, assumptions
+- technical_debt, future_work recommendations
+
+```
+Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
+```
+
+---
+
+## Phase 8: Complete
 
 **CRITICAL - DO NOT SKIP**
 
@@ -398,6 +423,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Catching and ignoring errors | Silent failures | Log and handle properly |
 | No rate limiting | DoS vulnerability | Add rate limiter |
 | Storing secrets in code | Leaked credentials | Use environment variables |
+| Forgetting task report | Analytics incomplete | Always write JSON report |
 
 ---
 

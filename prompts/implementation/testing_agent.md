@@ -553,13 +553,39 @@ Write(".orchestrator/VERIFICATION.md", <content>)
 
 ---
 
-## Phase 9: Complete
+## Phase 9: Write Task Report
+
+**CRITICAL**: Before writing the completion marker, write a JSON report.
+
+```
+Bash("mkdir -p .orchestrator/reports")
+```
+
+Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
+- task_id, loop_number, run_id, timestamp
+- category: "testing"
+- complexity (assigned vs actual)
+- model used, timing/duration
+- files created/modified, lines added/removed
+- quality: build_passed, lint_passed, tests_passed
+- acceptance criteria met (count and details)
+- errors, workarounds, assumptions
+- technical_debt, future_work recommendations
+
+```
+Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
+```
+
+---
+
+## Phase 10: Complete
 
 **CRITICAL - DO NOT SKIP**
 
 Before completing, verify:
 - [ ] Tests are written and passing
 - [ ] `.orchestrator/VERIFICATION.md` exists with complete instructions
+- [ ] Task report JSON written
 
 Then write the completion marker:
 
@@ -582,6 +608,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Testing happy path only | Errors not caught | Test error cases |
 | Slow tests | Developer frustration | Use unit tests for speed |
 | Forgetting VERIFICATION.md | User can't verify build | Always write verification docs |
+| Forgetting task report | Analytics incomplete | Always write JSON report |
 
 ---
 

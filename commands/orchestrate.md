@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.1 - Category-specific agents with verification output.
+> **Version**: MVP 3.2 - Analytics and reporting.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -15,8 +15,10 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 
 1. Check PRD.md exists → if not, tell user to run `/prdgen` first
 2. Check git → init if needed
-3. Create `.orchestrator/complete/` directory if missing
+3. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
 4. Get absolute working directory with `pwd` (store for agent prompts)
+5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
+6. Initialize LOOP_NUMBER to 1
 
 ---
 
@@ -28,6 +30,7 @@ Agents read detailed instructions from prompt files:
 |------------|-------------|
 | Decomposition | `prompts/decomposition_agent.md` |
 | Research | `prompts/research_agent.md` |
+| Analysis | `prompts/analysis_agent.md` |
 | Frontend | `prompts/implementation/frontend_agent.md` |
 | Backend | `prompts/implementation/backend_agent.md` |
 | Fullstack | `prompts/implementation/fullstack_agent.md` |
@@ -125,6 +128,8 @@ Task(
 
   WORKING_DIR: [absolute path]
   TASK_ID: [TASK-XXX]
+  LOOP_NUMBER: [current loop number]
+  RUN_ID: [run-YYYYMMDD-HHMMSS]
   CATEGORY: [from task]
   COMPLEXITY: [from task]
 
@@ -136,6 +141,8 @@ Task(
   DEPENDENCIES: [from task_queue.md or 'None']
 
   NOTES: [from task_queue.md or 'None']
+
+  Write report to: .orchestrator/reports/[TASK-XXX]-loop-[NNN].json
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/[TASK-XXX].done', 'done')
@@ -173,36 +180,11 @@ Bash("git add -A && git commit -m 'Initial build complete'")
 
 ---
 
-## Step 4: Display Verification Instructions
+## Step 4: Improvement Loops (`/orchestrate N`)
 
-**After all tasks complete**, read and display the verification guide:
+If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the initial build.
 
-```
-Read(".orchestrator/VERIFICATION.md")
-```
-
-Output to user:
-```
-═══════════════════════════════════════════════════════════════════════════════
-BUILD COMPLETE - VERIFICATION INSTRUCTIONS
-═══════════════════════════════════════════════════════════════════════════════
-
-[Contents of VERIFICATION.md]
-
-═══════════════════════════════════════════════════════════════════════════════
-```
-
-If VERIFICATION.md doesn't exist, warn the user:
-```
-⚠️  Warning: VERIFICATION.md not found. The testing task may have failed.
-    Check .orchestrator/task_queue.md for the testing task status.
-```
-
----
-
-## Improvement Loops (`/orchestrate N`)
-
-If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the initial build:
+**Increment LOOP_NUMBER** at the start of each loop.
 
 ### For each loop 1..N:
 
@@ -264,6 +246,64 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ---
 
+## Step 5: Run Analysis Agent
+
+**After ALL loops complete** (or after initial build if no loops), spawn the Analysis Agent:
+
+```
+Task(
+  model: "haiku",
+  run_in_background: true,
+  prompt: "Read('prompts/analysis_agent.md') and follow those instructions.
+
+  ---
+
+  ## Your Task
+
+  WORKING_DIR: [absolute path]
+  RUN_ID: [run-YYYYMMDD-HHMMSS]
+  TOTAL_LOOPS: [number of loops completed]
+  TOTAL_TASKS: [number of tasks completed]
+
+  1. Read all JSON reports from .orchestrator/reports/
+  2. Append data to .orchestrator/history.csv
+  3. Generate .orchestrator/analytics.json
+  4. Generate .orchestrator/analytics.html
+  5. Delete processed JSON reports
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/analysis.done', 'done')
+
+  START: Glob('.orchestrator/reports/*.json')"
+)
+```
+
+**Wait for completion:**
+```
+Bash("while [ ! -f '.orchestrator/complete/analysis.done' ]; do sleep 10; done && echo 'Analysis complete'", timeout: 300000)
+```
+
+---
+
+## Step 6: Final Output
+
+Output paths to user (do NOT read file contents):
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+ORCHESTRATION COMPLETE
+═══════════════════════════════════════════════════════════════════════════════
+
+Verification Guide: .orchestrator/VERIFICATION.md
+Analytics Dashboard: .orchestrator/analytics.html
+Analytics Data: .orchestrator/analytics.json
+Historical Data: .orchestrator/history.csv
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
 ## Complexity → Model Mapping
 
 | Complexity | Model | Token Cost |
@@ -292,8 +332,12 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 | Markers | `.orchestrator/complete/{id}.done` |
 | State | `.orchestrator/session_state.md` |
 | Verification | `.orchestrator/VERIFICATION.md` |
+| Task Reports | `.orchestrator/reports/{task_id}-loop-{n}.json` |
+| History CSV | `.orchestrator/history.csv` |
+| Analytics JSON | `.orchestrator/analytics.json` |
+| Analytics HTML | `.orchestrator/analytics.html` |
 | Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ---
 
-*MVP Version: 3.1*
+*MVP Version: 3.2*

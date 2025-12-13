@@ -355,7 +355,32 @@ npm run test:e2e -- --grep "Create Post" 2>&1 | head -100
 
 ---
 
-## Phase 7: Complete
+## Phase 7: Write Task Report
+
+**CRITICAL**: Before writing the completion marker, write a JSON report.
+
+```
+Bash("mkdir -p .orchestrator/reports")
+```
+
+Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
+- task_id, loop_number, run_id, timestamp
+- category: "fullstack"
+- complexity (assigned vs actual)
+- model used, timing/duration
+- files created/modified, lines added/removed
+- quality: build_passed, lint_passed, tests_passed
+- acceptance criteria met (count and details)
+- errors, workarounds, assumptions
+- technical_debt, future_work recommendations
+
+```
+Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
+```
+
+---
+
+## Phase 8: Complete
 
 **CRITICAL - DO NOT SKIP**
 
@@ -377,6 +402,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Forgetting auth on new endpoints | Security hole | Copy auth from similar endpoints |
 | Not testing error cases | Poor error UX | Test 400, 401, 500 cases |
 | Hardcoded API URLs | Environment issues | Use env variables |
+| Forgetting task report | Analytics incomplete | Always write JSON report |
 
 ---
 

@@ -174,6 +174,24 @@ PHASE 4: WRITE TASK QUEUE
 
 Create `.orchestrator/task_queue.md` with this exact format:
 
+### CRITICAL: Task ID Naming Convention
+
+**ALL tasks MUST use the format: `TASK-XXX`** where XXX is a zero-padded number.
+
+| Correct | INCORRECT (will break system) |
+|---------|-------------------------------|
+| TASK-001 | UI-001 |
+| TASK-002 | BE-002 |
+| TASK-003 | FE-003 |
+| TASK-010 | task-10 |
+| TASK-099 | Task_099 |
+
+**NEVER use category prefixes** (UI-, BE-, FE-, API-, etc.) in task IDs.
+**NEVER use lowercase** task IDs.
+**ALWAYS zero-pad** to 3 digits (001, 002, ... 010, 011, ... 099, 100).
+
+The category is specified in the Category field, NOT in the task ID.
+
 ```markdown
 # Task Queue
 
@@ -238,6 +256,7 @@ Before finishing, verify:
 - [ ] Read the source document completely
 - [ ] Analyzed each requirement/issue
 - [ ] Created 3-15 appropriately-sized tasks
+- [ ] **ALL task IDs use TASK-XXX format (not UI-001, BE-002, etc.)**
 - [ ] Each task has Status, Category, Complexity
 - [ ] Each task has clear Objective
 - [ ] Each task has specific, testable Acceptance Criteria
@@ -252,6 +271,7 @@ COMMON MISTAKES
 
 | Mistake | Impact | Fix |
 |---------|--------|-----|
+| Wrong task ID format (UI-001) | Breaks reporting, scripting | Use TASK-XXX format only |
 | Tasks too large | Agent overwhelmed, poor results | Break into smaller pieces |
 | Vague acceptance criteria | Implementation ambiguity | Be specific and testable |
 | Missing complexity field | Wrong model selected | Always assess complexity |

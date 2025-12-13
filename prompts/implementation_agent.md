@@ -230,10 +230,84 @@ Go through each criterion and confirm it's met:
 - [ ] ...
 
 ===============================================================================
-PHASE 5: COMPLETE
+PHASE 5: WRITE TASK REPORT
 ===============================================================================
 
-### 5.1 Write Completion Marker
+**CRITICAL**: Before writing the completion marker, you MUST write a JSON report.
+
+### 5.1 Create Report Directory
+
+```
+Bash("mkdir -p .orchestrator/reports")
+```
+
+### 5.2 Write JSON Report
+
+Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json`:
+
+```json
+{
+  "task_id": "{task_id}",
+  "loop_number": {loop_number},
+  "run_id": "{run_id}",
+  "timestamp": "{ISO 8601 timestamp}",
+  "category": "{category}",
+  "complexity": {
+    "assigned": "{complexity}",
+    "actual": "{your assessment - easy/normal/complex}"
+  },
+  "model": "{model used - haiku/sonnet/opus}",
+  "timing": {
+    "start": "{start timestamp or estimate}",
+    "end": "{end timestamp}",
+    "duration_seconds": {estimated seconds}
+  },
+  "changes": {
+    "files_created": ["list", "of", "files"],
+    "files_modified": ["list", "of", "files"],
+    "files_deleted": [],
+    "lines_added": {estimate},
+    "lines_removed": {estimate},
+    "dependencies_added": ["package@version"]
+  },
+  "quality": {
+    "build_passed": true,
+    "lint_passed": true,
+    "tests_passed": true
+  },
+  "acceptance": {
+    "criteria_met": {number met},
+    "criteria_total": {total number},
+    "details": [
+      {"criterion": "description", "met": true},
+      {"criterion": "description", "met": false, "reason": "why not"}
+    ]
+  },
+  "issues": {
+    "errors": [
+      {"type": "error type", "message": "description", "resolved": true}
+    ],
+    "workarounds": ["description of any workarounds applied"],
+    "assumptions": ["assumptions made during implementation"]
+  },
+  "recommendations": {
+    "technical_debt": ["items to address later"],
+    "future_work": ["suggested improvements"]
+  }
+}
+```
+
+### 5.3 Write the Report File
+
+```
+Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
+```
+
+===============================================================================
+PHASE 6: COMPLETE
+===============================================================================
+
+### 6.1 Write Completion Marker
 
 **CRITICAL - DO NOT SKIP**
 
@@ -254,6 +328,7 @@ EXECUTION CHECKLIST
 - [ ] Code compiles without errors
 - [ ] No security vulnerabilities introduced
 - [ ] Verified each acceptance criterion
+- [ ] **WROTE THE TASK REPORT JSON**
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 
 ===============================================================================
@@ -266,6 +341,7 @@ COMMON MISTAKES
 | Over-engineering | Complexity, maintenance | Only build what's needed |
 | Skipping verification | Broken code merged | Always run build/lint |
 | Hardcoding values | Inflexibility | Use config/env vars |
+| Forgetting task report | Analytics incomplete | Always write JSON report |
 | Forgetting completion marker | System hangs | Always write .done file |
 | Not reading related code | Duplicate work | Search before writing |
 
@@ -277,7 +353,8 @@ START NOW
 2. Plan your approach
 3. Implement the solution
 4. Verify your work compiles and meets criteria
-5. Write the completion marker
+5. Write the task report JSON
+6. Write the completion marker
 
 Begin by reading the project structure and finding related code.
 ```
@@ -289,6 +366,8 @@ Begin by reading the project structure and finding related code.
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `{task_id}` | Unique task identifier | `TASK-001` |
+| `{loop_number}` | Current loop number | `1`, `2`, `3` |
+| `{run_id}` | Unique run identifier | `run-20240115-143022` |
 | `{category}` | Task category | `backend`, `frontend`, `fullstack` |
 | `{complexity}` | Task complexity | `easy`, `normal`, `complex` |
 | `{objective}` | What to build | `Implement user login endpoint` |
@@ -308,6 +387,8 @@ Task(
     prompt: "Read('prompts/implementation_agent.md') and follow those instructions.
 
     TASK_ID: TASK-001
+    LOOP_NUMBER: 1
+    RUN_ID: run-20240115-143022
     CATEGORY: backend
     COMPLEXITY: normal
     OBJECTIVE: Implement user authentication endpoint
@@ -320,6 +401,7 @@ Task(
     DEPENDENCIES: None
     NOTES: Use existing User model
 
+    Write report to: .orchestrator/reports/TASK-001-loop-001.json
     When done: Write('.orchestrator/complete/TASK-001.done', 'done')"
 )
 ```

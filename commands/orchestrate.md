@@ -237,13 +237,9 @@ If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the i
 
 ### For each loop 1..N:
 
-**1. Check for pending issues**
+**1. Spawn Research Agent**
 
-Read `.orchestrator/issue_queue.md` and check for `Status | pending` issues.
-
-**2. If NO pending issues → Spawn Research Agent**
-
-Only spawn research if the issue queue is empty or all issues are completed:
+Research Agent finds issues based on quotas:
 
 ```
 Task(
@@ -293,18 +289,43 @@ Wait for completion:
 Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done && rm .orchestrator/complete/research.done && echo 'Research complete'", timeout: 900000)
 ```
 
-**3. Convert issues to tasks**
+**3. Spawn Decomposition Agent (convert issues to tasks)**
 
-Read `.orchestrator/issue_queue.md`, for each `Status | pending` issue:
-- Create a task entry in task_queue.md with same format
-- Copy Category from issue to task
-- Set issue status to `Status | in_progress`
+```
+Task(
+  model: "sonnet",
+  run_in_background: true,
+  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
 
-**4. Execute tasks** - Same category-based routing as Step 2
+  ---
 
-**5. Mark issues complete**
+  ## Your Task
 
-After task completes, update corresponding issue to `Status | completed`
+  WORKING_DIR: [absolute path]
+  SOURCE: issue_queue.md
+  MODE: convert_issues
+
+  Read .orchestrator/issue_queue.md and convert pending issues to tasks in .orchestrator/task_queue.md.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+  START: Read('.orchestrator/issue_queue.md')"
+)
+```
+
+Wait for completion:
+```
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
+```
+
+**4. Execute tasks**
+
+Read task_queue.md to get new pending tasks, spawn implementation agents (same as Step 2).
+
+**5. Mark tasks done**
+
+When implementation agent's completion marker is detected, update task status to `done` in task_queue.md.
 
 **6. Commit:**
 ```
@@ -439,13 +460,33 @@ Historical Data: .orchestrator/history.csv
 
 ## Critical Rules
 
-1. **NEVER read PRD.md yourself** - spawn a background agent with decomposition instructions
-2. **Use category-specific prompts** - agents read their detailed prompt file first
-3. **ONE blocking Bash per agent** - not a polling loop
-4. **NEVER use TaskOutput** - adds 50-100k tokens to context
-5. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
-6. **NEVER improvise the flow** - follow the documented steps exactly
-7. **ONE Research Agent per loop** - with FOCUS parameter, not multiple topic-specific agents
+1. **NEVER read PRD.md yourself** - spawn Decomposition Agent
+2. **CAN read task_queue.md** - to know what agents to spawn
+3. **NEVER read issue_queue.md** - spawn Decomposition Agent to convert issues
+4. **CAN mark task as done** - when completion marker detected (minimal update)
+5. **Use category-specific prompts** - agents read their detailed prompt file first
+6. **ONE blocking Bash per agent** - not a polling loop
+7. **NEVER use TaskOutput** - adds 50-100k tokens to context
+8. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
+9. **NEVER improvise the flow** - follow the documented steps exactly
+10. **ONE Research Agent per loop** - with quotas, not multiple topic-specific agents
+
+### Orchestrator is a COORDINATOR
+
+The orchestrator CAN:
+- Parse command arguments
+- Read task_queue.md (to know what agents to spawn)
+- Spawn agents with prompts
+- Wait for completion markers
+- Mark task status as `done` (when completion marker detected)
+- Output final paths to user
+
+The orchestrator NEVER:
+- Reads PRD.md (Decomposition Agent does this)
+- Reads issue_queue.md (Decomposition Agent does this)
+- Converts issues to tasks (Decomposition Agent does this)
+- Modifies task content/objectives
+- Writes code or fixes issues
 
 ### Allowed Agent Types (ONLY these)
 

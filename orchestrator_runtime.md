@@ -222,20 +222,39 @@ Task(
 Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done && rm .orchestrator/complete/research.done && echo 'done'", timeout: 900000)
 ```
 
-### 2. Convert Issues to Tasks
+### 2. Spawn Decomposition Agent (convert issues to tasks)
 
-Read `.orchestrator/issue_queue.md`, for each pending issue:
-- Create task entry in task_queue.md
-- Copy Category from issue
-- Set issue status to `in_progress`
+```
+Task(
+  model: "sonnet",
+  run_in_background: true,
+  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
 
-### 3. Execute Tasks (max 5)
+  ---
 
-Same category-based routing as Initial Step 2, limit 5 per loop.
+  ## Your Task
 
-### 4. Mark Issues Complete
+  WORKING_DIR: [absolute path]
+  SOURCE: issue_queue.md
+  MODE: convert_issues
 
-Update corresponding issue to `completed` after task completes.
+  Read .orchestrator/issue_queue.md and convert pending issues to tasks.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+  START: Read('.orchestrator/issue_queue.md')"
+)
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
+```
+
+### 3. Execute Tasks
+
+Read task_queue.md, spawn implementation agents for pending tasks (same as Initial Step 2).
+
+### 4. Mark Tasks Done
+
+When implementation agent's completion marker is detected, update task status to `done`.
 
 ### 5. Commit
 
@@ -400,18 +419,31 @@ Historical Data: .orchestrator/history.csv
 5. **Pass LOOP_NUMBER and RUN_ID** - to all implementation agents
 6. **NEVER spawn ad-hoc agents** - only use predefined agent types
 7. **NEVER improvise** - follow the documented flow exactly
-8. **ONE Research Agent per loop** - use FOCUS parameter, not topic-specific agents
+8. **ONE Research Agent per loop** - with quotas, not topic-specific agents
+9. **CAN read task_queue.md** - to know what agents to spawn
+10. **CAN mark task as done** - when completion marker detected
+11. **NEVER read issue_queue.md** - Decomposition Agent handles this
+12. **NEVER convert issues to tasks** - Decomposition Agent handles this
+
+### Orchestrator CAN vs CANNOT
+
+| CAN | CANNOT |
+|-----|--------|
+| Read task_queue.md | Read PRD.md |
+| Mark task status as `done` | Read issue_queue.md |
+| Spawn predefined agents | Convert issues to tasks |
+| Wait for completion markers | Modify task content |
+| Output final paths | Write code or fix issues |
 
 ### Forbidden Behaviors
 
 | ❌ WRONG | ✅ CORRECT |
 |----------|-----------|
 | Spawn "Security research agent" | Spawn Research Agent with quotas |
-| Spawn "UI improvement agent" | Spawn Research Agent with quotas |
+| Read issue_queue.md directly | Spawn Decomposition Agent to convert |
+| Convert issues to tasks yourself | Decomposition Agent converts issues |
 | `/orchestrate 3 2 security 3 UI` = 2 sec + 3 UI total | = 6 sec + 9 UI total (per loop × loops) |
 | Do 2 security in loop 1, 3 UI in loop 2 | Do 2 security + 3 UI in EACH loop |
-| Create agent types not in prompt files | Only use agents listed in Prompt Files table |
-| Improvise steps not in this document | Follow documented steps exactly |
 
 ## Waiting Pattern
 

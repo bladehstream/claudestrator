@@ -553,7 +553,116 @@ Write(".orchestrator/VERIFICATION.md", <content>)
 
 ---
 
-## Phase 9: Write Task Report
+## Phase 9: Execute Verification Steps
+
+**CRITICAL**: Execute all accumulated verification steps from implementation agents.
+
+### 9.1 Read Verification Steps
+
+```
+Read(".orchestrator/verification_steps.md")
+```
+
+If file doesn't exist or is empty, skip to Phase 10.
+
+### 9.2 Execute Each Task's Verification
+
+For each task section in the verification steps file:
+
+1. **Run build verification commands**
+   - Execute the build commands specified
+   - Record exit codes and any error output
+
+2. **Run runtime verification commands**
+   - Start the application/server if needed
+   - Execute the verification commands
+   - Record results
+   - Clean up (stop server)
+
+3. **Check expected outcomes**
+   - Compare actual results to expected outcomes
+   - Mark each verification as PASS or FAIL
+
+### 9.3 Handle Failures
+
+**For each FAILED verification:**
+
+Determine severity:
+
+| Failure Type | Severity | Auto-Retry |
+|--------------|----------|------------|
+| Build fails (compilation error) | CRITICAL | Yes |
+| Server won't start | CRITICAL | Yes |
+| API endpoint returns error | HIGH | Yes |
+| Database connection fails | CRITICAL | Yes |
+| Test suite fails | HIGH | Yes |
+| Missing expected content | MEDIUM | No |
+| Performance below threshold | LOW | No |
+
+**For CRITICAL/HIGH failures**, write issue to `.orchestrator/issue_queue.md`:
+
+```markdown
+## ISSUE-YYYYMMDD-NNN
+
+| Field | Value |
+|-------|-------|
+| Type | bug |
+| Priority | critical |
+| Status | pending |
+| Source | generated |
+| Category | [from failed task's category] |
+| Created | [ISO timestamp] |
+| Auto-Retry | true |
+| Retry-Count | 0 |
+| Max-Retries | 3 |
+| Blocking | true |
+
+### Summary
+[Verification failed]: [brief description]
+
+### Failure Details
+Task: [TASK-ID]
+Verification: [which step failed]
+Command: [command that failed]
+Exit Code: [if applicable]
+Error Output:
+```
+[error output]
+```
+
+### Affected Files
+[Files from the original task]
+
+### Suggested Fix
+[Based on error output, suggest what might fix it]
+```
+
+### 9.4 Verification Summary
+
+Output a summary:
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION RESULTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Tasks Verified: [N]
+Passed: [N]
+Failed: [N]
+
+[If failures:]
+Critical Issues (will auto-retry):
+  - TASK-XXX: [failure summary]
+
+[If all pass:]
+✅ All verification steps passed
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
+## Phase 10: Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -578,13 +687,15 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 
 ---
 
-## Phase 10: Complete
+## Phase 11: Complete
 
 **CRITICAL - DO NOT SKIP**
 
 Before completing, verify:
 - [ ] Tests are written and passing
 - [ ] `.orchestrator/VERIFICATION.md` exists with complete instructions
+- [ ] Verification steps executed (Phase 9)
+- [ ] Critical failures written to issue queue with `Auto-Retry: true`
 - [ ] Task report JSON written
 
 Then write the completion marker:
@@ -609,6 +720,8 @@ The orchestrator is BLOCKED waiting for this file.
 | Slow tests | Developer frustration | Use unit tests for speed |
 | Forgetting VERIFICATION.md | User can't verify build | Always write verification docs |
 | Forgetting task report | Analytics incomplete | Always write JSON report |
+| Skipping verification execution | Critical bugs reach user | Always run Phase 9 |
+| Not flagging critical failures | No auto-retry | Set Auto-Retry: true for blocking issues |
 
 ---
 
@@ -641,4 +754,4 @@ expect(handler).toHaveBeenCalledTimes(1);
 
 ---
 
-*Testing Implementation Agent v1.0*
+*Testing Implementation Agent v1.1 - Verification execution and auto-retry*

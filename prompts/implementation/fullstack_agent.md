@@ -355,7 +355,72 @@ npm run test:e2e -- --grep "Create Post" 2>&1 | head -100
 
 ---
 
-## Phase 7: Write Task Report
+## Phase 7: Write Verification Steps
+
+**CRITICAL**: Append verification steps for the Testing Agent to execute.
+
+### 7.1 Determine Verification Commands
+
+Based on the project's tech stack (from Phase 1), determine:
+- How to build both frontend and backend
+- How to start the full application
+- How to verify your implemented features work end-to-end
+
+### 7.2 Append to Verification Steps File
+
+Append to `.orchestrator/verification_steps.md`:
+
+```markdown
+## [TASK-ID]
+
+| Field | Value |
+|-------|-------|
+| Category | fullstack |
+| Agent | fullstack |
+| Timestamp | [ISO timestamp] |
+
+### Build Verification
+[Commands to verify both frontend and backend build without errors]
+
+### Runtime Verification
+[Commands to:
+1. Start the full application (background)
+2. Wait for startup
+3. Verify both frontend and backend are running
+4. Test the implemented feature end-to-end
+5. Cleanup (stop servers)]
+
+### Expected Outcomes
+- Build completes with exit code 0
+- Application starts and remains running
+- [Specific to what you implemented]:
+  - Frontend can reach backend API
+  - Data flows correctly between layers
+  - User flow works end-to-end
+
+---
+```
+
+### 7.3 What to Verify (Fullstack-Specific)
+
+| What You Implemented | Verification |
+|---------------------|--------------|
+| New feature (E2E) | User flow works from UI to database and back |
+| API + UI integration | Frontend displays data from API correctly |
+| Form submission | Form data reaches backend, persists, confirms |
+| Authentication flow | Login/logout works, protected routes enforce auth |
+| Real-time feature | WebSocket/SSE connections work |
+| File upload | Files upload, store, and display correctly |
+
+### 7.4 Keep It Generic
+
+- Use the project's actual commands for both frontend and backend
+- Don't hardcode ports - detect from config
+- Test the complete user flow, not just individual pieces
+
+---
+
+## Phase 8: Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -380,9 +445,13 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 
 ---
 
-## Phase 8: Complete
+## Phase 9: Complete
 
 **CRITICAL - DO NOT SKIP**
+
+Before completing, verify:
+- [ ] Verification steps appended to `.orchestrator/verification_steps.md`
+- [ ] Task report JSON written
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")

@@ -418,7 +418,72 @@ trivy image app:test
 
 ---
 
-## Phase 7: Write Task Report
+## Phase 7: Write Verification Steps
+
+**CRITICAL**: Append verification steps for the Testing Agent to execute.
+
+### 7.1 Determine Verification Commands
+
+Based on the project's infrastructure setup, determine:
+- How to build containers/images
+- How to validate configuration files
+- How to verify deployments work
+
+### 7.2 Append to Verification Steps File
+
+Append to `.orchestrator/verification_steps.md`:
+
+```markdown
+## [TASK-ID]
+
+| Field | Value |
+|-------|-------|
+| Category | devops |
+| Agent | devops |
+| Timestamp | [ISO timestamp] |
+
+### Build Verification
+[Commands to verify infrastructure builds correctly]
+
+### Runtime Verification
+[Commands to:
+1. Build containers/images
+2. Start services
+3. Verify services are healthy
+4. Test connectivity/functionality
+5. Cleanup]
+
+### Expected Outcomes
+- Build/image creation succeeds
+- Services start and pass health checks
+- [Specific to what you implemented]:
+  - Container runs correctly
+  - CI/CD pipeline syntax is valid
+  - Configuration is applied correctly
+
+---
+```
+
+### 7.3 What to Verify (DevOps-Specific)
+
+| What You Implemented | Verification |
+|---------------------|--------------|
+| Dockerfile | Image builds successfully, container starts |
+| Docker Compose | All services start and communicate |
+| CI/CD pipeline | Pipeline syntax validates |
+| Kubernetes manifests | Manifests apply without errors |
+| Infrastructure config | Config validation passes |
+| Environment setup | Environment variables are set correctly |
+
+### 7.4 Keep It Generic
+
+- Use the project's actual infrastructure tools
+- Test in isolation where possible
+- Verify both build and runtime behavior
+
+---
+
+## Phase 8: Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -443,9 +508,13 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 
 ---
 
-## Phase 8: Complete
+## Phase 9: Complete
 
 **CRITICAL - DO NOT SKIP**
+
+Before completing, verify:
+- [ ] Verification steps appended to `.orchestrator/verification_steps.md`
+- [ ] Task report JSON written
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")
@@ -466,6 +535,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Using :latest tag | Unpredictable builds | Pin versions |
 | No caching | Slow builds | Order layers for caching |
 | Forgetting task report | Analytics incomplete | Always write JSON report |
+| Skipping verification steps | Broken infra reaches prod | Always write verification steps |
 
 ---
 

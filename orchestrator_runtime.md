@@ -1,6 +1,6 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 3.2 - Analytics and reporting.
+> **Version**: MVP 3.3 - Auto-retry for critical failures.
 
 ## Key Principle: Read Prompt Files
 
@@ -239,6 +239,73 @@ Bash("while [ ! -f '.orchestrator/complete/analysis.done' ]; do sleep 10; done &
 
 ---
 
+## Auto-Retry Check (End of Loop)
+
+**After Analysis Agent completes**, check for critical issues flagged for auto-retry:
+
+```
+READ .orchestrator/issue_queue.md
+
+auto_retry_issues = issues WHERE:
+  - Auto-Retry == true
+  - Status == pending
+  - Retry-Count < Max-Retries
+
+IF auto_retry_issues is empty:
+    GOTO Final Output
+
+# Check global cap
+READ .orchestrator/session_state.md
+IF total_auto_retries >= 5:
+    OUTPUT "⚠️ Auto-retry limit (5) reached. Manual intervention required."
+    GOTO Final Output
+
+# Trigger retry
+FOR each issue IN auto_retry_issues:
+    INCREMENT issue.Retry-Count
+    SET issue.Status = "in_progress"
+
+INCREMENT session.total_auto_retries
+WRITE updated files
+
+OUTPUT:
+    "═══════════════════════════════════════════════════════════════════════════════
+    🔄 AUTO-RETRY TRIGGERED
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Critical issue(s) detected:
+    [list issues]
+
+    Attempt: [retry_count] of [max_retries]
+    Action: Running improvement loop to fix issue(s)
+
+    ═══════════════════════════════════════════════════════════════════════════════"
+
+# Run ONE improvement loop targeting auto-retry issues
+GOTO "Improvement Loops" (run 1 loop)
+```
+
+### Auto-Retry Issue Format
+
+Issues flagged for auto-retry include these fields:
+
+```markdown
+| Auto-Retry | true |
+| Retry-Count | 0 |
+| Max-Retries | 3 |
+| Blocking | true |
+```
+
+### Safeguards
+
+| Safeguard | Limit |
+|-----------|-------|
+| Per-issue retries | 3 (configurable via Max-Retries) |
+| Global retry cap | 5 per orchestration run |
+| Disable flag | `.orchestrator/no_auto_retry` file |
+
+---
+
 ## Final Output
 
 Output paths to user (do NOT read file contents):
@@ -279,6 +346,8 @@ Historical Data: .orchestrator/history.csv
 | History CSV | `.orchestrator/history.csv` |
 | Analytics JSON | `.orchestrator/analytics.json` |
 | Analytics HTML | `.orchestrator/analytics.html` |
+| Verification Steps | `.orchestrator/verification_steps.md` |
+| No Auto-Retry Flag | `.orchestrator/no_auto_retry` |
 | Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ## CRITICAL RULES
@@ -301,4 +370,4 @@ while not exists: Bash("sleep 5")
 
 ---
 
-*MVP Runtime Version: 3.2*
+*MVP Runtime Version: 3.3*

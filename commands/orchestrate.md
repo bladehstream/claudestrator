@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.2 - Analytics and reporting.
+> **Version**: MVP 3.3 - Auto-retry for critical failures.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -285,7 +285,61 @@ Bash("while [ ! -f '.orchestrator/complete/analysis.done' ]; do sleep 10; done &
 
 ---
 
-## Step 6: Final Output
+## Step 6: Auto-Retry Check
+
+**After Analysis Agent completes**, check for critical issues flagged for auto-retry:
+
+1. Read `.orchestrator/issue_queue.md`
+2. Find issues where `Auto-Retry | true` AND `Status | pending` AND `Retry-Count < Max-Retries`
+3. If none found → proceed to Final Output
+4. If found:
+   - Check `.orchestrator/session_state.md` for `total_auto_retries`
+   - If `total_auto_retries >= 5` → output warning, proceed to Final Output
+   - Otherwise:
+     - Increment `Retry-Count` for each auto-retry issue
+     - Set `Status | in_progress`
+     - Increment `total_auto_retries` in session state
+     - Output auto-retry message
+     - Run ONE improvement loop (go to Step 4, loop once)
+
+### Auto-Retry Issue Fields
+
+When the Testing Agent flags a critical issue:
+
+```markdown
+| Auto-Retry | true |
+| Retry-Count | 0 |
+| Max-Retries | 3 |
+| Blocking | true |
+```
+
+### Auto-Retry Output
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+🔄 AUTO-RETRY TRIGGERED
+═══════════════════════════════════════════════════════════════════════════════
+
+Critical issue(s) detected:
+  - [ISSUE-ID]: [Summary]
+
+Attempt: [N] of [Max]
+Action: Running improvement loop to fix issue(s)
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+### Safeguards
+
+| Safeguard | Limit |
+|-----------|-------|
+| Per-issue retries | 3 (configurable via Max-Retries) |
+| Global retry cap | 5 per orchestration run |
+| Disable flag | Create `.orchestrator/no_auto_retry` to disable |
+
+---
+
+## Step 7: Final Output
 
 Output paths to user (do NOT read file contents):
 
@@ -336,8 +390,10 @@ Historical Data: .orchestrator/history.csv
 | History CSV | `.orchestrator/history.csv` |
 | Analytics JSON | `.orchestrator/analytics.json` |
 | Analytics HTML | `.orchestrator/analytics.html` |
+| Verification Steps | `.orchestrator/verification_steps.md` |
+| No Auto-Retry Flag | `.orchestrator/no_auto_retry` |
 | Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
 
 ---
 
-*MVP Version: 3.2*
+*MVP Version: 3.3*

@@ -376,7 +376,72 @@ npm test -- --testPathPattern=users 2>&1 | head -100
 
 ---
 
-## Phase 7: Write Task Report
+## Phase 7: Write Verification Steps
+
+**CRITICAL**: Append verification steps for the Testing Agent to execute.
+
+### 7.1 Determine Verification Commands
+
+Based on the project's tech stack (from Phase 1), determine:
+- How to build/compile the code
+- How to start the server
+- How to verify your implemented endpoints/services work
+
+### 7.2 Append to Verification Steps File
+
+Append to `.orchestrator/verification_steps.md`:
+
+```markdown
+## [TASK-ID]
+
+| Field | Value |
+|-------|-------|
+| Category | backend |
+| Agent | backend |
+| Timestamp | [ISO timestamp] |
+
+### Build Verification
+[Commands to verify code compiles without errors - use project's actual build command]
+
+### Runtime Verification
+[Commands to:
+1. Start the server (background)
+2. Wait for startup
+3. Verify server is running
+4. Test implemented endpoints/services
+5. Cleanup (stop server)]
+
+### Expected Outcomes
+- Build completes with exit code 0
+- Server starts and remains running
+- [Specific to what you implemented]:
+  - API endpoint responds correctly
+  - Database operations succeed
+  - Service returns expected data
+
+---
+```
+
+### 7.3 What to Verify (Backend-Specific)
+
+| What You Implemented | Verification |
+|---------------------|--------------|
+| New API endpoint | Endpoint responds with correct status code |
+| Database model/migration | Can query the new table/fields |
+| Authentication | Protected routes require auth, return 401 without |
+| Service/business logic | Service method returns expected results |
+| Middleware | Request passes through middleware correctly |
+| Error handling | Invalid input returns appropriate error response |
+
+### 7.4 Keep It Generic
+
+- Use the project's actual commands (read from package.json, Makefile, etc.)
+- Don't hardcode ports - use environment variables or detect from config
+- Test the happy path first, then critical error cases
+
+---
+
+## Phase 8: Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -401,9 +466,13 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 
 ---
 
-## Phase 8: Complete
+## Phase 9: Complete
 
 **CRITICAL - DO NOT SKIP**
+
+Before completing, verify:
+- [ ] Verification steps appended to `.orchestrator/verification_steps.md`
+- [ ] Task report JSON written
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")

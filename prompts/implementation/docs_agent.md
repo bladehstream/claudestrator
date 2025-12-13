@@ -370,7 +370,71 @@ npx markdown-link-check ./docs/**/*.md
 
 ---
 
-## Phase 7: Write Task Report
+## Phase 7: Write Verification Steps
+
+**CRITICAL**: Append verification steps for the Testing Agent to execute.
+
+### 7.1 Determine Verification Commands
+
+Based on the documentation created, determine:
+- How to check for broken links
+- How to validate code examples
+- How to verify documentation builds (if using a doc generator)
+
+### 7.2 Append to Verification Steps File
+
+Append to `.orchestrator/verification_steps.md`:
+
+```markdown
+## [TASK-ID]
+
+| Field | Value |
+|-------|-------|
+| Category | docs |
+| Agent | docs |
+| Timestamp | [ISO timestamp] |
+
+### Build Verification
+[Commands to verify documentation builds/renders correctly, if applicable]
+
+### Content Verification
+[Commands to:
+1. Check for broken internal links
+2. Validate code examples syntax
+3. Verify required sections exist]
+
+### Expected Outcomes
+- Documentation renders without errors (if using doc generator)
+- No broken internal links
+- Code examples are syntactically valid
+- [Specific to what you documented]:
+  - README contains required sections
+  - API docs match actual endpoints
+  - Examples are complete and runnable
+
+---
+```
+
+### 7.3 What to Verify (Docs-Specific)
+
+| What You Documented | Verification |
+|---------------------|--------------|
+| README | Contains installation, usage, examples |
+| API documentation | Endpoints match actual API |
+| Code examples | Examples parse without syntax errors |
+| Internal links | Links resolve to existing files/anchors |
+| Configuration docs | Documented options match code |
+| Tutorials | Steps are complete and sequential |
+
+### 7.4 Keep It Generic
+
+- Use project's doc tooling if available (markdown-link-check, etc.)
+- Validate code examples against actual language parsers
+- Check that documented behavior matches implementation
+
+---
+
+## Phase 8: Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -395,9 +459,13 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 
 ---
 
-## Phase 8: Complete
+## Phase 9: Complete
 
 **CRITICAL - DO NOT SKIP**
+
+Before completing, verify:
+- [ ] Verification steps appended to `.orchestrator/verification_steps.md`
+- [ ] Task report JSON written
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")
@@ -418,6 +486,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Jargon without definition | Confusing for newcomers | Define terms or link to glossary |
 | No versioning | Wrong docs for version | Note version compatibility |
 | Forgetting task report | Analytics incomplete | Always write JSON report |
+| Skipping verification steps | Broken docs reach users | Always write verification steps |
 
 ---
 

@@ -286,7 +286,72 @@ Go through each criterion:
 
 ---
 
-## Phase 7: Write Task Report
+## Phase 7: Write Verification Steps
+
+**CRITICAL**: Append verification steps for the Testing Agent to execute.
+
+### 7.1 Determine Verification Commands
+
+Based on the project's tech stack (from Phase 1), determine:
+- How to build the frontend bundle
+- How to start the dev server
+- How to verify your implemented pages/components work
+
+### 7.2 Append to Verification Steps File
+
+Append to `.orchestrator/verification_steps.md`:
+
+```markdown
+## [TASK-ID]
+
+| Field | Value |
+|-------|-------|
+| Category | frontend |
+| Agent | frontend |
+| Timestamp | [ISO timestamp] |
+
+### Build Verification
+[Commands to verify frontend builds without errors - use project's actual build command]
+
+### Runtime Verification
+[Commands to:
+1. Start the dev server (background)
+2. Wait for startup
+3. Verify server is running
+4. Test implemented pages/components
+5. Cleanup (stop server)]
+
+### Expected Outcomes
+- Build completes with exit code 0
+- Dev server starts and remains running
+- [Specific to what you implemented]:
+  - Page/route loads successfully
+  - Component renders correctly
+  - User interactions work as expected
+
+---
+```
+
+### 7.3 What to Verify (Frontend-Specific)
+
+| What You Implemented | Verification |
+|---------------------|--------------|
+| New page/route | Route returns 200, contains expected content |
+| Component | Component renders without errors |
+| Form | Form submits and validates correctly |
+| API integration | Data loads from API and displays |
+| Navigation | Links navigate to correct routes |
+| Responsive layout | Page renders at different viewport sizes |
+
+### 7.4 Keep It Generic
+
+- Use the project's actual commands (read from package.json, vite.config, etc.)
+- Don't hardcode ports - detect from config or use common defaults
+- Test the happy path first, then critical user flows
+
+---
+
+## Phase 8: Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -311,9 +376,13 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 
 ---
 
-## Phase 8: Complete
+## Phase 9: Complete
 
 **CRITICAL - DO NOT SKIP**
+
+Before completing, verify:
+- [ ] Verification steps appended to `.orchestrator/verification_steps.md`
+- [ ] Task report JSON written
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")

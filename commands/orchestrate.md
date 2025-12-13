@@ -15,20 +15,24 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 
 ### Argument Parsing
 
-**CRITICAL**: Parse arguments in this order:
+**CRITICAL**: Parse arguments strictly:
 
-1. **First token is a number?** → That's the loop count
-2. **Everything after the number** → Research focus (passed to research agent)
-3. **No number?** → Single pass (initial build only)
+1. **Look at ONLY the first token**
+2. **If first token is a number** → That's LOOP_COUNT, everything else is RESEARCH_FOCUS
+3. **If first token is NOT a number** → LOOP_COUNT = 0, no focus
 
 | Command | Loop Count | Research Focus |
 |---------|------------|----------------|
 | `/orchestrate` | 0 (initial only) | None |
 | `/orchestrate 3` | 3 | None (general improvements) |
 | `/orchestrate 2 modern UI` | 2 | "modern UI" |
-| `/orchestrate 5 security and performance` | 5 | "security and performance" |
+| `/orchestrate 2 security, modern UI improvements` | 2 | "security, modern UI improvements" |
 
-The research focus is passed to the Research Agent to guide what improvements to look for.
+**WRONG interpretations to avoid:**
+- `/orchestrate 2 security, 2 modern UI` → Do NOT parse as "2 security loops + 2 UI loops"
+- This is 2 loops with focus "security, 2 modern UI" (the second "2" is part of the text)
+
+The focus is a single text string passed to ONE Research Agent per loop.
 
 ---
 
@@ -402,6 +406,31 @@ Historical Data: .orchestrator/history.csv
 2. **Use category-specific prompts** - agents read their detailed prompt file first
 3. **ONE blocking Bash per agent** - not a polling loop
 4. **NEVER use TaskOutput** - adds 50-100k tokens to context
+5. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
+6. **NEVER improvise the flow** - follow the documented steps exactly
+7. **ONE Research Agent per loop** - with FOCUS parameter, not multiple topic-specific agents
+
+### Allowed Agent Types (ONLY these)
+
+| Agent | When to Spawn | Prompt File |
+|-------|---------------|-------------|
+| Decomposition | Initial PRD breakdown | `prompts/decomposition_agent.md` |
+| Research | Start of each improvement loop | `prompts/research_agent.md` |
+| Frontend | Frontend tasks | `prompts/implementation/frontend_agent.md` |
+| Backend | Backend tasks | `prompts/implementation/backend_agent.md` |
+| Fullstack | Fullstack tasks | `prompts/implementation/fullstack_agent.md` |
+| DevOps | DevOps tasks | `prompts/implementation/devops_agent.md` |
+| Testing | Testing tasks | `prompts/implementation/testing_agent.md` |
+| Docs | Documentation tasks | `prompts/implementation/docs_agent.md` |
+| Analysis | End of all loops | `prompts/analysis_agent.md` |
+
+**FORBIDDEN:**
+- "Security research agent" ❌
+- "UI improvement agent" ❌
+- "Performance analysis agent" ❌
+- Any agent not in the table above ❌
+
+Use the Research Agent with `FOCUS: security` instead of a "security research agent".
 
 ---
 

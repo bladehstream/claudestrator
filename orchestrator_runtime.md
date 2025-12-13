@@ -29,21 +29,24 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 
 ## Argument Parsing
 
-**CRITICAL**: Parse `/orchestrate` arguments in this order:
+**CRITICAL**: Parse ONLY the first token as a number:
 
-1. **First token is a number?** → Loop count (N improvement loops)
-2. **Everything after the number** → Research focus
-3. **No number?** → Single pass (initial build only)
+1. **First token is a number?** → That's LOOP_COUNT
+2. **Everything after** → RESEARCH_FOCUS (single text string)
+3. **No number?** → LOOP_COUNT = 0, no focus
 
 | Command | Loops | Focus |
 |---------|-------|-------|
 | `/orchestrate` | 0 | None |
 | `/orchestrate 3` | 3 | general |
 | `/orchestrate 2 modern UI` | 2 | "modern UI" |
+| `/orchestrate 2 security, UI improvements` | 2 | "security, UI improvements" |
+
+**WRONG:** `/orchestrate 2 security, 2 UI` is NOT "2+2 loops" - it's 2 loops with focus "security, 2 UI"
 
 Store parsed values:
-- `LOOP_COUNT` = number of improvement loops
-- `RESEARCH_FOCUS` = focus text (or "general improvements")
+- `LOOP_COUNT` = number of improvement loops (from first token only)
+- `RESEARCH_FOCUS` = everything after the number (single string)
 
 ---
 
@@ -381,6 +384,19 @@ Historical Data: .orchestrator/history.csv
 3. **Use category-specific prompts** - agents read their detailed prompt file first
 4. **Manager only** - never write code directly
 5. **Pass LOOP_NUMBER and RUN_ID** - to all implementation agents
+6. **NEVER spawn ad-hoc agents** - only use predefined agent types
+7. **NEVER improvise** - follow the documented flow exactly
+8. **ONE Research Agent per loop** - use FOCUS parameter, not topic-specific agents
+
+### Forbidden Behaviors
+
+| ❌ WRONG | ✅ CORRECT |
+|----------|-----------|
+| Spawn "Security research agent" | Spawn Research Agent with `FOCUS: security` |
+| Spawn "UI improvement agent" | Spawn Research Agent with `FOCUS: UI improvements` |
+| Parse "2 security, 2 UI" as 4 loops | Parse as 2 loops with focus "security, 2 UI" |
+| Create agent types not in prompt files | Only use agents listed in Prompt Files table |
+| Improvise steps not in this document | Follow documented steps exactly |
 
 ## Waiting Pattern
 

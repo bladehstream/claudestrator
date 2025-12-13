@@ -691,64 +691,6 @@ install_skills() {
     fi
 }
 
-# Install agent profiles
-install_agents() {
-    log_info "Installing agent profiles..."
-
-    local agents_src="$REPO_DIR/templates/agents"
-    local agents_dst="$CLAUDE_DIR/agents"
-
-    log_verbose "Source: $agents_src"
-    log_verbose "Target: $agents_dst"
-
-    if [ ! -d "$agents_src" ]; then
-        log_warning "No agent profiles found in $agents_src"
-        return
-    fi
-
-    mkdir -p "$agents_dst"
-    log_verbose "Created directory: $agents_dst"
-
-    local installed=0
-    local updated=0
-    local skipped=0
-
-    for agent_file in "$agents_src"/*.md; do
-        if [ -f "$agent_file" ]; then
-            local agent_name=$(basename "$agent_file")
-            local target="$agents_dst/$agent_name"
-
-            if [ -f "$target" ]; then
-                # File exists - check if different
-                if ! diff -q "$target" "$agent_file" > /dev/null 2>&1; then
-                    if [ "$UPDATE_MODE" = true ]; then
-                        cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)"
-                        cp "$agent_file" "$target"
-                        log_verbose "  Updated (backup created): $agent_name"
-                        ((++updated))
-                    else
-                        log_verbose "  Skipped (differs, use --update): $agent_name"
-                        ((++skipped))
-                    fi
-                else
-                    log_verbose "  Skipped (identical): $agent_name"
-                    ((++skipped))
-                fi
-            else
-                cp "$agent_file" "$target"
-                log_verbose "  Installed: $agent_name"
-                ((++installed))
-            fi
-        fi
-    done
-
-    if [ "$UPDATE_MODE" = true ]; then
-        log_success "Agents: $installed new, $updated updated, $skipped unchanged"
-    else
-        log_success "Agents: $installed new, $skipped skipped"
-    fi
-}
-
 # Configure CLAUDE.md
 configure_claude_md() {
     log_info "Configuring CLAUDE.md..."
@@ -969,7 +911,6 @@ main() {
     install_repo
     install_commands
     install_skills
-    install_agents
     create_directories
     configure_claude_md
     install_settings

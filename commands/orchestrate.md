@@ -1,8 +1,8 @@
 # /orchestrate
 
-> **Version**: MVP 2.0 - Pre-configured agent profiles with category-based routing.
+> **Version**: MVP 2.1 - Inline prompts with complexity-based model routing.
 
-You are a PROJECT MANAGER. You spawn specialized agents and route tasks by category.
+You are a PROJECT MANAGER. You spawn `general-purpose` agents with inline instructions and route by complexity.
 
 ## Usage
 
@@ -20,18 +20,16 @@ You are a PROJECT MANAGER. You spawn specialized agents and route tasks by categ
 
 ---
 
-## Agent Types
+## Agent Configuration
 
-**For Task tool automation, always use `subagent_type: "general-purpose"`** with instructions in the prompt.
+All agents use `subagent_type: "general-purpose"` with role-specific instructions in the prompt.
 
-Custom agents in `.claude/agents/` are for interactive use (mentioning by name), not Task tool.
+| subagent_type | Use For |
+|---------------|---------|
+| `general-purpose` | All tasks (decomposition, research, implementation) |
+| `Explore` | Quick read-only codebase search |
 
-| subagent_type | Model | Use For |
-|---------------|-------|---------|
-| `general-purpose` | sonnet | All implementation tasks (include instructions in prompt) |
-| `Explore` | haiku | Quick read-only codebase search |
-
-**Category → Model mapping:**
+**Complexity → Model mapping:**
 
 | Category | Complexity | Model |
 |----------|------------|-------|
@@ -265,7 +263,6 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 | Purpose | Path |
 |---------|------|
-| Agent Profiles | `.claude/agents/*.md` |
 | Task Queue | `.orchestrator/task_queue.md` |
 | Issue Queue | `.orchestrator/issue_queue.md` |
 | Markers | `.orchestrator/complete/{id}.done` |
@@ -273,4 +270,4 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ---
 
-*MVP Version: 2.0*
+*MVP Version: 2.1*

@@ -1,6 +1,6 @@
-# Architecture Guide (MVP 2.0)
+# Architecture Guide (MVP 2.1)
 
-This document describes the Claudestrator MVP 2.0 architecture with pre-configured agent profiles and category-based routing.
+This document describes the Claudestrator MVP 2.1 architecture with inline prompts and complexity-based model routing.
 
 ---
 
@@ -182,30 +182,22 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
 
 ---
 
-## Agent Types
+## Agent Configuration
 
-**For Task tool automation, always use `subagent_type: "general-purpose"`** with role-specific instructions in the prompt.
-
-Custom agents in `.claude/agents/` are for **interactive use only** (mentioning by name in conversation). They cannot be invoked via the Task tool's `subagent_type` parameter.
-
-### Built-in Agents (Task tool)
+All agents use `subagent_type: "general-purpose"` with role-specific instructions in the prompt.
 
 | subagent_type | Model | Use For |
 |---------------|-------|---------|
-| `general-purpose` | haiku/sonnet/opus | All implementation tasks (include instructions in prompt) |
+| `general-purpose` | haiku/sonnet/opus | All tasks (decomposition, research, implementation) |
 | `Explore` | haiku | Quick read-only codebase search |
 
-### Custom Agent Profiles (Interactive use)
+**Complexity → Model mapping:**
 
-Installed to `.claude/agents/` for use when mentioning by name:
-
-| Profile | Skills | Domain |
-|---------|--------|--------|
-| `decomposition-agent` | decomposition_agent | Breaking PRD into tasks |
-| `frontend-agent` | frontend_design, ui-generator | UI, React, styling |
-| `backend-agent` | api_development, database_designer, backend_security | API, database, server |
-| `qa-agent` | qa_agent, webapp_testing, playwright_qa_agent | Tests, validation |
-| `research-agent` | web_research_agent, qa_agent, security_reviewer | Finding improvements |
+| Complexity | Model |
+|------------|-------|
+| easy | haiku |
+| normal | sonnet |
+| complex | opus |
 
 ---
 
@@ -245,13 +237,6 @@ Installed to `.claude/agents/` for use when mentioning by name:
 ```
 project/
 ├── PRD.md                          # Input: Product requirements
-├── .claude/
-│   └── agents/                     # Pre-configured agent profiles
-│       ├── decomposition-agent.md
-│       ├── frontend-agent.md
-│       ├── backend-agent.md
-│       ├── qa-agent.md
-│       └── research-agent.md
 └── .orchestrator/                  # Runtime data
     ├── task_queue.md               # Tasks with Category, Complexity
     ├── issue_queue.md              # Issues from research/user
@@ -401,8 +386,8 @@ WHILE Glob(marker).length == 0:
     Bash("sleep 5")
 
 # ❌ NEVER - orchestrator should not read these
-Read("PRD.md")           # decomposition-agent reads this
-Read("issue_queue.md")   # research-agent writes, orchestrator converts
+Read("PRD.md")           # decomposition agent reads this
+Read("issue_queue.md")   # research agent writes, orchestrator converts
 
 # ❌ NEVER - outputs fill context
 Bash("cat .orchestrator/task_queue.md")
@@ -468,5 +453,5 @@ The POST /api/users endpoint lacks input validation.
 
 ---
 
-*Architecture Version: 2.0*
+*Architecture Version: 2.1*
 *Last Updated: December 2025*

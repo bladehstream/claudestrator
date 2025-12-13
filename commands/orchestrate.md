@@ -253,9 +253,9 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ## Critical Rules
 
-1. **NEVER read PRD.md yourself** - spawn decomposition-agent
-2. **Route by Category** - use the right specialized agent
-3. **Agents have built-in instructions** - keep prompts minimal
+1. **NEVER read PRD.md yourself** - spawn a general-purpose agent with decomposition instructions
+2. **Always use `subagent_type: "general-purpose"`** - custom agent names don't work in Task tool
+3. **Include full instructions in prompt** - agents need explicit directions
 4. **ONE blocking Bash per agent** - not a polling loop
 5. **NEVER use TaskOutput** - adds 50-100k tokens to context
 

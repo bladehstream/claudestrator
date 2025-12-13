@@ -85,14 +85,14 @@ The orchestrator is blocked waiting for this file.
 
 ## Category Guidelines
 
-| Category | Description | Routes To |
-|----------|-------------|-----------|
-| frontend | UI components, styling, client logic | frontend-agent |
-| backend | API, database, server logic | backend-agent |
-| fullstack | Both frontend and backend | general-purpose |
-| devops | Docker, CI/CD, deployment | general-purpose |
-| testing | Tests, QA, validation | qa-agent |
-| docs | Documentation, README | general-purpose |
+| Category | Description |
+|----------|-------------|
+| frontend | UI components, styling, client logic |
+| backend | API, database, server logic |
+| fullstack | Both frontend and backend |
+| devops | Docker, CI/CD, deployment |
+| testing | Tests, QA, validation |
+| docs | Documentation, README |
 
 ## Checklist Before Finishing
 

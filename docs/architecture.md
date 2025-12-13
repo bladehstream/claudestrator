@@ -7,8 +7,8 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
 ## Core Principles
 
 1. **Orchestrator stays minimal** - only reads `task_queue.md`, never PRD or codebase
-2. **Pre-configured agents** - agent profiles in `.claude/agents/` with built-in skills
-3. **Category-based routing** - tasks routed to specialized agents by category
+2. **Always use `general-purpose`** - custom agent names don't work in Task tool's `subagent_type`
+3. **Instructions in prompt** - each agent gets role-specific instructions inline
 4. **File-based coordination** - agents write `.done` markers, orchestrator waits via blocking Bash
 
 ---
@@ -41,11 +41,11 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
                     ┌────────────────▼────────────────┐
                     │     STEP 1: DECOMPOSITION       │
                     │                                 │
-                    │  Task(decomposition-agent)      │
+                    │  Task(general-purpose)          │
+                    │  + decomposition instructions   │
                     │         │                       │
                     │         ▼                       │
                     │  ┌─────────────────────┐        │
-                    │  │ decomposition-agent │        │
                     │  │  • Read PRD.md      │        │
                     │  │  • Create tasks     │        │
                     │  │  • Write task_queue │        │
@@ -65,26 +65,22 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
                     │  ┌─────────────────────────┐    │
                     │  │ For each pending task:  │    │
                     │  │                         │    │
-                    │  │  Category → Agent       │    │
-                    │  │  ─────────────────────  │    │
-                    │  │  frontend → frontend-agent   │
-                    │  │  backend  → backend-agent    │
-                    │  │  testing  → qa-agent         │
-                    │  │  *        → general-purpose  │
-                    │  │                         │    │
                     │  │  Complexity → Model     │    │
                     │  │  ─────────────────────  │    │
                     │  │  easy    → haiku        │    │
                     │  │  normal  → sonnet       │    │
                     │  │  complex → opus         │    │
+                    │  │                         │    │
+                    │  │  Include Category in    │    │
+                    │  │  prompt for context     │    │
                     │  └───────────┬─────────────┘    │
                     │              │                  │
                     │              ▼                  │
                     │  ┌─────────────────────────┐    │
-                    │  │   Task(selected-agent)  │    │
-                    │  │   while [ ! TASK-XXX.done ]  │
-                    │  │   Update status=completed    │
-                    │  │   Next task...          │    │
+                    │  │  Task(general-purpose)  │    │
+                    │  │  + task instructions    │    │
+                    │  │  while [ ! TASK-XXX.done ]  │
+                    │  │  Update status=completed    │
                     │  └─────────────────────────┘    │
                     └────────────────┬────────────────┘
                                      │
@@ -127,11 +123,11 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
                          │                    ┌────────────────▼────────────────┐
                          │                    │  2. SPAWN RESEARCH AGENT        │
                          │                    │                                 │
-                         │                    │  Task(research-agent)           │
+                         │                    │  Task(general-purpose)          │
+                         │                    │  + research instructions        │
                          │                    │         │                       │
                          │                    │         ▼                       │
                          │                    │  ┌─────────────────────┐        │
-                         │                    │  │   research-agent    │        │
                          │                    │  │  • Analyze codebase │        │
                          │                    │  │  • Find improvements│        │
                          │                    │  │  • Write 3-5 issues │        │
@@ -156,8 +152,8 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
                     ┌───────────────────────▼─────────────────────────┐
                     │  4. EXECUTE TASKS (same as Step 2)               │
                     │                                                  │
-                    │  Route by Category → Agent                       │
                     │  Select Model by Complexity                      │
+                    │  Include Category in prompt for context          │
                     └───────────────────────┬─────────────────────────┘
                                             │
                     ┌───────────────────────▼─────────────────────────┐
@@ -186,23 +182,34 @@ This document describes the Claudestrator MVP 2.0 architecture with pre-configur
 
 ---
 
-## Agent Catalog
+## Agent Types
 
-Pre-configured agents in `.claude/agents/`:
+**For Task tool automation, always use `subagent_type: "general-purpose"`** with role-specific instructions in the prompt.
 
-| Agent | Model | Skills | Use For |
-|-------|-------|--------|---------|
-| `decomposition-agent` | sonnet | decomposition_agent | Breaking PRD into tasks |
-| `frontend-agent` | sonnet | frontend_design, ui-generator | UI, React, styling |
-| `backend-agent` | sonnet | api_development, database_designer, backend_security | API, database, server |
-| `qa-agent` | sonnet | qa_agent, webapp_testing, playwright_qa_agent | Tests, validation |
-| `research-agent` | sonnet | web_research_agent, qa_agent, security_reviewer | Finding improvements |
-| `general-purpose` | varies | (built-in) | Everything else |
-| `Explore` | haiku | (built-in, read-only) | Quick codebase search |
+Custom agents in `.claude/agents/` are for **interactive use only** (mentioning by name in conversation). They cannot be invoked via the Task tool's `subagent_type` parameter.
+
+### Built-in Agents (Task tool)
+
+| subagent_type | Model | Use For |
+|---------------|-------|---------|
+| `general-purpose` | haiku/sonnet/opus | All implementation tasks (include instructions in prompt) |
+| `Explore` | haiku | Quick read-only codebase search |
+
+### Custom Agent Profiles (Interactive use)
+
+Installed to `.claude/agents/` for use when mentioning by name:
+
+| Profile | Skills | Domain |
+|---------|--------|--------|
+| `decomposition-agent` | decomposition_agent | Breaking PRD into tasks |
+| `frontend-agent` | frontend_design, ui-generator | UI, React, styling |
+| `backend-agent` | api_development, database_designer, backend_security | API, database, server |
+| `qa-agent` | qa_agent, webapp_testing, playwright_qa_agent | Tests, validation |
+| `research-agent` | web_research_agent, qa_agent, security_reviewer | Finding improvements |
 
 ---
 
-## Agent Routing
+## Task Routing
 
 ```
                     ┌─────────────────────────────────┐
@@ -210,22 +217,26 @@ Pre-configured agents in `.claude/agents/`:
                     │   (reads task_queue.md)         │
                     └────────────────┬────────────────┘
                                      │
-                         Category field determines route
+                         Complexity → Model Selection
                                      │
-        ┌────────────┬───────────────┼───────────────┬────────────┐
-        │            │               │               │            │
-        ▼            ▼               ▼               ▼            ▼
-   ┌─────────┐ ┌─────────┐    ┌─────────┐    ┌─────────┐   ┌─────────┐
-   │frontend │ │backend  │    │ testing │    │fullstack│   │  docs   │
-   │ -agent  │ │ -agent  │    │qa-agent │    │general- │   │general- │
-   │         │ │         │    │         │    │purpose  │   │purpose  │
-   └─────────┘ └─────────┘    └─────────┘    └─────────┘   └─────────┘
-        │            │               │               │            │
-        └────────────┴───────────────┴───────────────┴────────────┘
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+   ┌─────────┐                 ┌─────────┐                 ┌─────────┐
+   │  easy   │                 │ normal  │                 │ complex │
+   │  haiku  │                 │ sonnet  │                 │  opus   │
+   └─────────┘                 └─────────┘                 └─────────┘
+        │                            │                            │
+        └────────────────────────────┴────────────────────────────┘
+                                     │
+                    Task(subagent_type: "general-purpose")
+                    + Category included in prompt for context
                                      │
                               All agents write
                          .orchestrator/complete/TASK-XXX.done
 ```
+
+**Category** is included in the agent prompt to provide domain context (frontend, backend, etc.), but does not affect agent routing - all tasks use `general-purpose`.
 
 ---
 
@@ -259,11 +270,13 @@ project/
 
 | File | Written By | Read By | Size |
 |------|------------|---------|------|
-| `PRD.md` | User / PRDGen | decomposition-agent ONLY | 5-10k tokens |
-| `.orchestrator/issue_queue.md` | research-agent, user | Orchestrator | Variable |
-| `.orchestrator/task_queue.md` | decomposition-agent | **Orchestrator** | ~500 tokens |
+| `PRD.md` | User / PRDGen | Decomposition agent ONLY | 5-10k tokens |
+| `.orchestrator/issue_queue.md` | Research agent, user | Orchestrator | Variable |
+| `.orchestrator/task_queue.md` | Decomposition agent | **Orchestrator** | ~500 tokens |
 | `.orchestrator/session_state.md` | Orchestrator | Orchestrator | ~100 tokens |
 | `.orchestrator/complete/*.done` | All agents | Orchestrator (via Bash) | ~10 tokens |
+
+*Note: "Decomposition agent" and "Research agent" refer to `general-purpose` agents with specific instructions, not custom agent names.*
 
 ---
 
@@ -276,24 +289,24 @@ project/
 │   ─────────────────────        ────────────────────────                 │
 │                                                                         │
 │   ┌───────────────────┐        ┌───────────────────┐                    │
-│   │ • task_queue.md   │        │ decomposition     │                    │
-│   │   (~500 tokens)   │        │ • PRD (5-10k)     │                    │
-│   │                   │        │ • skills loaded   │                    │
+│   │ • task_queue.md   │        │ Decomposition     │                    │
+│   │   (~500 tokens)   │        │ (general-purpose) │                    │
+│   │                   │        │ • PRD (5-10k)     │                    │
 │   │ • session_state   │        └───────────────────┘                    │
 │   │   (~100 tokens)   │                                                 │
 │   │                   │        ┌───────────────────┐                    │
-│   │ • Wait results    │        │ research-agent    │                    │
-│   │   (~100/agent)    │        │ • Full codebase   │                    │
-│   │                   │        │ • Web access      │                    │
-│   │ TOTAL: ~1000      │        │ • 50k+ tokens OK  │                    │
-│   │ tokens/loop       │        └───────────────────┘                    │
-│   └───────────────────┘                                                 │
+│   │ • Wait results    │        │ Research          │                    │
+│   │   (~100/agent)    │        │ (general-purpose) │                    │
+│   │                   │        │ • Full codebase   │                    │
+│   │ TOTAL: ~1000      │        │ • Web access      │                    │
+│   │ tokens/loop       │        │ • 50k+ tokens OK  │                    │
+│   └───────────────────┘        └───────────────────┘                    │
+│                                                                         │
 │                                ┌───────────────────┐                    │
-│                                │ frontend-agent    │                    │
-│                                │ backend-agent     │                    │
-│                                │ qa-agent          │                    │
+│                                │ Implementation    │                    │
+│                                │ (general-purpose) │                    │
 │                                │ • Task context    │                    │
-│                                │ • Skills loaded   │                    │
+│                                │ • Category hint   │                    │
 │                                └───────────────────┘                    │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘

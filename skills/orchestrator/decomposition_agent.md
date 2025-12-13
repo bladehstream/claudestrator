@@ -76,16 +76,16 @@ Format each task as:
 
 ### Category Guidelines
 
-The orchestrator routes tasks to specialized agents based on Category:
+Category helps the orchestrator select the right model and include domain-specific context:
 
-| Category | Routes To | Use For |
-|----------|-----------|---------|
-| frontend | frontend-agent | UI components, React, styling, client logic |
-| backend | backend-agent | API endpoints, database, server logic |
-| fullstack | general-purpose | Features spanning frontend and backend |
-| devops | general-purpose | Docker, CI/CD, deployment, infrastructure |
-| testing | qa-agent | Tests, validation, QA |
-| docs | general-purpose | Documentation, README |
+| Category | Domain | Typical Work |
+|----------|--------|--------------|
+| frontend | UI/UX | React components, styling, client logic |
+| backend | Server | API endpoints, database, server logic |
+| fullstack | Both | Features spanning frontend and backend |
+| devops | Ops | Docker, CI/CD, deployment, infrastructure |
+| testing | QA | Tests, validation, QA |
+| docs | Docs | Documentation, README |
 
 ### Step 5: Write Completion Marker
 

@@ -102,14 +102,14 @@ The orchestrator is blocked waiting for this file.
 
 ## Issue Category Guidelines
 
-Set Category for agent routing:
+Set Category so the orchestrator includes domain-specific context:
 
-| Category | Routes To |
-|----------|-----------|
-| frontend | frontend-agent |
-| backend | backend-agent |
-| testing | qa-agent |
-| fullstack | general-purpose |
+| Category | Domain |
+|----------|--------|
+| frontend | UI, React, styling |
+| backend | API, database, server |
+| testing | Tests, QA, validation |
+| fullstack | Both frontend and backend |
 
 ## Constraints
 

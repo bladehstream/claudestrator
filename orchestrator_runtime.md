@@ -90,7 +90,7 @@ For each loop 1..N:
 
 ```
 Task(
-  model: "opus",
+  model: "opus",  # Research requires deep analysis
   run_in_background: true,
   prompt: "Analyze codebase for improvements. Write to .orchestrator/issue_queue.md.
            When done: Write('.orchestrator/complete/research-[LOOP].done', 'done')"

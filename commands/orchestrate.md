@@ -168,7 +168,7 @@ Only spawn research if the issue queue is empty or all issues are completed:
 
 ```
 Task(
-  model: "sonnet",
+  model: "opus",
   run_in_background: true,
   prompt: "WORKING_DIR: [absolute path]
   LOOP: [N] of [total]

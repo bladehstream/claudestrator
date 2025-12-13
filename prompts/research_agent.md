@@ -481,7 +481,6 @@ The orchestrator spawns this agent using:
 
 ```
 Task(
-    subagent_type: "general-purpose",
     model: "opus",
     prompt: <contents of this template with variables substituted>
 )

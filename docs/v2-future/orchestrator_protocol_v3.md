@@ -870,7 +870,6 @@ agent_id = "agent-" + generateShortId()
 
 # Spawn the agent IN BACKGROUND to prevent context bloat
 Task(
-    subagent_type: "general-purpose",
     model: selectModel(task),
     prompt: constructPrompt(task, skills, context, model),
     description: task.name,

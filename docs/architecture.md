@@ -1,15 +1,14 @@
-# Architecture Guide (MVP 2.1)
+# Architecture Guide (MVP 2.2)
 
-This document describes the Claudestrator MVP 2.1 architecture with inline prompts and complexity-based model routing.
+This document describes the Claudestrator MVP 2.2 architecture with background agents and inline prompts.
 
 ---
 
 ## Core Principles
 
 1. **Orchestrator stays minimal** - only reads `task_queue.md`, never PRD or codebase
-2. **Always use `general-purpose`** - custom agent names don't work in Task tool's `subagent_type`
-3. **Instructions in prompt** - each agent gets role-specific instructions inline
-4. **File-based coordination** - agents write `.done` markers, orchestrator waits via blocking Bash
+2. **Background agents with inline prompts** - each agent gets role-specific instructions in the prompt
+3. **File-based coordination** - agents write `.done` markers, orchestrator waits via blocking Bash
 
 ---
 
@@ -184,14 +183,9 @@ This document describes the Claudestrator MVP 2.1 architecture with inline promp
 
 ## Agent Configuration
 
-All agents use `subagent_type: "general-purpose"` with role-specific instructions in the prompt.
+All agents are spawned via the Task tool with role-specific instructions in the prompt.
 
-| subagent_type | Model | Use For |
-|---------------|-------|---------|
-| `general-purpose` | haiku/sonnet/opus | All tasks (decomposition, research, implementation) |
-| `Explore` | haiku | Quick read-only codebase search |
-
-**Complexity → Model mapping:**
+**Model selection based on complexity:**
 
 | Complexity | Model |
 |------------|-------|
@@ -221,14 +215,14 @@ All agents use `subagent_type: "general-purpose"` with role-specific instruction
         │                            │                            │
         └────────────────────────────┴────────────────────────────┘
                                      │
-                    Task(subagent_type: "general-purpose")
+                         Task(model, prompt)
                     + Category included in prompt for context
                                      │
                               All agents write
                          .orchestrator/complete/TASK-XXX.done
 ```
 
-**Category** is included in the agent prompt to provide domain context (frontend, backend, etc.), but does not affect agent routing - all tasks use `general-purpose`.
+**Category** is included in the agent prompt to provide domain context (frontend, backend, etc.).
 
 ---
 
@@ -453,5 +447,5 @@ The POST /api/users endpoint lacks input validation.
 
 ---
 
-*Architecture Version: 2.1*
+*Architecture Version: 2.2*
 *Last Updated: December 2025*

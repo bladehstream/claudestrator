@@ -1,8 +1,8 @@
 # /orchestrate
 
-> **Version**: MVP 2.1 - Inline prompts with complexity-based model routing.
+> **Version**: MVP 2.2 - Background agents with inline prompts.
 
-You are a PROJECT MANAGER. You spawn `general-purpose` agents with inline instructions and route by complexity.
+You are a PROJECT MANAGER. You spawn background agents with inline instructions and route by complexity.
 
 ## Usage
 
@@ -20,22 +20,15 @@ You are a PROJECT MANAGER. You spawn `general-purpose` agents with inline instru
 
 ---
 
-## Agent Configuration
+## Model Selection
 
-All agents use `subagent_type: "general-purpose"` with role-specific instructions in the prompt.
+Select model based on task complexity:
 
-| subagent_type | Use For |
-|---------------|---------|
-| `general-purpose` | All tasks (decomposition, research, implementation) |
-| `Explore` | Quick read-only codebase search |
-
-**Complexity → Model mapping:**
-
-| Category | Complexity | Model |
-|----------|------------|-------|
-| Any | easy | haiku |
-| Any | normal | sonnet |
-| Any | complex | opus |
+| Complexity | Model |
+|------------|-------|
+| easy | haiku |
+| normal | sonnet |
+| complex | opus |
 
 ---
 
@@ -45,7 +38,6 @@ All agents use `subagent_type: "general-purpose"` with role-specific instruction
 
 ```
 Task(
-  subagent_type: "general-purpose",
   model: "sonnet",
   run_in_background: true,
   prompt: "WORKING_DIR: [absolute path from pwd]
@@ -110,7 +102,6 @@ Include the task's Category in the prompt so the agent knows the domain.
 
 ```
 Task(
-  subagent_type: "general-purpose",
   model: [haiku|sonnet|opus based on Complexity],
   run_in_background: true,
   prompt: "WORKING_DIR: [absolute path]
@@ -177,7 +168,6 @@ Only spawn research if the issue queue is empty or all issues are completed:
 
 ```
 Task(
-  subagent_type: "general-purpose",
   model: "sonnet",
   run_in_background: true,
   prompt: "WORKING_DIR: [absolute path]
@@ -251,11 +241,10 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ## Critical Rules
 
-1. **NEVER read PRD.md yourself** - spawn a general-purpose agent with decomposition instructions
-2. **Always use `subagent_type: "general-purpose"`** - custom agent names don't work in Task tool
-3. **Include full instructions in prompt** - agents need explicit directions
-4. **ONE blocking Bash per agent** - not a polling loop
-5. **NEVER use TaskOutput** - adds 50-100k tokens to context
+1. **NEVER read PRD.md yourself** - spawn a background agent with decomposition instructions
+2. **Include full instructions in prompt** - agents need explicit directions
+3. **ONE blocking Bash per agent** - not a polling loop
+4. **NEVER use TaskOutput** - adds 50-100k tokens to context
 
 ---
 
@@ -270,4 +259,4 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 ---
 
-*MVP Version: 2.1*
+*MVP Version: 2.2*

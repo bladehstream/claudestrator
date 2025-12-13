@@ -33,7 +33,6 @@ Spawn a PRD Generator agent to conduct a requirements interview and produce a st
 
 ```
 Task(
-    subagent_type: "general-purpose",
     model: "opus",
     prompt: """
         # PRD Generator Agent

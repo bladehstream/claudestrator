@@ -55,7 +55,6 @@ The orchestrator polls this queue and creates tasks automatically.
 
 ```
 Task(
-    subagent_type: "general-purpose",
     model: "sonnet",
     prompt: """
         # Issue Reporter Agent

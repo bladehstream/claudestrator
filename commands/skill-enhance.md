@@ -211,7 +211,6 @@ ON /skill-enhance [skill_id]:
 
 ```
 Task(
-    subagent_type: "general-purpose",
     model: "opus",  # Complex research task requires Opus
     prompt: """
         # Skill Enhancer Agent

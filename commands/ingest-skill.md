@@ -19,7 +19,6 @@ Import skills from external sources (URLs, local files, GitHub repos) into the C
 
 ```
 Task(
-    subagent_type: "general-purpose",
     model: "sonnet",
     prompt: """
         # Skill Ingestion Agent

@@ -100,7 +100,6 @@ ON /audit-skills:
 
 ```
 Task(
-    subagent_type: "general-purpose",
     model: "sonnet",
     prompt: """
         # Skill Auditor Agent

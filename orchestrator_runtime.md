@@ -41,7 +41,6 @@
    ```
 
    Task parameters:
-   - subagent_type: "general-purpose"
    - model: "opus"
    - run_in_background: true
 
@@ -57,7 +56,6 @@ For each pending task in `.orchestrator/task_queue.md`:
 1. Spawn agent:
    ```
    Task(
-     subagent_type: "general-purpose",
      model: [haiku|sonnet|opus based on complexity],
      run_in_background: true,
      prompt: "Task: [TASK-ID]
@@ -92,7 +90,6 @@ For each loop 1..N:
 
 ```
 Task(
-  subagent_type: "general-purpose",
   model: "opus",
   run_in_background: true,
   prompt: "Analyze codebase for improvements. Write to .orchestrator/issue_queue.md.

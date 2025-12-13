@@ -7,9 +7,30 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 ## Usage
 
 ```
-/orchestrate              # Single pass - decompose PRD and execute tasks
-/orchestrate --dry-run    # Preview tasks without executing
+/orchestrate                              # Single pass - decompose PRD and execute tasks
+/orchestrate --dry-run                    # Preview tasks without executing
+/orchestrate N                            # Run N improvement loops after initial build
+/orchestrate N <focus>                    # Run N loops focused on specific area
 ```
+
+### Argument Parsing
+
+**CRITICAL**: Parse arguments in this order:
+
+1. **First token is a number?** → That's the loop count
+2. **Everything after the number** → Research focus (passed to research agent)
+3. **No number?** → Single pass (initial build only)
+
+| Command | Loop Count | Research Focus |
+|---------|------------|----------------|
+| `/orchestrate` | 0 (initial only) | None |
+| `/orchestrate 3` | 3 | None (general improvements) |
+| `/orchestrate 2 modern UI` | 2 | "modern UI" |
+| `/orchestrate 5 security and performance` | 5 | "security and performance" |
+
+The research focus is passed to the Research Agent to guide what improvements to look for.
+
+---
 
 ## Startup Checklist
 
@@ -209,8 +230,15 @@ Task(
   WORKING_DIR: [absolute path]
   LOOP: [N] of [total]
   MODE: improvement_loop
+  FOCUS: [research focus from command args, or 'general improvements' if none]
 
   Analyze the codebase for improvements and write issues to .orchestrator/issue_queue.md.
+
+  If FOCUS is specified, prioritize finding issues related to that area.
+  Examples:
+  - FOCUS: 'modern UI' → look for UI/UX improvements, outdated patterns, accessibility
+  - FOCUS: 'security' → look for vulnerabilities, auth issues, input validation
+  - FOCUS: 'performance' → look for slow queries, inefficient code, caching opportunities
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/research.done', 'done')

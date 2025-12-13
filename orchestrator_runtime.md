@@ -27,6 +27,26 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 
 ---
 
+## Argument Parsing
+
+**CRITICAL**: Parse `/orchestrate` arguments in this order:
+
+1. **First token is a number?** → Loop count (N improvement loops)
+2. **Everything after the number** → Research focus
+3. **No number?** → Single pass (initial build only)
+
+| Command | Loops | Focus |
+|---------|-------|-------|
+| `/orchestrate` | 0 | None |
+| `/orchestrate 3` | 3 | general |
+| `/orchestrate 2 modern UI` | 2 | "modern UI" |
+
+Store parsed values:
+- `LOOP_COUNT` = number of improvement loops
+- `RESEARCH_FOCUS` = focus text (or "general improvements")
+
+---
+
 ## Startup
 
 1. Check PRD.md exists
@@ -35,6 +55,7 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 4. Get absolute working directory with `pwd`
 5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS`
 6. Initialize LOOP_NUMBER to 1
+7. Parse arguments → set LOOP_COUNT and RESEARCH_FOCUS
 
 ---
 
@@ -170,8 +191,11 @@ Task(
   WORKING_DIR: [absolute path]
   LOOP: [N] of [total]
   MODE: improvement_loop
+  FOCUS: [RESEARCH_FOCUS from parsed args, or 'general improvements']
 
   Analyze the codebase for improvements and write issues to .orchestrator/issue_queue.md.
+
+  If FOCUS is specified, prioritize issues related to that area.
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/research.done', 'done')

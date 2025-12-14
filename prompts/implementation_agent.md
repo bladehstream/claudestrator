@@ -26,16 +26,19 @@ You must:
 TASK ASSIGNMENT
 ===============================================================================
 
-Task ID:     {task_id}
-Category:    {category}
-Complexity:  {complexity}
-Objective:   {objective}
+Task ID:       {task_id}
+Category:      {category}
+Complexity:    {complexity}
+Objective:     {objective}
 
 Acceptance Criteria:
 {acceptance_criteria}
 
-Dependencies: {dependencies}
-Notes:        {notes}
+Dependencies:  {dependencies}
+Notes:         {notes}
+
+Build Command: {build_command}
+Test Command:  {test_command}
 
 ===============================================================================
 PHASE 1: UNDERSTAND CONTEXT
@@ -240,12 +243,34 @@ Edit("path/to/file.ts", <old_string>, <new_string>)
 ```
 
 ===============================================================================
-PHASE 4: VERIFY (RUN TESTS)
+PHASE 4: VERIFY (BUILD + TESTS)
 ===============================================================================
 
-**This is your verification step for the current attempt.**
+**This is your verification step for the current attempt. BOTH build AND tests must pass.**
 
-### 4.1 Run the Tests
+### 4.1 Run the Build (REQUIRED)
+
+**CRITICAL**: You MUST run the build command BEFORE running tests. A failing build means your implementation is incomplete.
+
+```
+Bash("{build_command} 2>&1")
+```
+
+**If build FAILS:**
+- Read the error output carefully
+- Common issues:
+  - Missing imports (file doesn't exist)
+  - Syntax errors
+  - Type errors
+  - Missing dependencies
+- **Fix the build error before proceeding**
+- This counts against your 3 attempts
+- **If attempt < 3**: Fix and retry
+- **If attempt == 3**: Proceed to FAILURE PROTOCOL
+
+**If build PASSES:** Proceed to run tests.
+
+### 4.2 Run the Tests
 
 ```
 Bash("{test_command} 2>&1")
@@ -256,27 +281,28 @@ Common test commands:
 - Node.js: `npm test -- --testPathPattern={test_pattern}`
 - Go: `go test -v ./{test_package}`
 
-### 4.2 Analyze Test Results
+### 4.3 Analyze Results
 
-**If ALL tests pass:**
+**If build AND tests pass:**
 - Proceed to Phase 5 (Write Report) and Phase 6 (Complete)
 - You're done!
 
-**If ANY tests fail:**
+**If build fails OR ANY tests fail:**
 - Read the failure output carefully
-- Identify which specific assertion failed
-- Understand WHY it failed (logic error? missing code? wrong assumption?)
+- Identify the specific error
+- Understand WHY it failed (missing file? logic error? wrong assumption?)
 - Document your diagnosis
 - **If attempt < 3**: Return to Phase 3A with a different approach
 - **If attempt == 3**: Proceed to FAILURE PROTOCOL
 
-### 4.3 Between Attempts
+### 4.4 Between Attempts
 
 When retrying after a failed attempt:
 1. Do NOT just repeat the same approach
 2. Analyze what went wrong
 3. Try a fundamentally different approach if needed
 4. Consider if you misunderstood the requirement
+5. **For build failures**: Ensure all imports resolve to existing files
 
 ===============================================================================
 FAILURE PROTOCOL (AFTER 3 FAILED ATTEMPTS)
@@ -309,25 +335,32 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
   "run_id": "{run_id}",
   "status": "failed",
   "attempts": 3,
+  "build_command": "{build_command}",
   "test_file": "{test_file_path}",
   "test_command": "{test_command}",
   "failures": [
     {
       "attempt": 1,
       "approach": "Description of what you tried",
+      "build_passed": true,
+      "build_output": "Build output if failed, null if passed",
       "test_output": "Actual error message from test run",
       "diagnosis": "Why you think it failed"
     },
     {
       "attempt": 2,
       "approach": "Description of different approach",
+      "build_passed": true,
+      "build_output": "Build output if failed",
       "test_output": "Actual error message",
       "diagnosis": "Why this also failed"
     },
     {
       "attempt": 3,
       "approach": "Description of final approach",
-      "test_output": "Actual error message",
+      "build_passed": false,
+      "build_output": "Build error output",
+      "test_output": "Not run - build failed",
       "diagnosis": "Final diagnosis"
     }
   ],
@@ -449,10 +482,10 @@ EXECUTION CHECKLIST
 - [ ] **Created test file from task's Test Code section**
 - [ ] Followed existing code conventions
 - [ ] Implemented code (up to 3 attempts)
-- [ ] **Ran tests after each attempt**
-- [ ] Code compiles without errors
+- [ ] **Ran BUILD after each attempt**
+- [ ] **Ran TESTS after each attempt (only if build passed)**
 - [ ] No security vulnerabilities introduced
-- [ ] **ALL tests pass** (or followed FAILURE PROTOCOL if 3 attempts exhausted)
+- [ ] **Build passes AND ALL tests pass** (or followed FAILURE PROTOCOL if 3 attempts exhausted)
 - [ ] **WROTE THE TASK REPORT JSON**
 - [ ] **WROTE THE COMPLETION MARKER FILE** (.done if success, .failed if failed)
 
@@ -462,10 +495,12 @@ COMMON MISTAKES
 
 | Mistake | Impact | Fix |
 |---------|--------|-----|
+| **Skipping build verification** | Missing imports, broken code deployed | Run build BEFORE tests |
 | **Skipping test file creation** | No verification criteria | Create test file FIRST |
 | **More than 3 attempts** | Wasted effort, no analysis | Stop at 3, use failure protocol |
 | **Same approach each attempt** | Repeating failure | Try different approach |
-| **Writing .done when tests fail** | False completion | Only .done when ALL tests pass |
+| **Writing .done when build/tests fail** | False completion | Only .done when build AND tests pass |
+| **Importing non-existent files** | Build failure | Verify imports exist before using |
 | Ignoring existing patterns | Inconsistent codebase | Study conventions first |
 | Over-engineering | Complexity, maintenance | Only build what's needed |
 | Hardcoding values | Inflexibility | Use config/env vars |
@@ -481,10 +516,12 @@ START NOW
 2. **Create the test file from the task's Test Code section**
 3. Plan your approach
 4. Implement (Attempt 1)
-5. Run tests
-6. If tests fail and attempt < 3: analyze and retry (Attempts 2, 3)
-7. If ALL tests pass: Write success report and .done marker
-8. If 3 attempts exhausted: Follow FAILURE PROTOCOL (report + .failed marker)
+5. **Run BUILD first**
+6. If build fails: fix and count as attempt
+7. **Run TESTS (only if build passed)**
+8. If build or tests fail and attempt < 3: analyze and retry (Attempts 2, 3)
+9. If build AND tests pass: Write success report and .done marker
+10. If 3 attempts exhausted: Follow FAILURE PROTOCOL (report + .failed marker)
 
 Begin by reading the project structure, then CREATE THE TEST FILE.
 ```
@@ -504,6 +541,8 @@ Begin by reading the project structure, then CREATE THE TEST FILE.
 | `{acceptance_criteria}` | Success criteria | Bullet list of requirements |
 | `{dependencies}` | Prerequisites | `TASK-000` or `None` |
 | `{notes}` | Additional context | Implementation hints |
+| `{build_command}` | Command to build the project | `npm run build`, `make build` |
+| `{test_command}` | Command to run tests | `npm test`, `pytest` |
 
 ---
 

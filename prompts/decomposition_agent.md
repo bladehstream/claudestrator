@@ -48,6 +48,45 @@ Answer:
 - What is the primary technology stack?
 - What are the key constraints or requirements?
 
+### 1.3 Determine Build and Test Commands (CRITICAL)
+
+**You MUST determine the project's build and test commands.** These will be passed to every implementation agent so they can verify their work.
+
+Check for these files and determine commands:
+
+| File | Build Command | Test Command |
+|------|---------------|--------------|
+| `package.json` | `npm run build` or `npm run build:frontend` | `npm test` or `npm run test` |
+| `Makefile` | `make build` or `make` | `make test` |
+| `pyproject.toml` | `python -m build` or `pip install -e .` | `pytest` |
+| `requirements.txt` | `pip install -r requirements.txt` | `pytest` |
+| `Cargo.toml` | `cargo build` | `cargo test` |
+| `go.mod` | `go build ./...` | `go test ./...` |
+| `docker-compose.yml` | `docker-compose build` | `docker-compose run test` |
+
+**For monorepos or multi-component projects:**
+- Check for separate frontend/backend directories
+- Each may have different build commands
+- Example: `cd frontend && npm run build && cd ../backend && make build`
+
+**Read the actual files to confirm:**
+```
+Read("package.json")      # Check "scripts" section for actual command names
+Read("Makefile")          # Check available targets
+Read("pyproject.toml")    # Check [project.scripts] or [tool.pytest]
+```
+
+**Store these for use in all tasks:**
+```
+PROJECT_BUILD_COMMAND: <detected command>
+PROJECT_TEST_COMMAND: <detected command>
+```
+
+**If commands cannot be determined:**
+- Set to `echo "No build command configured"` for build
+- Set to `echo "No test command configured"` for test
+- Add a note in the task that the implementation agent should determine appropriate commands
+
 ===============================================================================
 PHASE 2: ANALYZE REQUIREMENTS
 ===============================================================================
@@ -377,6 +416,13 @@ Generated: {timestamp}
 Source: {source_document}
 Total Tasks: {count}
 
+## Project Commands
+
+| Command | Value |
+|---------|-------|
+| Build | {PROJECT_BUILD_COMMAND} |
+| Test | {PROJECT_TEST_COMMAND} |
+
 ---
 
 ### TASK-001
@@ -387,6 +433,8 @@ Total Tasks: {count}
 | Category | backend |
 | Complexity | normal |
 | Test File | tests/api/test_auth_login.py |
+| Build Command | {PROJECT_BUILD_COMMAND} |
+| Test Command | {PROJECT_TEST_COMMAND} |
 
 **Objective:** Implement user authentication endpoint
 
@@ -486,17 +534,19 @@ Before finishing, verify:
 
 - [ ] Read the source document completely
 - [ ] Analyzed each requirement/issue
+- [ ] **Determined PROJECT_BUILD_COMMAND and PROJECT_TEST_COMMAND**
 - [ ] Examined existing test patterns in the project
 - [ ] Created 3-15 appropriately-sized tasks
 - [ ] **ALL task IDs use TASK-XXX format (not UI-001, BE-002, etc.)**
 - [ ] Each task has Status, Category, Complexity, Test File
+- [ ] **Each task has Build Command and Test Command fields**
 - [ ] Each task has clear Objective
 - [ ] Each task has specific, testable Acceptance Criteria
 - [ ] **Each task has Test Code that covers all Acceptance Criteria**
 - [ ] Test code uses project's actual test framework and patterns
 - [ ] Dependencies noted where applicable
 - [ ] **FINAL TASK is Category: testing with VERIFICATION.md requirement**
-- [ ] Wrote task_queue.md using Write tool
+- [ ] Wrote task_queue.md using Write tool (with Project Commands header)
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 
 ===============================================================================

@@ -497,7 +497,7 @@ Historical Data: .orchestrator/history.csv
 9. **CAN read task_queue.md** - to know what agents to spawn
 10. **CAN mark task as done** - when completion marker detected
 11. **NEVER read issue_queue.md fully** - EXCEPT for critical issue scan at startup:
-    `grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md`
+    `grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md | grep -q "| Status | pending |"`
 12. **NEVER convert issues to tasks** - Decomposition Agent handles this
 
 ### Orchestrator CAN vs CANNOT

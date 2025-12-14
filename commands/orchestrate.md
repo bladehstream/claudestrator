@@ -75,10 +75,10 @@ Pass QUOTAS to Research Agent so it knows exactly how many issues to find per ca
 **IMPORTANT:** Before proceeding, scan for critical blocking issues:
 
 ```bash
-grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md 2>/dev/null
+CRITICAL_COUNT=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -c "| Status | pending |")
 ```
 
-**If matches found:**
+**If CRITICAL_COUNT > 0:**
 
 1. **Set CRITICAL_MODE = true**
 2. **Display warning:**
@@ -86,7 +86,7 @@ grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md 2
 ⚠️  CRITICAL BLOCKING ISSUES DETECTED
 ═══════════════════════════════════════
 
-Found {N} critical issue(s) in issue_queue.md that may block the build.
+Found $CRITICAL_COUNT critical issue(s) in issue_queue.md that may block the build.
 
 CRITICAL MODE ACTIVATED:
   • Research Agent will be SKIPPED (no new issues will be found)
@@ -547,7 +547,7 @@ Historical Data: .orchestrator/history.csv
 2. **CAN read task_queue.md** - to know what agents to spawn
 3. **NEVER read issue_queue.md fully** - EXCEPT for the critical issue scan at startup:
    ```bash
-   grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md 2>/dev/null
+   grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -c "| Status | pending |"
    ```
    Full issue processing is handled by Decomposition Agent.
 4. **CAN mark task as done** - when completion marker detected (minimal update)

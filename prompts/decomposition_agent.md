@@ -22,20 +22,116 @@ CONTEXT
 ===============================================================================
 
 Working Directory: {working_dir}
-Source Document:   {source} (PRD.md for initial run, .orchestrator/issue_queue.md for loops)
-Mode:              {mode} (initial | improvement_loop)
+Source Document:   {source} (PRD.md for initial, .orchestrator/issue_queue.md for loops)
+Mode:              {mode} (initial | improvement_loop | critical_only)
+
+### Mode Definitions
+
+| Mode | Source | What to Process |
+|------|--------|-----------------|
+| `initial` | PRD.md | All requirements from PRD |
+| `improvement_loop` | issue_queue.md | All pending issues |
+| `critical_only` | issue_queue.md | **ONLY** issues with `Priority \| critical` |
 
 ===============================================================================
-PHASE 1: READ AND UNDERSTAND
+PHASE 1: MODE BRANCH (READ THIS FIRST)
 ===============================================================================
 
-### 1.1 Load the Source Document
+**Check your MODE and follow the correct branch:**
 
 ```
-Read("{source}")
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           WHICH MODE ARE YOU IN?                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   MODE = "initial"           → Go to BRANCH A (PRD Processing)              │
+│   MODE = "improvement_loop"  → Go to BRANCH B (All Issues)                  │
+│   MODE = "critical_only"     → Go to BRANCH C (Critical Issues Only)        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Read the entire document carefully. Do not skim.
+---
+
+## BRANCH A: Initial Mode (PRD Processing)
+
+**When:** `MODE = initial`
+**Source:** `PRD.md`
+**Action:** Create tasks for ALL requirements in the PRD
+
+1. Read PRD.md completely
+2. Identify project context (1.2)
+3. Determine build/test commands (1.3)
+4. Analyze ALL requirements (Phase 2)
+5. Create tasks for ALL features (Phase 3, 4)
+6. Write completion marker
+
+**→ Continue to Section 1.2 below**
+
+---
+
+## BRANCH B: Improvement Loop Mode (All Issues)
+
+**When:** `MODE = improvement_loop`
+**Source:** `.orchestrator/issue_queue.md`
+**Action:** Create tasks for ALL pending issues (any priority)
+
+1. Read issue_queue.md completely
+2. Process ALL issues with `| Status | pending |` regardless of priority
+3. Determine build/test commands if not already known (1.3)
+4. Create tasks for each pending issue (Phase 3, 4)
+5. Write completion marker
+
+**→ Continue to Section 1.2 below**
+
+---
+
+## BRANCH C: Critical Only Mode (Critical Issues Only)
+
+**When:** `MODE = critical_only`
+**Source:** `.orchestrator/issue_queue.md`
+**Action:** Create tasks ONLY for critical priority pending issues
+
+**IMPORTANT:** This mode is triggered because the orchestrator detected critical
+blocking issues. You must ONLY process critical issues - ignore everything else.
+
+### C.1 Find Critical Pending Issues
+
+```
+Grep("Priority \| critical", ".orchestrator/issue_queue.md", output_mode: "content", -B: 5, -A: 30)
+```
+
+### C.2 Filter to Pending Only
+
+From the grep results, identify issues that have BOTH:
+- `| Priority | critical |`
+- `| Status | pending |`
+
+### C.3 Create Tasks for Critical Issues
+
+**If critical pending issues exist:**
+- Create one task per critical issue
+- Use next available TASK-XXX ID (check existing task_queue.md)
+- Follow standard task format (Phase 4)
+- Include Build Command and Test Command fields
+- Then write completion marker
+
+**If NO critical pending issues found:**
+- This means critical issues may have already been addressed
+- Do NOT create any tasks
+- Write completion marker immediately
+- The orchestrator will verify and handle this case
+
+**DO NOT process non-critical issues in this mode.** The orchestrator will
+run improvement loops for other issues after critical issues are resolved.
+
+**→ Skip to Section 1.3 (Build/Test Commands), then Phase 3, 4**
+
+---
+
+===============================================================================
+PHASE 1 (CONTINUED): COMMON STEPS
+===============================================================================
 
 ### 1.2 Identify Project Context
 
@@ -581,7 +677,7 @@ Then analyze, create tasks, write task_queue.md, and write the completion marker
 |----------|-------------|---------|
 | `{working_dir}` | Absolute path to project | `/home/user/myproject` |
 | `{source}` | Source document to analyze | `PRD.md` or `.orchestrator/issue_queue.md` |
-| `{mode}` | Run mode | `initial` or `improvement_loop` |
+| `{mode}` | Run mode | `initial`, `improvement_loop`, or `critical_only` |
 
 ---
 

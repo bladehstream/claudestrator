@@ -101,9 +101,44 @@ To view details: /issues --critical
 3. **Modified flow when CRITICAL_MODE = true:**
    - Spawn Decomposition Agent with `MODE: critical_only`
    - Decomposition Agent converts ONLY critical issues to tasks
+   - **VERIFY tasks were created** (see Step 3b below)
    - **SKIP Research Agent entirely** - don't find more issues
    - Run implementation agents on critical tasks only
    - After critical tasks complete, exit loop
+
+### Step 3b: Verify Tasks Created (CRITICAL_MODE only)
+
+**After Decomposition Agent completes in critical_only mode, you MUST verify tasks were created:**
+
+```bash
+PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+```
+
+**If PENDING_TASKS == 0 AND CRITICAL_MODE == true:**
+
+This is an ERROR. Critical issues were detected but no tasks were created.
+
+```
+⚠️  CRITICAL ERROR: NO TASKS CREATED
+═══════════════════════════════════════
+
+$CRITICAL_COUNT critical issues were detected, but the Decomposition Agent
+created 0 tasks. This indicates a processing failure.
+
+Possible causes:
+  • Decomposition Agent did not read issue_queue.md correctly
+  • Critical issues have unexpected format
+  • Decomposition Agent prompt issue
+
+Action: HALT orchestration. Do NOT proceed to improvement loops.
+Manual intervention required.
+
+═══════════════════════════════════════
+```
+
+**HALT immediately.** Do NOT assume "no pending tasks = issues resolved."
+
+**If PENDING_TASKS > 0:** Proceed with running implementation agents on the critical tasks.
 
 **If no matches:** Continue with normal flow (CRITICAL_MODE = false).
 

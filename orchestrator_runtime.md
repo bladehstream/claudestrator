@@ -1,6 +1,6 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 3.3 - Auto-retry for critical failures.
+> **Version**: MVP 3.4 - Test-first implementation with failure analysis.
 
 ## Key Principle: Read Prompt Files
 
@@ -18,6 +18,7 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 | Decomposition | `prompts/decomposition_agent.md` |
 | Research | `prompts/research_agent.md` |
 | Analysis | `prompts/analysis_agent.md` |
+| **Failure Analysis** | `prompts/failure_analysis_agent.md` |
 | Frontend | `prompts/implementation/frontend_agent.md` |
 | Backend | `prompts/implementation/backend_agent.md` |
 | Fullstack | `prompts/implementation/fullstack_agent.md` |
@@ -164,18 +165,65 @@ For each pending task in `.orchestrator/task_queue.md`:
    )
    ```
 
-4. **Wait:**
+4. **Wait for completion OR failure:**
    ```
-   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
    ```
 
-5. **Update task status** to "completed" in task_queue.md
+5. **Check result and update status:**
+   ```
+   IF .orchestrator/complete/[TASK-ID].done exists:
+       Update task status to "completed" in task_queue.md
+
+   IF .orchestrator/complete/[TASK-ID].failed exists:
+       Task status already set to "failed" by implementation agent
+       Spawn Failure Analysis Agent (see below)
+   ```
 
 6. **After all tasks:**
    ```
    Write(".orchestrator/session_state.md", "initial_prd_tasks_complete: true")
    Bash("git add -A && git commit -m 'Initial build complete'")
    ```
+
+---
+
+## Failure Analysis (When Task Fails)
+
+When a `.failed` marker is detected, spawn the Failure Analysis Agent:
+
+```
+Task(
+  model: "opus",  # Deep analysis requires strong reasoning
+  run_in_background: true,
+  prompt: "Read('prompts/failure_analysis_agent.md') and follow those instructions.
+
+  ---
+
+  ## Your Task
+
+  WORKING_DIR: [absolute path]
+  TASK_ID: [TASK-XXX]
+  LOOP_NUMBER: [current loop number]
+  RUN_ID: [run-YYYYMMDD-HHMMSS]
+
+  The implementation agent failed after 3 attempts.
+  Analyze the failure and create remediation issues with Priority: critical.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/analysis-[TASK-XXX].done', 'done')
+
+  START: Read('.orchestrator/reports/[TASK-XXX]-loop-[N].json')"
+)
+```
+
+Wait for analysis completion:
+```
+Bash("while [ ! -f '.orchestrator/complete/analysis-[TASK-ID].done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+```
+
+**Result**: Failure Analysis Agent creates issue(s) with `Priority | critical` in issue_queue.md.
+These will be processed in the next loop (or trigger CRITICAL_MODE if detected at startup).
 
 ---
 
@@ -393,13 +441,39 @@ Historical Data: .orchestrator/history.csv
 | normal | sonnet |
 | complex | opus |
 
+## Task Statuses
+
+| Status | Meaning | Next Action |
+|--------|---------|-------------|
+| `pending` | Not yet started | Spawn implementation agent |
+| `in_progress` | Currently being worked on | Wait for completion |
+| `completed` | Tests passed, work verified | None (done) |
+| `failed` | 3 attempts exhausted, tests still failing | Spawn Failure Analysis Agent |
+
+## Issue Priority Enforcement
+
+| Priority | When Processed |
+|----------|----------------|
+| `critical` | Immediately, exclusively (blocks all other work) |
+| `high` | Normal mode, first |
+| `medium` | Normal mode, second |
+| `low` | Normal mode, last |
+
+**Key Rules:**
+- Critical issues block ALL other work until resolved
+- Failing tests automatically create `Priority: critical` issues
+- Research Agent is skipped while critical issues exist
+- Once critical queue is empty, normal priority processing resumes
+
 ## File Paths
 
 | Purpose | Path |
 |---------|------|
 | Task Queue | `.orchestrator/task_queue.md` |
 | Issue Queue | `.orchestrator/issue_queue.md` |
-| Completion | `.orchestrator/complete/{id}.done` |
+| Completion (success) | `.orchestrator/complete/{id}.done` |
+| Completion (failure) | `.orchestrator/complete/{id}.failed` |
+| Failure Analysis Done | `.orchestrator/complete/analysis-{id}.done` |
 | State | `.orchestrator/session_state.md` |
 | Verification | `.orchestrator/VERIFICATION.md` |
 | Task Reports | `.orchestrator/reports/{task_id}-loop-{n}.json` |
@@ -450,8 +524,12 @@ Historical Data: .orchestrator/history.csv
 ## Waiting Pattern
 
 ```bash
-# CORRECT - single blocking call
-Bash("while [ ! -f '.orchestrator/complete/{id}.done' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+# CORRECT - single blocking call, check for success OR failure
+Bash("while [ ! -f '.orchestrator/complete/{id}.done' ] && [ ! -f '.orchestrator/complete/{id}.failed' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+
+# Then check which marker exists:
+# - {id}.done = success, mark task completed
+# - {id}.failed = failure, spawn Failure Analysis Agent
 
 # WRONG - fills context
 while not exists: Bash("sleep 5")
@@ -459,4 +537,4 @@ while not exists: Bash("sleep 5")
 
 ---
 
-*MVP Runtime Version: 3.3*
+*MVP Runtime Version: 3.4*

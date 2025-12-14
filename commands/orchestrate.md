@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.3 - Auto-retry for critical failures.
+> **Version**: MVP 3.4 - Test-first implementation with failure analysis.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -120,6 +120,7 @@ Agents read detailed instructions from prompt files:
 | Decomposition | `prompts/decomposition_agent.md` |
 | Research | `prompts/research_agent.md` |
 | Analysis | `prompts/analysis_agent.md` |
+| **Failure Analysis** | `prompts/failure_analysis_agent.md` |
 | Frontend | `prompts/implementation/frontend_agent.md` |
 | Backend | `prompts/implementation/backend_agent.md` |
 | Fullstack | `prompts/implementation/fullstack_agent.md` |
@@ -242,17 +243,59 @@ Task(
 )
 ```
 
-### 2c. Wait for Completion
+### 2c. Wait for Completion or Failure
 
 ```
-Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ]; do sleep 10; done && echo '[TASK-ID] done'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && echo '[TASK-ID] finished'", timeout: 1800000)
 ```
 
-### 2d. Update Status
+### 2d. Check Result and Handle
 
-Change `Status | pending` to `Status | completed` in task_queue.md.
+**If `.orchestrator/complete/[TASK-ID].done` exists:**
+- Change `Status | pending` to `Status | completed` in task_queue.md
 
-### 2e. Repeat
+**If `.orchestrator/complete/[TASK-ID].failed` exists:**
+- Task status already set to `failed` by implementation agent
+- Spawn Failure Analysis Agent (see Step 2e below)
+
+### 2e. Handle Failed Tasks (Spawn Failure Analysis Agent)
+
+When a task fails (`.failed` marker detected), spawn the Failure Analysis Agent:
+
+```
+Task(
+  model: "opus",
+  run_in_background: true,
+  prompt: "Read('prompts/failure_analysis_agent.md') and follow those instructions.
+
+  ---
+
+  ## Your Task
+
+  WORKING_DIR: [absolute path]
+  TASK_ID: [TASK-XXX]
+  LOOP_NUMBER: [current loop number]
+  RUN_ID: [run-YYYYMMDD-HHMMSS]
+
+  The implementation agent failed after 3 attempts.
+  Analyze the failure and create remediation issues with Priority: critical.
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/analysis-[TASK-XXX].done', 'done')
+
+  START: Read('.orchestrator/reports/[TASK-XXX]-loop-[N].json')"
+)
+```
+
+Wait for analysis:
+```
+Bash("while [ ! -f '.orchestrator/complete/analysis-[TASK-ID].done' ]; do sleep 10; done && echo 'Failure analysis complete'", timeout: 600000)
+```
+
+**Result**: Failure Analysis Agent creates issue(s) with `Priority | critical` in issue_queue.md.
+These will be processed in the next loop (or trigger CRITICAL_MODE if detected at startup).
+
+### 2f. Repeat
 
 Continue with next pending task.
 
@@ -538,6 +581,7 @@ The orchestrator NEVER:
 |-------|---------------|-------------|
 | Decomposition | Initial PRD breakdown | `prompts/decomposition_agent.md` |
 | Research | Start of each improvement loop | `prompts/research_agent.md` |
+| **Failure Analysis** | When task has `.failed` marker | `prompts/failure_analysis_agent.md` |
 | Frontend | Frontend tasks | `prompts/implementation/frontend_agent.md` |
 | Backend | Backend tasks | `prompts/implementation/backend_agent.md` |
 | Fullstack | Fullstack tasks | `prompts/implementation/fullstack_agent.md` |
@@ -562,7 +606,9 @@ Use the Research Agent with `FOCUS: security` instead of a "security research ag
 |---------|------|
 | Task Queue | `.orchestrator/task_queue.md` |
 | Issue Queue | `.orchestrator/issue_queue.md` |
-| Markers | `.orchestrator/complete/{id}.done` |
+| Success Marker | `.orchestrator/complete/{id}.done` |
+| Failure Marker | `.orchestrator/complete/{id}.failed` |
+| Analysis Done | `.orchestrator/complete/analysis-{id}.done` |
 | State | `.orchestrator/session_state.md` |
 | Verification | `.orchestrator/VERIFICATION.md` |
 | Task Reports | `.orchestrator/reports/{task_id}-loop-{n}.json` |
@@ -575,4 +621,4 @@ Use the Research Agent with `FOCUS: security` instead of a "security research ag
 
 ---
 
-*MVP Version: 3.3*
+*MVP Version: 3.4*

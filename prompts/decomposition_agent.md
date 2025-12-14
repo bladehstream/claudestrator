@@ -169,6 +169,184 @@ Example:
 ```
 
 ===============================================================================
+PHASE 3B: GENERATE TEST CODE (CRITICAL)
+===============================================================================
+
+**IMPORTANT**: You MUST generate actual test code for each task. Implementation
+agents will use these tests to verify their work. Tests are written FIRST so
+implementation agents have clear pass/fail criteria.
+
+### 3B.1 Understand Project Test Patterns
+
+Before writing tests, examine existing tests:
+
+```
+Glob("**/*.test.{ts,js,tsx,jsx}")    # JavaScript/TypeScript tests
+Glob("**/test_*.py")                  # Python tests
+Glob("**/*_test.go")                  # Go tests
+Read("{existing_test_file}")          # Study patterns
+```
+
+Identify:
+- Test framework (Jest, Pytest, Go testing, etc.)
+- Test file naming convention
+- Test organization (describe/it, class-based, function-based)
+- Common fixtures and helpers
+- Assertion patterns
+
+### 3B.2 Generate Test Code for Each Task
+
+For each task, create complete, runnable test code:
+
+**Test Code Requirements:**
+- Use the project's actual test framework and patterns
+- Cover ALL acceptance criteria with specific assertions
+- Include setup/teardown (fixtures, mocks)
+- Test both success AND failure cases
+- Include edge cases where appropriate
+
+**Example Test Code (Python/FastAPI):**
+
+```python
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+client = TestClient(app)
+
+class TestAuthLogin:
+    """Tests for POST /api/auth/login endpoint - TASK-001"""
+
+    @pytest.fixture
+    def test_user(self, db):
+        """Create a test user for authentication tests"""
+        from app.models import User
+        from app.utils.auth import hash_password
+        user = User(
+            email="test@example.com",
+            password=hash_password("validpassword123"),
+            name="Test User"
+        )
+        db.add(user)
+        db.commit()
+        return user
+
+    def test_valid_login_returns_token(self, test_user):
+        """AC: Returns 200 with { token, user } on valid credentials"""
+        response = client.post("/api/auth/login", json={
+            "email": "test@example.com",
+            "password": "validpassword123"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "token" in data
+        assert "user" in data
+        assert data["user"]["email"] == "test@example.com"
+        assert "password" not in data["user"]  # AC: Passwords never returned
+
+    def test_invalid_password_returns_401(self, test_user):
+        """AC: Returns 401 on invalid password"""
+        response = client.post("/api/auth/login", json={
+            "email": "test@example.com",
+            "password": "wrongpassword"
+        })
+        assert response.status_code == 401
+        assert response.json()["error"] == "Invalid credentials"
+
+    def test_missing_email_returns_400(self):
+        """AC: Returns 400 if email missing"""
+        response = client.post("/api/auth/login", json={
+            "password": "somepassword"
+        })
+        assert response.status_code == 400
+        assert "email" in response.json()["error"].lower()
+
+    def test_nonexistent_user_returns_401(self):
+        """AC: Returns 401 for unknown user"""
+        response = client.post("/api/auth/login", json={
+            "email": "unknown@example.com",
+            "password": "anypassword"
+        })
+        assert response.status_code == 401
+
+    def test_sql_injection_attempt_safe(self):
+        """Security: SQL injection should not crash or succeed"""
+        response = client.post("/api/auth/login", json={
+            "email": "'; DROP TABLE users; --",
+            "password": "test"
+        })
+        assert response.status_code in [400, 401]  # Should fail safely
+```
+
+**Example Test Code (TypeScript/Jest):**
+
+```typescript
+import request from 'supertest';
+import { app } from '../app';
+import { createTestUser, cleanupTestUsers } from './helpers';
+
+describe('POST /api/auth/login - TASK-001', () => {
+  let testUser: { email: string; password: string };
+
+  beforeAll(async () => {
+    testUser = await createTestUser({
+      email: 'test@example.com',
+      password: 'validpassword123',
+    });
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers();
+  });
+
+  it('returns 200 with token for valid credentials', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: testUser.email, password: 'validpassword123' })
+      .expect(200);
+
+    expect(response.body).toHaveProperty('token');
+    expect(response.body).toHaveProperty('user');
+    expect(response.body.user.email).toBe(testUser.email);
+    expect(response.body.user).not.toHaveProperty('password');
+  });
+
+  it('returns 401 for invalid password', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: testUser.email, password: 'wrongpassword' })
+      .expect(401);
+
+    expect(response.body.error).toBe('Invalid credentials');
+  });
+
+  it('returns 400 for missing email', async () => {
+    await request(app)
+      .post('/api/auth/login')
+      .send({ password: 'somepassword' })
+      .expect(400);
+  });
+
+  it('returns 401 for nonexistent user', async () => {
+    await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'unknown@example.com', password: 'anypassword' })
+      .expect(401);
+  });
+});
+```
+
+### 3B.3 Test Code Quality Standards
+
+| Requirement | Description |
+|-------------|-------------|
+| **Runnable** | Tests must actually run with project's test command |
+| **Isolated** | Tests don't depend on external state |
+| **Deterministic** | Same result every time |
+| **Complete** | Covers all acceptance criteria |
+| **Clear** | Each test has descriptive name and comment linking to AC |
+
+===============================================================================
 PHASE 4: WRITE TASK QUEUE
 ===============================================================================
 
@@ -208,6 +386,7 @@ Total Tasks: {count}
 | Status | pending |
 | Category | backend |
 | Complexity | normal |
+| Test File | tests/api/test_auth_login.py |
 
 **Objective:** Implement user authentication endpoint
 
@@ -220,6 +399,58 @@ Total Tasks: {count}
 **Dependencies:** None
 
 **Notes:** Use existing User model from src/models/user.ts
+
+**Test Code:**
+
+```python
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+client = TestClient(app)
+
+class TestAuthLogin:
+    """Tests for TASK-001: POST /auth/login endpoint"""
+
+    @pytest.fixture
+    def test_user(self, db):
+        from app.models import User
+        from app.utils.auth import hash_password
+        user = User(
+            email="test@example.com",
+            password=hash_password("validpassword123"),
+            name="Test User"
+        )
+        db.add(user)
+        db.commit()
+        return user
+
+    def test_valid_login_returns_200_with_token(self, test_user):
+        """AC: Returns JWT token on success"""
+        response = client.post("/auth/login", json={
+            "email": "test@example.com",
+            "password": "validpassword123"
+        })
+        assert response.status_code == 200
+        assert "token" in response.json()
+
+    def test_invalid_password_returns_401(self, test_user):
+        """AC: Returns 401 on invalid credentials"""
+        response = client.post("/auth/login", json={
+            "email": "test@example.com",
+            "password": "wrongpassword"
+        })
+        assert response.status_code == 401
+
+    def test_accepts_email_and_password(self):
+        """AC: POST /auth/login accepts email and password"""
+        response = client.post("/auth/login", json={
+            "email": "any@example.com",
+            "password": "anypassword"
+        })
+        # Should not return 400 for valid format (even if credentials wrong)
+        assert response.status_code in [200, 401]
+```
 
 ---
 
@@ -255,11 +486,14 @@ Before finishing, verify:
 
 - [ ] Read the source document completely
 - [ ] Analyzed each requirement/issue
+- [ ] Examined existing test patterns in the project
 - [ ] Created 3-15 appropriately-sized tasks
 - [ ] **ALL task IDs use TASK-XXX format (not UI-001, BE-002, etc.)**
-- [ ] Each task has Status, Category, Complexity
+- [ ] Each task has Status, Category, Complexity, Test File
 - [ ] Each task has clear Objective
 - [ ] Each task has specific, testable Acceptance Criteria
+- [ ] **Each task has Test Code that covers all Acceptance Criteria**
+- [ ] Test code uses project's actual test framework and patterns
 - [ ] Dependencies noted where applicable
 - [ ] **FINAL TASK is Category: testing with VERIFICATION.md requirement**
 - [ ] Wrote task_queue.md using Write tool
@@ -275,6 +509,8 @@ COMMON MISTAKES
 | Tasks too large | Agent overwhelmed, poor results | Break into smaller pieces |
 | Vague acceptance criteria | Implementation ambiguity | Be specific and testable |
 | Missing complexity field | Wrong model selected | Always assess complexity |
+| **Missing Test Code** | Impl agent has no verification | Always include Test Code |
+| Test code not matching project patterns | Tests won't run | Study existing tests first |
 | Forgetting completion marker | System hangs forever | Always write .done file |
 | Just describing actions | Nothing happens | Actually USE the tools |
 

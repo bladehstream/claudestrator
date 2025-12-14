@@ -121,8 +121,54 @@ WebSearch("{specific_problem} solution")
 | Forums/Reddit | LOW | May be outdated |
 
 ===============================================================================
-PHASE 3: IMPLEMENT
+PHASE 3: CREATE TEST FILE FIRST
 ===============================================================================
+
+**CRITICAL**: Before implementing, you MUST create the test file from the task.
+
+### 3.0 Write the Test File
+
+The task includes a `Test File` path and `Test Code` section. Create this file FIRST:
+
+```
+Write("{test_file_path}", <test_code_from_task>)
+```
+
+**Why tests first?**
+- Tests define the exact pass/fail criteria
+- You have a clear target to implement against
+- Verification is automated, not manual
+
+### 3.0.1 Verify Test File Created
+
+```
+Read("{test_file_path}")
+```
+
+Confirm the test file exists before proceeding.
+
+===============================================================================
+PHASE 3A: IMPLEMENT (3 ATTEMPTS MAX)
+===============================================================================
+
+You have **3 attempts** to make all tests pass. Track your progress:
+
+### Attempt Loop Protocol
+
+```
+FOR attempt IN [1, 2, 3]:
+    1. Implement/fix code
+    2. Run tests: {test_command}
+    3. IF all tests pass:
+         - Write success report
+         - Write completion marker (.done)
+         - EXIT (success)
+    4. IF tests fail:
+         - Analyze failure output carefully
+         - Document what went wrong
+         - IF attempt < 3: try different approach
+         - IF attempt == 3: proceed to FAILURE PROTOCOL
+```
 
 ### 3.1 Write Clean Code
 
@@ -194,40 +240,117 @@ Edit("path/to/file.ts", <old_string>, <new_string>)
 ```
 
 ===============================================================================
-PHASE 4: VERIFY
+PHASE 4: VERIFY (RUN TESTS)
 ===============================================================================
 
-### 4.1 Syntax Check
+**This is your verification step for the current attempt.**
 
-Ensure code compiles/parses:
-```
-Bash("npm run build 2>&1 | head -50")     # TypeScript/JS
-Bash("python -m py_compile file.py")       # Python
-Bash("cargo check 2>&1 | head -50")        # Rust
-```
+### 4.1 Run the Tests
 
-### 4.2 Lint Check
-
-Run linter if available:
 ```
-Bash("npm run lint 2>&1 | head -50")
-Bash("ruff check . 2>&1 | head -50")
+Bash("{test_command} 2>&1")
 ```
 
-### 4.3 Test (if applicable)
+Common test commands:
+- Python: `pytest {test_file} -v`
+- Node.js: `npm test -- --testPathPattern={test_pattern}`
+- Go: `go test -v ./{test_package}`
 
-Run relevant tests:
+### 4.2 Analyze Test Results
+
+**If ALL tests pass:**
+- Proceed to Phase 5 (Write Report) and Phase 6 (Complete)
+- You're done!
+
+**If ANY tests fail:**
+- Read the failure output carefully
+- Identify which specific assertion failed
+- Understand WHY it failed (logic error? missing code? wrong assumption?)
+- Document your diagnosis
+- **If attempt < 3**: Return to Phase 3A with a different approach
+- **If attempt == 3**: Proceed to FAILURE PROTOCOL
+
+### 4.3 Between Attempts
+
+When retrying after a failed attempt:
+1. Do NOT just repeat the same approach
+2. Analyze what went wrong
+3. Try a fundamentally different approach if needed
+4. Consider if you misunderstood the requirement
+
+===============================================================================
+FAILURE PROTOCOL (AFTER 3 FAILED ATTEMPTS)
+===============================================================================
+
+**If you've exhausted all 3 attempts and tests still fail:**
+
+### F.1 Do NOT Keep Trying
+
+Stop implementation. Do not make more attempts.
+
+### F.2 Update Task Status
+
+Edit `.orchestrator/task_queue.md` to change this task's status:
+
 ```
-Bash("npm test -- --testPathPattern={related_test}")
-Bash("pytest tests/test_{module}.py -v")
+Edit(".orchestrator/task_queue.md",
+     "| Status | in_progress |",
+     "| Status | failed |")
 ```
 
-### 4.4 Verify Acceptance Criteria
+### F.3 Write Detailed Failure Report
 
-Go through each criterion and confirm it's met:
-- [ ] Criterion 1: How verified?
-- [ ] Criterion 2: How verified?
-- [ ] ...
+Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
+
+```json
+{
+  "task_id": "{task_id}",
+  "loop_number": {loop_number},
+  "run_id": "{run_id}",
+  "status": "failed",
+  "attempts": 3,
+  "test_file": "{test_file_path}",
+  "test_command": "{test_command}",
+  "failures": [
+    {
+      "attempt": 1,
+      "approach": "Description of what you tried",
+      "test_output": "Actual error message from test run",
+      "diagnosis": "Why you think it failed"
+    },
+    {
+      "attempt": 2,
+      "approach": "Description of different approach",
+      "test_output": "Actual error message",
+      "diagnosis": "Why this also failed"
+    },
+    {
+      "attempt": 3,
+      "approach": "Description of final approach",
+      "test_output": "Actual error message",
+      "diagnosis": "Final diagnosis"
+    }
+  ],
+  "suspected_root_cause": "Your best guess at the underlying problem",
+  "files_modified": ["list", "of", "files", "you", "changed"],
+  "blockers_identified": ["Any blockers you identified"],
+  "recommendations": ["Suggestions for how to fix this"]
+}
+```
+
+### F.4 Write Failure Marker
+
+**CRITICAL**: Write the failure marker (NOT .done):
+
+```
+Write(".orchestrator/complete/{task_id}.failed", "failed")
+```
+
+This signals to the orchestrator that the task failed and needs analysis.
+
+### F.5 EXIT
+
+Do not attempt any more fixes. The Failure Analysis Agent will examine your report and create remediation issues.
 
 ===============================================================================
 PHASE 5: WRITE TASK REPORT
@@ -323,13 +446,15 @@ EXECUTION CHECKLIST
 
 - [ ] Read and understood the task requirements
 - [ ] Explored relevant codebase sections
+- [ ] **Created test file from task's Test Code section**
 - [ ] Followed existing code conventions
-- [ ] Implemented all acceptance criteria
+- [ ] Implemented code (up to 3 attempts)
+- [ ] **Ran tests after each attempt**
 - [ ] Code compiles without errors
 - [ ] No security vulnerabilities introduced
-- [ ] Verified each acceptance criterion
+- [ ] **ALL tests pass** (or followed FAILURE PROTOCOL if 3 attempts exhausted)
 - [ ] **WROTE THE TASK REPORT JSON**
-- [ ] **WROTE THE COMPLETION MARKER FILE**
+- [ ] **WROTE THE COMPLETION MARKER FILE** (.done if success, .failed if failed)
 
 ===============================================================================
 COMMON MISTAKES
@@ -337,12 +462,15 @@ COMMON MISTAKES
 
 | Mistake | Impact | Fix |
 |---------|--------|-----|
+| **Skipping test file creation** | No verification criteria | Create test file FIRST |
+| **More than 3 attempts** | Wasted effort, no analysis | Stop at 3, use failure protocol |
+| **Same approach each attempt** | Repeating failure | Try different approach |
+| **Writing .done when tests fail** | False completion | Only .done when ALL tests pass |
 | Ignoring existing patterns | Inconsistent codebase | Study conventions first |
 | Over-engineering | Complexity, maintenance | Only build what's needed |
-| Skipping verification | Broken code merged | Always run build/lint |
 | Hardcoding values | Inflexibility | Use config/env vars |
 | Forgetting task report | Analytics incomplete | Always write JSON report |
-| Forgetting completion marker | System hangs | Always write .done file |
+| Forgetting completion marker | System hangs | Always write .done or .failed |
 | Not reading related code | Duplicate work | Search before writing |
 
 ===============================================================================
@@ -350,13 +478,15 @@ START NOW
 ===============================================================================
 
 1. Explore the codebase to understand context
-2. Plan your approach
-3. Implement the solution
-4. Verify your work compiles and meets criteria
-5. Write the task report JSON
-6. Write the completion marker
+2. **Create the test file from the task's Test Code section**
+3. Plan your approach
+4. Implement (Attempt 1)
+5. Run tests
+6. If tests fail and attempt < 3: analyze and retry (Attempts 2, 3)
+7. If ALL tests pass: Write success report and .done marker
+8. If 3 attempts exhausted: Follow FAILURE PROTOCOL (report + .failed marker)
 
-Begin by reading the project structure and finding related code.
+Begin by reading the project structure, then CREATE THE TEST FILE.
 ```
 
 ---

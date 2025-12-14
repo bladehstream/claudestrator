@@ -2,7 +2,7 @@
 name: Documentation Writer
 id: documentation
 version: 1.0
-category: documentation
+category: support
 domain: [any]
 task_types: [documentation]
 keywords: [docs, readme, comment, guide, api, reference, tutorial, explain, markdown]

@@ -6,7 +6,7 @@ category: implementation
 domain: [llm, ai, ollama, api_integration, python]
 task_types: [implementation, integration]
 keywords: [ollama, llm, ai, claude, gemini, openai, prompts, extraction, inference, structured_output, json_mode]
-complexity: normal
+complexity: [normal]
 pairs_with: [api_development, beautifulsoup_scraper]
 external_dependencies:
   - type: service

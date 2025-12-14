@@ -2,7 +2,7 @@
 name: Refactoring Specialist
 id: refactoring
 version: 1.0
-category: refactoring
+category: support
 domain: [any]
 task_types: [refactor, cleanup]
 keywords: [refactor, clean, restructure, extract, rename, simplify, pattern, technical debt, code smell]

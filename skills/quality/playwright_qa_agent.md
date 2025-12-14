@@ -6,7 +6,7 @@ category: quality
 domain: [web, testing]
 task_types: [testing, automation, ui-testing, regression-testing, cross-browser, qa, post-implementation-verification]
 keywords: [playwright, testing, automation, functional-testing, viewport, mobile-testing, desktop-testing, tablet-testing, screenshot, test-runner, browser-testing, responsive-testing, user-flows, smoke-test, regression-test, post-deployment, feature-verification, multi-viewport, cross-device]
-complexity: intermediate
+complexity: [normal]
 pairs_with: [qa_agent, webapp_testing, security_reviewer]
 dependencies:
   npm: [playwright]

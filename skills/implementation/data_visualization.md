@@ -2,7 +2,7 @@
 name: Data Visualization Developer
 id: data_visualization
 version: 1.0
-category: visualization
+category: implementation
 domain: [web, frontend, dashboard]
 task_types: [implementation, design, feature]
 keywords: [chart, graph, visualization, d3, plot, dashboard, metrics, recharts, chart.js, bar chart, line chart, pie chart, data viz, analytics, scatter, area, heatmap, sparkline]

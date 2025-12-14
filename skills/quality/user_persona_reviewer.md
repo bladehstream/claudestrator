@@ -2,7 +2,7 @@
 name: User Persona Reviewer
 id: user_persona
 version: 1.0
-category: ux-review
+category: quality
 domain: [any]
 task_types: [testing, review, evaluation]
 keywords: [user, player, experience, ux, accessibility, friction, usability, persona, feedback]

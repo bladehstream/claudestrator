@@ -167,21 +167,22 @@ fi
 
 ### Category Field
 
-The `category` field enables skill deduplication: only one skill per category is selected for each agent. This prevents redundant skills (e.g., two debugging skills or three rendering skills).
+The `category` field determines which directory the skill is stored in and enables skill deduplication. Only one skill per category is selected for each agent to prevent redundant skills.
 
-**Standard Categories:**
-| Category | Description |
-|----------|-------------|
-| `rendering` | Graphics, canvas, sprites, visual output |
-| `game-mechanics` | Game design, physics, gameplay |
-| `polish` | Game feel, juice, UX polish |
-| `api-design` | API architecture, endpoints |
-| `testing` | QA, verification, validation |
-| `security` | Security review, vulnerabilities |
-| `ux-review` | User experience, accessibility |
-| `assets` | SVG, images, audio generation |
-| `refactoring` | Code restructuring |
-| `documentation` | Technical writing, docs |
+**Standard Categories (must match directory structure):**
+
+| Category | Description | Examples |
+|----------|-------------|----------|
+| `implementation` | Building/coding features | api_development, databases, html5_canvas, game_feel |
+| `design` | Planning/architecture | api_designer, database_designer, frontend_design |
+| `quality` | Testing/review/QA | qa_agent, security_reviewer, playwright_qa_agent |
+| `support` | Supporting tasks | documentation, refactoring, prd_generator, xlsx |
+| `maintenance` | Skill/system maintenance | skill_auditor, skill_enhancer, dependency_updater |
+| `security` | Security implementation | authentication, software_security, backend_security |
+| `domain` | Domain-specific expertise | financial_app, healthcare, e-commerce |
+| `orchestrator` | Orchestration agents | decomposition_agent, agent_construction |
+
+**IMPORTANT:** The category value MUST match one of the directory names under `.claude/skills/`. Non-standard categories will be flagged by `/audit-skills`.
 
 ---
 

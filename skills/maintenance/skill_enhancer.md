@@ -2,7 +2,7 @@
 name: Skill Enhancer
 id: skill_enhancer
 version: 1.0
-category: skill-maintenance
+category: maintenance
 domain: [orchestrator, maintenance]
 task_types: [enhancement, update, research]
 keywords: [skill, enhance, update, research, web, current, modern, improve, metadata]

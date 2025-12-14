@@ -224,18 +224,19 @@ verify these dependencies before proceeding with tasks.
 Continue with ingestion? [Y/n]
 ```
 
-**Categories:**
+**Categories (MUST match directory structure):**
 - `implementation` - Building/coding features (html5_canvas, game_feel, data_visualization)
-- `design` - Planning/architecture (api_designer, database_designer, frontend_design, game_designer)
-- `quality` - Testing/review (qa_agent, security_reviewer, webapp_testing, user_persona_reviewer)
-- `support` - Supporting tasks (documentation, refactoring, svg_asset_generator, prd_generator)
+- `design` - Planning/architecture (api_designer, database_designer, frontend_design)
+- `quality` - Testing/review/QA (qa_agent, security_reviewer, playwright_qa_agent)
+- `support` - Supporting tasks (documentation, refactoring, prd_generator, xlsx)
 - `maintenance` - Skill/system maintenance (skill_auditor, skill_enhancer)
 - `security` - Security implementation (authentication, software_security)
 - `domain` - Domain-specific expertise (financial_app)
+- `orchestrator` - Orchestration agents (decomposition_agent, agent_construction)
 
 **Task types:** `design`, `planning`, `implementation`, `review`, `testing`, `documentation`, `security`, `optimization`, `feature`, `bugfix`
 
-**Complexity:** `easy`, `normal`, `complex`
+**Complexity (MUST be array format):** `[easy]`, `[normal]`, `[complex]`, or combinations like `[easy, normal]`
 
 **Present suggested metadata to user:**
 ```

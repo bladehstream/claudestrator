@@ -31,7 +31,7 @@ keywords:
   - dashboard
   - mobile ui
   - web ui
-complexity: normal
+complexity: [normal]
 pairs_with:
   - frontend_design
   - brand_guidelines

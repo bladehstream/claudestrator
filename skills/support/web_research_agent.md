@@ -6,7 +6,7 @@ category: support
 domain: [research, web]
 task_types: [research, data-extraction, screenshot, web-scraping, documentation, content-gathering]
 keywords: [playwright, research, screenshot, web-capture, scraping, data-extraction, visual-analysis, web-content, website-analysis, content-research, page-capture, documentation-capture, chart-capture, dashboard-screenshot, spa-scraping, dynamic-content, metadata-extraction]
-complexity: basic
+complexity: [easy]
 pairs_with: [documentation, prd_generator, doc_coauthoring]
 dependencies:
   npm: [playwright]

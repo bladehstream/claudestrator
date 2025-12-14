@@ -2,7 +2,7 @@
 name: QA Agent
 id: qa_agent
 version: 1.0
-category: testing
+category: quality
 domain: [any]
 task_types: [testing, verification, validation]
 keywords: [test, qa, quality, bug, verify, check, validate, acceptance, criteria, review]

@@ -1,3 +1,15 @@
+---
+name: Decomposition Agent
+id: decomposition_agent
+version: 1.0
+category: orchestrator
+domain: [orchestration, project-management]
+task_types: [planning, decomposition]
+keywords: [task-breakdown, PRD, requirements, decomposition, orchestration, tasks, task-queue, issue-queue]
+complexity: [normal]
+pairs_with: [agent_construction]
+---
+
 # Decomposition Agent Skill
 
 > **Role**: Technical Task Manager / Requirements Analyst

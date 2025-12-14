@@ -46,7 +46,7 @@ keywords:
   - expo-location
   - react-native-ble-plx
   - react-native-nfc-manager
-complexity: normal
+complexity: [normal]
 pairs_with:
   - software_security
   - frontend_design

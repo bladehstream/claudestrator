@@ -2,7 +2,7 @@
 name: Database Designer
 id: database_designer
 version: 1.0
-category: database
+category: design
 domain: [backend, data, api]
 task_types: [design, planning, optimization]
 keywords: [database, schema, sql, postgres, postgresql, sqlite, mysql, table, relation, migration, index, query, data model, entity, foreign key, primary key, normalization, erd]

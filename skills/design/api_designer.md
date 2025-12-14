@@ -2,7 +2,7 @@
 name: API Designer
 id: api_designer
 version: 1.0
-category: api-design
+category: design
 domain: [backend, api, web]
 task_types: [design, planning, specification]
 keywords: [api, rest, graphql, endpoint, schema, request, response, http, service, route]

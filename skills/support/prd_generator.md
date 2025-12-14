@@ -2,7 +2,7 @@
 name: PRD Generator
 id: prd_generator
 version: 1.1
-category: requirements
+category: support
 domain: [product, planning, requirements]
 task_types: [discovery, documentation, planning]
 keywords: [prd, requirements, product, specification, scope, interview, discovery, planning]

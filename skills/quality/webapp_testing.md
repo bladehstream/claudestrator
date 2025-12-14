@@ -2,7 +2,7 @@
 name: Web Application Tester
 id: webapp_testing
 version: 1.0
-category: testing
+category: quality
 domain: [web, frontend, qa]
 task_types: [testing, quality, verification]
 keywords: [test, testing, playwright, e2e, end-to-end, browser, automation, selenium, cypress, integration, qa, functional]

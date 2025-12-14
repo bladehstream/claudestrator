@@ -6,7 +6,7 @@ category: implementation
 domain: [web_scraping, data_extraction, python]
 task_types: [implementation, data_extraction]
 keywords: [beautifulsoup, scraping, html, parsing, requests, web, extraction, lxml, css, selectors, xpath]
-complexity: normal
+complexity: [normal]
 pairs_with: [api_development, databases]
 external_dependencies:
   - type: python_package

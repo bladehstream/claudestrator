@@ -15,25 +15,42 @@ See `skill_loader.md` for the dynamic discovery system.
 
 ---
 
+## Standard Categories
+
+Skills MUST use one of these standard categories (matching directory structure):
+
+| Category | Description |
+|----------|-------------|
+| `implementation` | Building/coding features |
+| `design` | Planning/architecture |
+| `quality` | Testing/review/QA |
+| `support` | Supporting tasks |
+| `maintenance` | Skill/system maintenance |
+| `security` | Security implementation |
+| `domain` | Domain-specific expertise |
+| `orchestrator` | Orchestration agents |
+
 ## Quick Reference
 
-| ID | Name | Category | Domain | Task Types | Complexity |
-|----|------|----------|--------|------------|------------|
-| html5_canvas | HTML5 Canvas Developer | rendering | web, game | impl, feature, bugfix | normal, complex |
-| svg_asset_gen | SVG Asset Generator | assets | web, game | asset, impl | easy, normal |
-| game_designer | Game Designer | game-mechanics | game | design, planning | normal, complex |
-| game_feel | Game Feel Developer | polish | game | polish, feature | normal |
-| qa_agent | QA Agent | testing | any | testing, verification | normal |
-| user_persona | User Persona Reviewer | ux-review | any | testing, review | normal |
-| api_designer | API Designer | api-design | backend, api | design, planning | normal, complex |
-| security_reviewer | Security Reviewer | security | any | review, audit | complex |
-| refactoring | Refactoring Specialist | refactoring | any | refactor | normal, complex |
-| documentation | Documentation Writer | documentation | any | documentation | easy, normal |
-| prd_generator | PRD Generator | requirements | product, planning | discovery, documentation | normal, complex |
-| skill_auditor | Skill Auditor | skill-maintenance | orchestrator | audit, review | normal |
-| skill_enhancer | Skill Enhancer | skill-maintenance | orchestrator | enhancement, update | complex |
-| device_hardware | Device Hardware | implementation | react-native, expo, mobile | impl, feature | normal |
-| ui_generator | UI Generator | support | ui, frontend, react-native | impl, design | normal |
+| ID | Name | Category | Domain | Complexity |
+|----|------|----------|--------|------------|
+| html5_canvas | HTML5 Canvas Developer | implementation | web, game | [normal, complex] |
+| svg_asset_generator | SVG Asset Generator | design | web, game | [easy, normal] |
+| game_designer | Game Designer | design | game | [normal, complex] |
+| game_feel | Game Feel Developer | implementation | game | [normal] |
+| qa_agent | QA Agent | quality | any | [normal] |
+| user_persona_reviewer | User Persona Reviewer | quality | any | [normal] |
+| api_designer | API Designer | design | backend, api | [normal, complex] |
+| security_reviewer | Security Reviewer | quality | any | [complex] |
+| refactoring | Refactoring Specialist | support | any | [normal, complex] |
+| documentation | Documentation Writer | support | any | [easy, normal] |
+| prd_generator | PRD Generator | support | product, planning | [normal, complex] |
+| skill_auditor | Skill Auditor | maintenance | orchestrator | [normal] |
+| skill_enhancer | Skill Enhancer | maintenance | orchestrator | [complex] |
+| device_hardware | Device Hardware | implementation | react-native, mobile | [normal] |
+| ui_generator | UI Generator | support | ui, frontend | [normal] |
+| decomposition_agent | Decomposition Agent | orchestrator | orchestration | [normal] |
+| agent_construction | Agent Construction | orchestrator | orchestration | [normal] |
 
 > **Note**: Only one skill per category is selected for each agent. This ensures diverse expertise without redundancy.
 
@@ -238,25 +255,45 @@ See `skill_loader.md` for the dynamic discovery system.
 ## Skill File Locations
 
 ```
-orchestrator/skills/
+.claude/skills/  (or skills/ in orchestrator repo)
 ├── implementation/          # Code-writing skills
 │   ├── html5_canvas.md
-│   └── game_feel.md
+│   ├── game_feel.md
+│   ├── api_development.md
+│   ├── databases.md
+│   ├── device-hardware.md
+│   └── ...
 ├── design/                  # Design/planning skills
 │   ├── game_designer.md
-│   └── api_designer.md
+│   ├── api_designer.md
+│   ├── frontend_design.md
+│   ├── database_designer.md
+│   └── svg_asset_generator.md
 ├── quality/                 # QA/review skills
 │   ├── qa_agent.md
 │   ├── user_persona_reviewer.md
-│   └── security_reviewer.md
+│   ├── security_reviewer.md
+│   ├── playwright_qa_agent.md
+│   └── webapp_testing.md
 ├── support/                 # Supporting skills
-│   ├── svg_asset_generator.md
-│   ├── refactoring.md
 │   ├── documentation.md
-│   └── prd_generator.md
-└── maintenance/             # Orchestrator maintenance skills
-    ├── skill_auditor.md
-    └── skill_enhancer.md
+│   ├── refactoring.md
+│   ├── prd_generator.md
+│   ├── ui-generator.md
+│   └── ...
+├── security/                # Security implementation
+│   ├── backend_security.md
+│   ├── software_security.md
+│   └── ...
+├── maintenance/             # Skill/system maintenance
+│   ├── skill_auditor.md
+│   ├── skill_enhancer.md
+│   └── skill_creator.md
+├── domain/                  # Domain-specific expertise
+│   └── financial_app.md
+└── orchestrator/            # Orchestration agents
+    ├── decomposition_agent.md
+    └── agent_construction.md
 ```
 
 ---

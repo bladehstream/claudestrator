@@ -2,7 +2,7 @@
 name: Skill Auditor
 id: skill_auditor
 version: 1.0
-category: skill-maintenance
+category: maintenance
 domain: [orchestrator, maintenance]
 task_types: [audit, review, analysis]
 keywords: [skill, metadata, audit, validate, stale, outdated, review, health, maintenance]

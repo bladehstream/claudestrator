@@ -112,8 +112,10 @@ This is a LOOP that continues until the critical queue is empty:
 ### Step 7a: Scan for Critical Issues
 
 ```bash
-CRITICAL_COUNT=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -c "| Status | pending |")
+CRITICAL_COUNT=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -cE "Status \| (pending|accepted)")
 ```
+
+**Note:** Issues can be `pending` (new) or `accepted` (acknowledged but not started). Both need processing.
 
 ### Step 7b: Critical Loop Logic
 
@@ -152,7 +154,7 @@ WHILE CRITICAL_COUNT > 0:
     6. Commit changes
 
     # RE-SCAN for critical issues (fixes may have created new ones, or failed)
-    CRITICAL_COUNT = grep -A3 "| Priority | critical |" ... | grep -c "| Status | pending |"
+    CRITICAL_COUNT = grep -A3 "| Priority | critical |" ... | grep -cE "Status \| (pending|accepted)"
 
     IF CRITICAL_COUNT > 0:
         OUTPUT: "⚠️  $CRITICAL_COUNT critical issues still pending. Continuing loop..."

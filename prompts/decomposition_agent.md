@@ -101,23 +101,25 @@ blocking issues. You must ONLY process critical issues - ignore everything else.
 Grep("Priority \| critical", ".orchestrator/issue_queue.md", output_mode: "content", -B: 5, -A: 30)
 ```
 
-### C.2 Filter to Pending Only
+### C.2 Filter to Actionable Issues
 
 From the grep results, identify issues that have BOTH:
 - `| Priority | critical |`
-- `| Status | pending |`
+- `| Status | pending |` OR `| Status | accepted |`
+
+**Note:** Both `pending` (new) and `accepted` (acknowledged but not started) issues need processing.
 
 ### C.3 Create Tasks for Critical Issues
 
-**If critical pending issues exist:**
+**If critical actionable issues exist (pending OR accepted):**
 - Create one task per critical issue
 - Use next available TASK-XXX ID (check existing task_queue.md)
 - Follow standard task format (Phase 4)
 - Include Build Command and Test Command fields
 - Then write completion marker
 
-**If NO critical pending issues found:**
-- This means critical issues may have already been addressed
+**If NO critical actionable issues found:**
+- This means critical issues may have already been addressed (completed/in_progress)
 - Do NOT create any tasks
 - Write completion marker immediately
 - The orchestrator will verify and handle this case

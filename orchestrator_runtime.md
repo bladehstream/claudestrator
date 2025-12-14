@@ -79,8 +79,8 @@ CRITICAL_ITERATION = 0
 MAX_CRITICAL_ITERATIONS = 10
 
 WHILE true:
-    # Scan for critical pending issues
-    CRITICAL_COUNT = Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/null | grep -c '| Status | pending |' || echo '0'")
+    # Scan for critical pending/accepted issues
+    CRITICAL_COUNT = Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/null | grep -cE 'Status \\| (pending|accepted)' || echo '0'")
 
     IF CRITICAL_COUNT == 0:
         BREAK  # Exit loop, proceed to normal orchestration
@@ -556,7 +556,7 @@ Historical Data: .orchestrator/history.csv
 9. **CAN read task_queue.md** - to know what agents to spawn
 10. **CAN mark task as done** - when completion marker detected
 11. **NEVER read issue_queue.md fully** - EXCEPT for critical issue scan at startup:
-    `grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md | grep -q "| Status | pending |"`
+    `grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md | grep -qE "Status \| (pending|accepted)"`
 12. **NEVER convert issues to tasks** - Decomposition Agent handles this
 
 ### Orchestrator CAN vs CANNOT

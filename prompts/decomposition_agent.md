@@ -689,7 +689,7 @@ The orchestrator spawns this agent using:
 
 ```
 Task(
-    model: "sonnet",
+    model: "opus",
     prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
     WORKING_DIR: /path/to/project

@@ -94,7 +94,7 @@ WHILE true:
 
     # Spawn Decomposition Agent (critical_only mode)
     Task(
-      model: "sonnet",
+      model: "opus",
       prompt: "Read('.claude/prompts/decomposition_agent.md')...
         MODE: critical_only
         SOURCE: .orchestrator/issue_queue.md"
@@ -134,7 +134,7 @@ OUTPUT "✓ Critical queue clear. Proceeding with normal orchestration."
 
 ```
 Task(
-  model: "sonnet",
+  model: "opus",
   run_in_background: true,
   prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
@@ -333,7 +333,7 @@ Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done &
 
 ```
 Task(
-  model: "sonnet",
+  model: "opus",
   run_in_background: true,
   prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 

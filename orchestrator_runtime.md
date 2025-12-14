@@ -509,6 +509,37 @@ Historical Data: .orchestrator/history.csv
 | `completed` | Tests passed, work verified | None (done) |
 | `failed` | 3 attempts exhausted, tests still failing | Spawn Failure Analysis Agent |
 
+## Issue Lifecycle
+
+Issues in `.orchestrator/issue_queue.md` follow this lifecycle:
+
+| Status | Meaning | Who Sets It |
+|--------|---------|-------------|
+| `pending` | New issue, not yet processed | `/issue` command or Research Agent |
+| `accepted` | Acknowledged, ready for work | User (manual) |
+| `in_progress` | Task created, being worked on | **Decomposition Agent** |
+| `completed` | Fix verified, tests pass | **Testing Agent** |
+| `wont_fix` | Rejected | `/issue reject` command |
+
+### Issue-to-Task Linkage
+
+When tasks are created from issues:
+
+1. **Decomposition Agent** creates task with `| Source Issue | ISSUE-XXX |` field
+2. **Decomposition Agent** marks issue as `in_progress` and adds `| Task Ref | TASK-XXX |`
+3. **Testing Agent** verifies task completion
+4. **Testing Agent** marks source issue as `completed` (if tests pass)
+
+```
+Issue Lifecycle:
+  pending ──► in_progress ──► completed
+     │             │
+     └──► wont_fix │
+                   └──► (stays in_progress if tests fail)
+```
+
+**Why this matters:** The orchestrator RE-SCANS for critical issues. If issues aren't marked as `in_progress` when tasks are created, or `completed` when verified, the critical loop will process the same issues repeatedly.
+
 ## Issue Priority Enforcement
 
 | Priority | When Processed |

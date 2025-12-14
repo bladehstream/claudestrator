@@ -76,13 +76,44 @@ PHASE 1: MODE BRANCH (READ THIS FIRST)
 **Source:** `.orchestrator/issue_queue.md`
 **Action:** Create tasks for ALL pending issues (any priority)
 
-1. Read issue_queue.md completely
-2. Process ALL issues with `| Status | pending |` regardless of priority
-3. Determine build/test commands if not already known (1.3)
-4. Create tasks for each pending issue (Phase 3, 4)
-5. Write completion marker
+### B.1 Find All Pending Issues
 
-**→ Continue to Section 1.2 below**
+```
+Grep("Status \\| pending", ".orchestrator/issue_queue.md", output_mode: "content", -B: 10, -A: 20)
+```
+
+Also check for `accepted` status issues:
+```
+Grep("Status \\| accepted", ".orchestrator/issue_queue.md", output_mode: "content", -B: 10, -A: 20)
+```
+
+### B.2 Create Tasks for Each Issue
+
+For each pending/accepted issue:
+- Create one task per issue
+- **Include `Source Issue` field** (e.g., `| Source Issue | ISSUE-20241215-001 |`)
+- Follow standard task format (Phase 4)
+- Include Build Command and Test Command fields
+
+### B.3 Mark Issues as In-Progress (CRITICAL)
+
+**After creating tasks, you MUST update each source issue's status to `in_progress`.**
+
+```
+Edit(
+    file_path: ".orchestrator/issue_queue.md",
+    old_string: "| Status | pending |",
+    new_string: "| Status | in_progress |\n| Task Ref | TASK-XXX |"
+)
+```
+
+Repeat for each issue you created a task for.
+
+### B.4 Create Final Testing Task
+
+Always create TASK-99999 (testing task) that depends on all other tasks.
+
+**→ Continue to Section 1.3 (Build/Test Commands), then Phase 3, 4**
 
 ---
 
@@ -115,7 +146,9 @@ From the grep results, identify issues that have BOTH:
 - Create one task per critical issue
 - Use next available TASK-XXX ID (check existing task_queue.md)
 - Follow standard task format (Phase 4)
+- **Include `Source Issue` field with the issue ID** (e.g., `| Source Issue | ISSUE-20241215-001 |`)
 - Include Build Command and Test Command fields
+- Then mark issues as in_progress (C.4)
 - Then write completion marker
 
 **If NO critical actionable issues found:**
@@ -126,6 +159,33 @@ From the grep results, identify issues that have BOTH:
 
 **DO NOT process non-critical issues in this mode.** The orchestrator will
 run improvement loops for other issues after critical issues are resolved.
+
+### C.4 Mark Issues as In-Progress (CRITICAL)
+
+**After creating tasks, you MUST update each source issue's status to `in_progress`.**
+
+For each task created, update the corresponding issue in `.orchestrator/issue_queue.md`:
+
+```
+Edit(
+    file_path: ".orchestrator/issue_queue.md",
+    old_string: "| Status | pending |",
+    new_string: "| Status | in_progress |\n| Task Ref | TASK-XXX |"
+)
+```
+
+**Why this matters:** The orchestrator RE-SCANS for critical issues after tasks complete. If you don't mark issues as `in_progress`, the same issues will be found again and create duplicate tasks.
+
+### C.5 Create Final Testing Task (REQUIRED)
+
+**Even in critical_only mode, you MUST create TASK-99999 (testing task).**
+
+This task:
+- Has `Category: testing`
+- Depends on ALL critical tasks you just created
+- Verifies fixes work and marks issues as `completed`
+
+See "REQUIRED: Final Testing & Verification Task" section below for format.
 
 **→ Skip to Section 1.3 (Build/Test Commands), then Phase 3, 4**
 
@@ -245,7 +305,7 @@ Each task must be:
 This task is MANDATORY for every task queue. Example:
 
 ```
-### TASK-999 (always the LAST task)
+### TASK-99999 (always the LAST task)
 
 | Field | Value |
 |-------|-------|
@@ -530,11 +590,14 @@ Total Tasks: {count}
 | Status | pending |
 | Category | backend |
 | Complexity | normal |
+| Source Issue | ISSUE-20241215-001 |
 | Test File | tests/api/test_auth_login.py |
 | Build Command | {PROJECT_BUILD_COMMAND} |
 | Test Command | {PROJECT_TEST_COMMAND} |
 
 **Objective:** Implement user authentication endpoint
+
+> **Note:** The `Source Issue` field is REQUIRED when creating tasks from issues (improvement_loop or critical_only modes). Omit this field only for initial PRD tasks.
 
 **Acceptance Criteria:**
 - POST /auth/login accepts email and password
@@ -643,7 +706,9 @@ Before finishing, verify:
 - [ ] **Each task has Test Code that covers all Acceptance Criteria**
 - [ ] Test code uses project's actual test framework and patterns
 - [ ] Dependencies noted where applicable
-- [ ] **FINAL TASK is Category: testing with VERIFICATION.md requirement**
+- [ ] **Tasks from issues have `Source Issue` field** (BRANCH B/C only)
+- [ ] **Source issues marked as `in_progress`** (BRANCH B/C only)
+- [ ] **FINAL TASK (TASK-99999) is Category: testing**
 - [ ] Wrote task_queue.md using Write tool (with Project Commands header)
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 
@@ -659,6 +724,8 @@ COMMON MISTAKES
 | Missing complexity field | Wrong model selected | Always assess complexity |
 | **Missing Test Code** | Impl agent has no verification | Always include Test Code |
 | Test code not matching project patterns | Tests won't run | Study existing tests first |
+| **Missing Source Issue field** | **Issue not linked to task** | **Include for BRANCH B/C tasks** |
+| **Not marking issues in_progress** | **Same issues processed twice** | **Edit issue_queue.md after creating tasks** |
 | Forgetting completion marker | System hangs forever | Always write .done file |
 | Just describing actions | Nothing happens | Actually USE the tools |
 

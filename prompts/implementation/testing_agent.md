@@ -660,6 +660,50 @@ Critical Issues (will auto-retry):
 ═══════════════════════════════════════════════════════════════════════════════
 ```
 
+### 9.5 Mark Source Issues as Completed (CRITICAL)
+
+**After verification, you MUST update the status of Source Issues for tasks that PASSED.**
+
+#### 9.5.1 Find Tasks with Source Issues
+
+```
+Grep("Source Issue", ".orchestrator/task_queue.md", output_mode: "content", -B: 5, -A: 2)
+```
+
+This will show tasks that came from issues (not initial PRD tasks).
+
+#### 9.5.2 For Each PASSED Task with Source Issue
+
+If the task's verification passed, mark the source issue as `completed`:
+
+```
+Edit(
+    file_path: ".orchestrator/issue_queue.md",
+    old_string: "| Status | in_progress |",
+    new_string: "| Status | completed |\n| Completed | [ISO timestamp] |"
+)
+```
+
+**Important**: Only update issues for tasks that PASSED verification. Tasks that FAILED:
+- Leave the issue as `in_progress`
+- The auto-retry mechanism will create a new issue if needed
+- The orchestrator will re-scan and find pending/in_progress critical issues
+
+#### 9.5.3 Track Issue Completion
+
+For each issue you mark as completed, record it:
+
+```
+ISSUES MARKED COMPLETED:
+  - ISSUE-20241215-001 (from TASK-003) ✓
+  - ISSUE-20241215-002 (from TASK-004) ✓
+
+ISSUES LEFT IN_PROGRESS (verification failed):
+  - ISSUE-20241215-003 (from TASK-005) - build failed
+```
+
+**Why this matters:** The orchestrator RE-SCANS for critical issues. If you don't mark issues as `completed`, the loop will think critical issues still exist and won't proceed to normal orchestration.
+
 ---
 
 ## Phase 10: Write Task Report
@@ -696,6 +740,7 @@ Before completing, verify:
 - [ ] `.orchestrator/VERIFICATION.md` exists with complete instructions
 - [ ] Verification steps executed (Phase 9)
 - [ ] Critical failures written to issue queue with `Auto-Retry: true`
+- [ ] **Source Issues marked as `completed` for PASSED tasks (Phase 9.5)**
 - [ ] Task report JSON written
 
 Then write the completion marker:
@@ -722,6 +767,7 @@ The orchestrator is BLOCKED waiting for this file.
 | Forgetting task report | Analytics incomplete | Always write JSON report |
 | Skipping verification execution | Critical bugs reach user | Always run Phase 9 |
 | Not flagging critical failures | No auto-retry | Set Auto-Retry: true for blocking issues |
+| **Not marking Source Issues completed** | **Critical loop never exits** | **Always run Phase 9.5** |
 
 ---
 
@@ -754,4 +800,4 @@ expect(handler).toHaveBeenCalledTimes(1);
 
 ---
 
-*Testing Implementation Agent v1.1 - Verification execution and auto-retry*
+*Testing Implementation Agent v1.2 - Issue lifecycle management*

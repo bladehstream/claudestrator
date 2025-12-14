@@ -117,16 +117,16 @@ Agents read detailed instructions from prompt files:
 
 | Agent Type | Prompt File |
 |------------|-------------|
-| Decomposition | `prompts/decomposition_agent.md` |
-| Research | `prompts/research_agent.md` |
-| Analysis | `prompts/analysis_agent.md` |
-| **Failure Analysis** | `prompts/failure_analysis_agent.md` |
-| Frontend | `prompts/implementation/frontend_agent.md` |
-| Backend | `prompts/implementation/backend_agent.md` |
-| Fullstack | `prompts/implementation/fullstack_agent.md` |
-| DevOps | `prompts/implementation/devops_agent.md` |
-| Testing | `prompts/implementation/testing_agent.md` |
-| Docs | `prompts/implementation/docs_agent.md` |
+| Decomposition | `.claude/prompts/decomposition_agent.md` |
+| Research | `.claude/prompts/research_agent.md` |
+| Analysis | `.claude/prompts/analysis_agent.md` |
+| **Failure Analysis** | `.claude/prompts/failure_analysis_agent.md` |
+| Frontend | `.claude/prompts/implementation/frontend_agent.md` |
+| Backend | `.claude/prompts/implementation/backend_agent.md` |
+| Fullstack | `.claude/prompts/implementation/fullstack_agent.md` |
+| DevOps | `.claude/prompts/implementation/devops_agent.md` |
+| Testing | `.claude/prompts/implementation/testing_agent.md` |
+| Docs | `.claude/prompts/implementation/docs_agent.md` |
 
 ---
 
@@ -150,7 +150,7 @@ Select model based on task complexity:
 Task(
   model: "sonnet",
   run_in_background: true,
-  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
   ---
 
@@ -210,7 +210,7 @@ complex   → opus
 Task(
   model: [haiku|sonnet|opus based on Complexity],
   run_in_background: true,
-  prompt: "Read('prompts/implementation/[category]_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/implementation/[category]_agent.md') and follow those instructions.
 
   ---
 
@@ -266,7 +266,7 @@ When a task fails (`.failed` marker detected), spawn the Failure Analysis Agent:
 Task(
   model: "opus",
   run_in_background: true,
-  prompt: "Read('prompts/failure_analysis_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/failure_analysis_agent.md') and follow those instructions.
 
   ---
 
@@ -328,7 +328,7 @@ Research Agent finds issues based on quotas:
 Task(
   model: "opus",
   run_in_background: true,
-  prompt: "Read('prompts/research_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/research_agent.md') and follow those instructions.
 
   ---
 
@@ -378,7 +378,7 @@ Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done &
 Task(
   model: "sonnet",
   run_in_background: true,
-  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
   ---
 
@@ -427,7 +427,7 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 Task(
   model: "haiku",
   run_in_background: true,
-  prompt: "Read('prompts/analysis_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/analysis_agent.md') and follow those instructions.
 
   ---
 

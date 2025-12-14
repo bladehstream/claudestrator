@@ -553,7 +553,7 @@ The orchestrator spawns this agent using:
 ```
 Task(
     model: "opus",
-    prompt: "Read('prompts/research_agent.md') and follow those instructions exactly.
+    prompt: "Read('.claude/prompts/research_agent.md') and follow those instructions exactly.
 
     WORKING_DIR: /path/to/project
     LOOP: 1 of 3

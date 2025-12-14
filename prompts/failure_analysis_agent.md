@@ -386,7 +386,7 @@ The orchestrator spawns this agent when a `.failed` marker is detected:
 ```
 Task(
     model: "opus",  # Deep analysis requires strong reasoning
-    prompt: "Read('prompts/failure_analysis_agent.md') and follow those instructions.
+    prompt: "Read('.claude/prompts/failure_analysis_agent.md') and follow those instructions.
 
     WORKING_DIR: /path/to/project
     TASK_ID: TASK-005

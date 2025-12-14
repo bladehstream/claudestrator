@@ -15,16 +15,16 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 
 | Agent Type | Prompt File |
 |------------|-------------|
-| Decomposition | `prompts/decomposition_agent.md` |
-| Research | `prompts/research_agent.md` |
-| Analysis | `prompts/analysis_agent.md` |
-| **Failure Analysis** | `prompts/failure_analysis_agent.md` |
-| Frontend | `prompts/implementation/frontend_agent.md` |
-| Backend | `prompts/implementation/backend_agent.md` |
-| Fullstack | `prompts/implementation/fullstack_agent.md` |
-| DevOps | `prompts/implementation/devops_agent.md` |
-| Testing | `prompts/implementation/testing_agent.md` |
-| Docs | `prompts/implementation/docs_agent.md` |
+| Decomposition | `.claude/prompts/decomposition_agent.md` |
+| Research | `.claude/prompts/research_agent.md` |
+| Analysis | `.claude/prompts/analysis_agent.md` |
+| **Failure Analysis** | `.claude/prompts/failure_analysis_agent.md` |
+| Frontend | `.claude/prompts/implementation/frontend_agent.md` |
+| Backend | `.claude/prompts/implementation/backend_agent.md` |
+| Fullstack | `.claude/prompts/implementation/fullstack_agent.md` |
+| DevOps | `.claude/prompts/implementation/devops_agent.md` |
+| Testing | `.claude/prompts/implementation/testing_agent.md` |
+| Docs | `.claude/prompts/implementation/docs_agent.md` |
 
 ---
 
@@ -77,7 +77,7 @@ Pass QUOTAS to Research Agent each loop.
 Task(
   model: "sonnet",
   run_in_background: true,
-  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
   ---
 
@@ -111,12 +111,12 @@ For each pending task in `.orchestrator/task_queue.md`:
    ```
    Category → Prompt File
    ─────────────────────────────────────────────
-   frontend  → prompts/implementation/frontend_agent.md
-   backend   → prompts/implementation/backend_agent.md
-   fullstack → prompts/implementation/fullstack_agent.md
-   devops    → prompts/implementation/devops_agent.md
-   testing   → prompts/implementation/testing_agent.md
-   docs      → prompts/implementation/docs_agent.md
+   frontend  → .claude/prompts/implementation/frontend_agent.md
+   backend   → .claude/prompts/implementation/backend_agent.md
+   fullstack → .claude/prompts/implementation/fullstack_agent.md
+   devops    → .claude/prompts/implementation/devops_agent.md
+   testing   → .claude/prompts/implementation/testing_agent.md
+   docs      → .claude/prompts/implementation/docs_agent.md
    ```
 
 2. **Select model by complexity:**
@@ -133,7 +133,7 @@ For each pending task in `.orchestrator/task_queue.md`:
    Task(
      model: [haiku|sonnet|opus based on complexity],
      run_in_background: true,
-     prompt: "Read('prompts/implementation/[category]_agent.md') and follow those instructions.
+     prompt: "Read('.claude/prompts/implementation/[category]_agent.md') and follow those instructions.
 
      ---
 
@@ -196,7 +196,7 @@ When a `.failed` marker is detected, spawn the Failure Analysis Agent:
 Task(
   model: "opus",  # Deep analysis requires strong reasoning
   run_in_background: true,
-  prompt: "Read('prompts/failure_analysis_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/failure_analysis_agent.md') and follow those instructions.
 
   ---
 
@@ -239,7 +239,7 @@ For each loop 1..N:
 Task(
   model: "opus",  # Research requires deep analysis
   run_in_background: true,
-  prompt: "Read('prompts/research_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/research_agent.md') and follow those instructions.
 
   ---
 
@@ -276,7 +276,7 @@ Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done &
 Task(
   model: "sonnet",
   run_in_background: true,
-  prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
   ---
 
@@ -320,7 +320,7 @@ Bash("git add -A && git commit -m 'Loop [LOOP]'")
 Task(
   model: "haiku",
   run_in_background: true,
-  prompt: "Read('prompts/analysis_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/analysis_agent.md') and follow those instructions.
 
   ---
 
@@ -482,7 +482,7 @@ Historical Data: .orchestrator/history.csv
 | Analytics HTML | `.orchestrator/analytics.html` |
 | Verification Steps | `.orchestrator/verification_steps.md` |
 | No Auto-Retry Flag | `.orchestrator/no_auto_retry` |
-| Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
+| Agent Prompts | `.claude/prompts/*.md`, `.claude/prompts/implementation/*.md` |
 
 ## CRITICAL RULES
 

@@ -514,7 +514,7 @@ The orchestrator spawns this agent using:
 ```
 Task(
     model: "sonnet",  # or haiku/opus based on complexity
-    prompt: "Read('prompts/implementation_agent.md') and follow those instructions.
+    prompt: "Read('.claude/prompts/implementation_agent.md') and follow those instructions.
 
     TASK_ID: TASK-001
     LOOP_NUMBER: 1

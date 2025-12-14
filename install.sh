@@ -594,6 +594,91 @@ install_commands() {
     log_success "Commands installed: $installed, skipped: $skipped"
 }
 
+# Install prompts
+install_prompts() {
+    log_info "Installing agent prompts..."
+
+    local src_dir="$REPO_DIR/prompts"
+    local dst_dir="$CLAUDE_DIR/prompts"
+
+    log_verbose "Source: $src_dir/"
+    log_verbose "Target: $dst_dir/"
+
+    mkdir -p "$dst_dir"
+    mkdir -p "$dst_dir/implementation"
+    log_verbose "Created directory: $dst_dir"
+
+    local installed=0
+    local updated=0
+    local skipped=0
+
+    # Copy top-level prompt files
+    for prompt_file in "$src_dir"/*.md; do
+        if [ -f "$prompt_file" ]; then
+            local prompt_name=$(basename "$prompt_file")
+            local target="$dst_dir/$prompt_name"
+
+            if [ -f "$target" ]; then
+                if ! diff -q "$target" "$prompt_file" > /dev/null 2>&1; then
+                    if [ "$UPDATE_MODE" = true ]; then
+                        cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)"
+                        cp "$prompt_file" "$target"
+                        log_verbose "  Updated (backup created): $prompt_name"
+                        ((++updated))
+                    else
+                        log_verbose "  Skipped (differs, use --update): $prompt_name"
+                        ((++skipped))
+                    fi
+                else
+                    log_verbose "  Skipped (identical): $prompt_name"
+                    ((++skipped))
+                fi
+            else
+                cp "$prompt_file" "$target"
+                log_verbose "  Copied: $prompt_name"
+                ((++installed))
+            fi
+        fi
+    done
+
+    # Copy implementation subdirectory prompts
+    if [ -d "$src_dir/implementation" ]; then
+        for prompt_file in "$src_dir/implementation"/*.md; do
+            if [ -f "$prompt_file" ]; then
+                local prompt_name=$(basename "$prompt_file")
+                local target="$dst_dir/implementation/$prompt_name"
+
+                if [ -f "$target" ]; then
+                    if ! diff -q "$target" "$prompt_file" > /dev/null 2>&1; then
+                        if [ "$UPDATE_MODE" = true ]; then
+                            cp "$target" "$target.backup.$(date +%Y%m%d_%H%M%S)"
+                            cp "$prompt_file" "$target"
+                            log_verbose "  Updated (backup created): implementation/$prompt_name"
+                            ((++updated))
+                        else
+                            log_verbose "  Skipped (differs, use --update): implementation/$prompt_name"
+                            ((++skipped))
+                        fi
+                    else
+                        log_verbose "  Skipped (identical): implementation/$prompt_name"
+                        ((++skipped))
+                    fi
+                else
+                    cp "$prompt_file" "$target"
+                    log_verbose "  Copied: implementation/$prompt_name"
+                    ((++installed))
+                fi
+            fi
+        done
+    fi
+
+    if [ "$UPDATE_MODE" = true ]; then
+        log_success "Prompts: $installed new, $updated updated, $skipped unchanged"
+    else
+        log_success "Prompts: $installed new, $skipped skipped (run with --update to update existing)"
+    fi
+}
+
 # Install skills
 install_skills() {
     log_info "Installing skills..."
@@ -910,6 +995,7 @@ main() {
 
     install_repo
     install_commands
+    install_prompts
     install_skills
     create_directories
     configure_claude_md

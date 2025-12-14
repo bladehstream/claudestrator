@@ -8,6 +8,7 @@ task_types: [planning, decomposition]
 keywords: [task-breakdown, PRD, requirements, decomposition, orchestration, tasks, task-queue, issue-queue]
 complexity: [normal]
 pairs_with: [agent_construction]
+source: original
 ---
 
 # Decomposition Agent Skill

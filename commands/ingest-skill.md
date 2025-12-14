@@ -174,14 +174,32 @@ Analyze the skill content to suggest appropriate metadata:
 |-------|------------------|
 | `name` | Use existing, or derive from title/content |
 | `id` | Use existing, or generate snake_case from name |
-| `version` | Use existing, or default to `1.0` |
+| `version` | Use existing, or default to `1.0` (format: X.Y, not X.Y.Z) |
 | `category` | Analyze content for best fit (see categories below) |
 | `domain` | What tech domains does this apply to? |
 | `task_types` | What types of tasks does this skill support? |
 | `keywords` | Extract key terms that should trigger this skill |
-| `complexity` | Assess based on scope and depth |
-| `pairs_with` | Which existing skills complement this one? |
+| `complexity` | Assess based on scope and depth (MUST be array format) |
+| `pairs_with` | Which existing skills complement this one? (verify IDs exist) |
+| `source` | **REQUIRED** - Origin of this skill (see Source Field below) |
 | `external_dependencies` | External APIs, services, or tools required |
+
+**Source Field (REQUIRED):**
+
+| Value | When to Use |
+|-------|-------------|
+| `original` | Skill created from scratch for this orchestrator |
+| `external` | Imported from external repo (e.g., Anthropic skills repo) |
+| `local` | Imported from local file |
+| `<url>` | Imported from URL - use the actual URL as the value |
+
+Example:
+```yaml
+source: original                    # Created here
+source: external                    # From skills marketplace
+source: local                       # From local file
+source: https://example.com/skill   # From specific URL
+```
 
 **Detecting External Dependencies:**
 
@@ -245,15 +263,20 @@ Suggested Metadata for: [skill name]
 
 name: [suggested]
 id: [suggested]
-version: [suggested]
-category: [suggested]
+version: 1.0
+category: [suggested - MUST be standard category]
 domain: [suggested list]
 task_types: [suggested list]
 keywords: [suggested list]
-complexity: [suggested]
-pairs_with: [suggested list]
+complexity: [suggested - MUST be array format]
+pairs_with: [suggested list - verify IDs exist]
+source: [original|external|local|<url>]
 
-Source: [original URL/path]
+⚠️  Validation checks:
+  • Category: ✓ valid (matches directory)
+  • Complexity: ✓ array format
+  • pairs_with: ✓ all IDs exist / ⚠️ [id] not found
+  • Version: ✓ X.Y format
 
 Changes from original (if any):
   - [field]: [old] → [new]

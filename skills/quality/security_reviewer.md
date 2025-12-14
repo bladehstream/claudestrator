@@ -26,44 +26,9 @@ You review existing code and systems for security vulnerabilities. You perform p
 - Secure coding practice evaluation
 - Threat modeling basics
 
-## OWASP Top 10:2025 Checklist
+## OWASP Top 10:2021 Checklist
 
-### 5. Injection (A05:2025)
-**Look for:**
-- String concatenation in queries
-- Unsanitized user input in commands
-- Dynamic code evaluation
-
-**Example vulnerability:**
-```javascript
-// BAD
-const query = `SELECT * FROM users WHERE id = ${userId}`;
-
-// GOOD
-const query = 'SELECT * FROM users WHERE id = ?';
-db.query(query, [userId]);
-```
-
-### 2. Broken Authentication
-**Look for:**
-- Weak password requirements
-- Missing rate limiting on login
-- Session tokens in URLs
-- Missing logout functionality
-
-### 3. Sensitive Data Exposure
-**Look for:**
-- Credentials in code/logs
-- Missing encryption for sensitive data
-- Excessive data in responses
-- Sensitive data in error messages
-
-### 4. XML External Entities (XXE)
-**Look for:**
-- XML parsing without disabling external entities
-- Accepting XML from untrusted sources
-
-### 1. Broken Access Control (A01:2025)
+### 1. Broken Access Control (A01:2021)
 **Look for:**
 - Missing authorization checks
 - Direct object references without validation
@@ -73,47 +38,102 @@ db.query(query, [userId]);
 - Unvalidated redirects to internal resources
 - User-controlled URLs in server requests
 
-### 2. Security Misconfiguration (A02:2025)
+### 2. Cryptographic Failures (A02:2021)
 **Look for:**
-- Default credentials
-- Verbose error messages in production
-- Unnecessary features enabled
-- Missing security headers
+- Credentials in code/logs
+- Missing encryption for sensitive data
+- Excessive data in responses
+- Sensitive data in error messages
+- Weak cryptographic algorithms
 
-### 7. Cross-Site Scripting (XSS)
+### 3. Injection (A03:2021)
 **Look for:**
-- Unsanitized user input in HTML output
-- Using innerHTML with user data
-- Missing output encoding
+- String concatenation in queries (SQL injection)
+- Unsanitized user input in commands (Command injection)
+- Dynamic code evaluation (Code injection)
+- Unsanitized user input in HTML output (XSS)
 
-**Example vulnerability:**
+**SQL Injection example:**
+```javascript
+// BAD
+const query = `SELECT * FROM users WHERE id = ${userId}`;
+
+// GOOD
+const query = 'SELECT * FROM users WHERE id = ?';
+db.query(query, [userId]);
+```
+
+**XSS example:**
 ```javascript
 // BAD
 element.innerHTML = userInput;
 
 // GOOD
 element.textContent = userInput;
-// or sanitize first
+// or sanitize with DOMPurify
 ```
 
-### 8. Insecure Deserialization
+### 4. Insecure Design (A04:2021)
 **Look for:**
-- Deserializing untrusted data
-- Missing integrity checks on serialized data
+- Missing threat modeling
+- Lack of security controls in design
+- Business logic flaws
+- Missing rate limiting
 
-### 9. Using Components with Known Vulnerabilities
+### 5. Security Misconfiguration (A05:2021)
+**Look for:**
+- Default credentials
+- Verbose error messages in production
+- Unnecessary features enabled
+- Missing security headers
+- XML parsing without disabling external entities
+
+### 6. Vulnerable and Outdated Components (A06:2021)
 **Look for:**
 - Outdated dependencies
 - Unpatched libraries
 - Abandoned packages
+- Known CVEs in dependencies
 
-### 9. Logging & Alerting Failures (A09:2025)
+### 7. Identification and Authentication Failures (A07:2021)
+**Look for:**
+- Weak password requirements
+- Missing rate limiting on login
+- Session tokens in URLs
+- Missing logout functionality
+- Credential stuffing vulnerabilities
+
+**Example vulnerability:**
+```javascript
+// BAD: Vulnerable to timing attacks
+if (token === storedToken) { ... }
+
+// GOOD: Constant-time comparison
+const crypto = require('crypto');
+if (crypto.timingSafeEqual(Buffer.from(token), Buffer.from(storedToken))) { ... }
+```
+
+### 8. Software and Data Integrity Failures (A08:2021)
+**Look for:**
+- Deserializing untrusted data
+- Missing integrity checks on serialized data
+- Unsigned updates or deployments
+- CI/CD pipeline vulnerabilities
+
+### 9. Security Logging and Monitoring Failures (A09:2021)
 **Look for:**
 - Missing audit logs for sensitive actions
 - No alerting on suspicious activity
 - Logs containing sensitive data
+- Insufficient log retention
 
-### 10. Mishandling of Exceptional Conditions (A10:2025)
+### 10. Server-Side Request Forgery (A10:2021)
+**Look for:**
+- User-controlled URLs in server requests
+- Missing URL validation
+- Internal network access from user input
+
+## Exception Handling (Best Practice)
 **Look for:**
 - Improper input validation leading to crashes
 - Incomplete error recovery

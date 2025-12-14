@@ -65,25 +65,33 @@ ELSE:
 ### Step 2: Scan All Skills
 
 Use `Glob` to find all `.md` files in the skill directory and subdirectories.
+
+**Exclude from scan:**
+- `docs/` folder (contains manifest, template - not actual skills)
+- Files without YAML frontmatter
+
 Count total skills found. Note any non-markdown files that might be misplaced.
 
 ### Step 3: Validate Metadata
 
 For each skill file, use `Read` to check YAML frontmatter for required fields:
 
-| Field | Type | Required |
-|-------|------|----------|
-| `name` | string | Yes |
-| `id` | string | Yes (must be unique) |
-| `version` | string | Yes |
-| `category` | string | Yes |
-| `domain` | array | Yes |
-| `task_types` | array | Yes |
-| `keywords` | array | Yes |
-| `complexity` | array | Yes (values: easy, normal, complex) |
-| `pairs_with` | array | No |
+| Field | Type | Required | Validation |
+|-------|------|----------|------------|
+| `name` | string | Yes | Non-empty |
+| `id` | string | Yes | Unique, lowercase |
+| `version` | string | Yes | X.Y format (e.g., "1.0") |
+| `category` | string | Yes | Must match standard category |
+| `domain` | array | Yes | Non-empty |
+| `task_types` | array | Yes | Non-empty |
+| `keywords` | array | Yes | Non-empty |
+| `complexity` | array | Yes | Values: [easy], [normal], [complex] |
+| `pairs_with` | array | No | All IDs must exist |
+| `source` | string | Yes | original, external, local, or URL |
 
-Flag: missing fields, invalid types, empty arrays.
+**Standard categories:** implementation, design, quality, support, maintenance, security, domain, orchestrator
+
+Flag: missing fields, invalid types, empty arrays, non-standard categories, invalid complexity format, non-existent pairs_with IDs.
 
 ### Step 4: Check for Staleness
 

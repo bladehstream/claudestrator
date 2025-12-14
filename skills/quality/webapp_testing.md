@@ -253,10 +253,10 @@ await page.waitForTimeout(2000);
 await page.waitForSelector('[data-testid="loaded"]');
 
 // ❌ Flaky: Exact text match
-await expect(page.locator('.date')).toHaveText('December 10, 2024');
+await expect(page.locator('.date')).toHaveText('December 14, 2025');
 
 // ✅ Stable: Pattern match
-await expect(page.locator('.date')).toHaveText(/December \d+, 2024/);
+await expect(page.locator('.date')).toHaveText(/December \d+, 2025/);
 
 // ❌ Flaky: Shared test user
 const user = 'shared@test.com';

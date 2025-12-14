@@ -8,6 +8,7 @@ task_types: [type1, type2]
 keywords: [keyword1, keyword2, keyword3]
 complexity: [easy, normal, complex]
 pairs_with: [other_skill_id1, other_skill_id2]
+source: original  # REQUIRED: original, external, local, or URL
 external_dependencies: []  # See External Dependencies section below
 ---
 
@@ -91,13 +92,14 @@ When this skill is applied, the agent should:
 |-------|-------------|----------------|
 | name | Human-readable skill name | "HTML5 Canvas Developer" |
 | id | Unique lowercase identifier | "html5_canvas" |
-| version | Skill version | "1.0" |
-| category | Primary skill category (for deduplication) | rendering, testing, design, documentation, security, refactoring, assets |
-| domain | Applicable project domains | web, game, backend, api, data, devops |
+| version | Skill version (X.Y format) | "1.0", "1.1" |
+| category | **REQUIRED** Directory category | implementation, design, quality, support, maintenance, security, domain, orchestrator |
+| domain | Applicable project domains | web, game, backend, api, data, devops, mobile |
 | task_types | Types of tasks this handles | design, implementation, feature, bugfix, refactor, testing, documentation |
 | keywords | Matching keywords | Any relevant terms |
-| complexity | Complexity levels supported | easy, normal, complex |
-| pairs_with | Complementary skill IDs | Other skill IDs |
+| complexity | **MUST be array** | [easy], [normal], [complex], [easy, normal] |
+| pairs_with | Complementary skill IDs | Other skill IDs (verify they exist) |
+| source | **REQUIRED** Origin of skill | original, external, local, or URL |
 | external_dependencies | External APIs/services/env vars required | See External Dependencies section |
 
 ### External Dependencies Field

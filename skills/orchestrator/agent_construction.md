@@ -3,12 +3,11 @@ name: Agent Construction Expert
 id: agent_construction
 version: 1.0
 category: orchestrator
-usage: self
 domain: [orchestration]
 task_types: [planning, delegation, coordination]
 keywords: [model selection, skill composition, agent spawning, task delegation, context budgeting, prompt construction]
 complexity: [normal]
-pairs_with: []
+pairs_with: [decomposition_agent]
 source: original
 ---
 

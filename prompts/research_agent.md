@@ -110,10 +110,27 @@ When evaluating search results, weight sources by reliability:
 - Note publication dates - reject anything >2 years old for fast-moving tech
 - Be skeptical of "best practices" that aren't backed by official docs
 
-### 2.0 Web Research Agent (Visual Capture)
+### 2.0 Web Research Agent (Visual Capture) - OPTIONAL
 
-**IMPORTANT**: For competitor analysis, UI patterns, and visual research, use the `web_research_agent` skill to capture live screenshots and extract content from websites.
+For competitor analysis, UI patterns, and visual research, you can use the `web_research_agent` skill to capture live screenshots. However, this requires dependencies that may not be installed.
 
+**Pre-flight check** (run FIRST, before any visual capture):
+```bash
+node --version && npm list playwright 2>/dev/null | grep -q playwright && echo "VISUAL_CAPTURE_AVAILABLE"
+```
+
+**If check FAILS (no output or error):**
+- Set internal flag: `visual_capture_available = false`
+- Log: "Visual capture unavailable - dependencies missing, using text-only research"
+- Skip all `web_research_agent` commands in this session
+- Continue with WebSearch/WebFetch only (Phase 2.1+)
+- In Phase 6 summary, note: "Visual research: SKIPPED (dependencies missing)"
+
+**If check PASSES (outputs "VISUAL_CAPTURE_AVAILABLE"):**
+- Set internal flag: `visual_capture_available = true`
+- Proceed with visual capture as needed
+
+**Visual capture commands** (only if available):
 ```bash
 # Capture competitor dashboard/UI for visual analysis
 node .claude/skills/support/web_research_agent/scripts/capture.js \
@@ -126,16 +143,11 @@ Read("./research/competitor-analysis.png")
 Read("./research/competitor-analysis.txt")
 ```
 
-**When to use visual capture:**
+**When to use visual capture** (if available):
 - Competitor UI/UX analysis (see actual interfaces, not just descriptions)
 - Dashboard/chart patterns (layout, data visualization approaches)
 - Mobile/responsive design patterns (use `--mobile` flag)
 - Current state documentation of reference implementations
-
-**Pre-flight check** (run once per session):
-```bash
-node --version && npm install playwright
-```
 
 ### 2.1 Industry Best Practices
 
@@ -157,7 +169,7 @@ If the domain is clear:
 - What UX patterns are users accustomed to?
 - What differentiates the best implementations?
 
-**Use web_research_agent for visual competitive analysis:**
+**If visual_capture_available = true**, use web_research_agent for visual competitive analysis:
 ```bash
 # Capture multiple competitors
 for url in "https://competitor1.com" "https://competitor2.com"; do
@@ -165,8 +177,9 @@ for url in "https://competitor1.com" "https://competitor2.com"; do
     "$url" --full --meta -o "./research/$(basename $url)"
 done
 ```
-
 This provides actual screenshots of competitor UIs rather than just text descriptions.
+
+**If visual_capture_available = false**, use WebFetch to gather competitor information from text content only.
 
 ### 2.3 Technology-Specific Research
 
@@ -435,6 +448,7 @@ PROJECT PROFILE
   Health:   {overall_assessment: healthy | needs_attention | critical}
 
 RESEARCH CONDUCTED
+  Visual:   {AVAILABLE | SKIPPED (dependencies missing)}
   - {search_1}
   - {search_2}
   - {search_3}

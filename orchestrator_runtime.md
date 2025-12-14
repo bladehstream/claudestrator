@@ -66,6 +66,65 @@ Pass QUOTAS to Research Agent each loop.
 5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS`
 6. Initialize LOOP_NUMBER to 1
 7. Parse arguments → set LOOP_COUNT and RESEARCH_FOCUS
+8. **Run Critical Issue Resolution Loop** (see below)
+
+---
+
+## Critical Issue Resolution Loop (BEFORE any other work)
+
+**This loop runs BEFORE initial processing or improvement loops.**
+
+```
+CRITICAL_ITERATION = 0
+MAX_CRITICAL_ITERATIONS = 10
+
+WHILE true:
+    # Scan for critical pending issues
+    CRITICAL_COUNT = Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/null | grep -c '| Status | pending |' || echo '0'")
+
+    IF CRITICAL_COUNT == 0:
+        BREAK  # Exit loop, proceed to normal orchestration
+
+    CRITICAL_ITERATION += 1
+    IF CRITICAL_ITERATION > MAX_CRITICAL_ITERATIONS:
+        HALT "Critical loop exceeded 10 iterations"
+
+    # Process critical issues
+    OUTPUT "⚠️ CRITICAL: $CRITICAL_COUNT issues (iteration $CRITICAL_ITERATION)"
+
+    # Spawn Decomposition Agent (critical_only mode)
+    Task(
+      model: "sonnet",
+      prompt: "Read('.claude/prompts/decomposition_agent.md')...
+        MODE: critical_only
+        SOURCE: .orchestrator/issue_queue.md"
+    )
+    Wait for decomposition.done
+
+    # Verify tasks created
+    PENDING_TASKS = grep -c "| Status | pending |" .orchestrator/task_queue.md
+    IF PENDING_TASKS == 0:
+        HALT "ERROR: Critical issues exist but no tasks created"
+
+    # Run implementation agents on critical tasks
+    FOR each pending task:
+        Spawn implementation agent
+        Wait for completion
+        Update task status
+
+    # Commit and RE-SCAN (loop continues)
+    Bash("git add -A && git commit -m 'Critical fixes iteration $CRITICAL_ITERATION'")
+
+# Only reaches here when CRITICAL_COUNT == 0
+OUTPUT "✓ Critical queue clear. Proceeding with normal orchestration."
+```
+
+**Key points:**
+- Runs at startup BEFORE initial PRD processing or improvement loops
+- Loops until ALL critical issues resolved
+- Re-scans after each iteration (fixes may create new critical issues)
+- Safety limit of 10 iterations
+- HALTs if tasks aren't created for detected critical issues
 
 ---
 

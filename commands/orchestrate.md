@@ -70,59 +70,123 @@ Pass QUOTAS to Research Agent so it knows exactly how many issues to find per ca
 6. Initialize LOOP_NUMBER to 1
 7. **Scan for critical blocking issues** (see below)
 
-### Critical Issue Scan (Step 7)
+### Critical Issue Loop (Step 7)
 
-**IMPORTANT:** Before proceeding, scan for critical blocking issues:
+**IMPORTANT:** Before ANY other work, you must resolve ALL critical issues.
+
+This is a LOOP that continues until the critical queue is empty:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        CRITICAL ISSUE RESOLUTION LOOP                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌──────────────────┐                                                      │
+│   │ SCAN for critical│◄────────────────────────────────────┐                │
+│   │ pending issues   │                                     │                │
+│   └────────┬─────────┘                                     │                │
+│            │                                               │                │
+│            ▼                                               │                │
+│   ┌──────────────────┐      ┌──────────────────┐          │                │
+│   │ CRITICAL_COUNT   │──0──►│ EXIT LOOP        │          │                │
+│   │ > 0 ?            │      │ Proceed to normal│          │                │
+│   └────────┬─────────┘      │ orchestration    │          │                │
+│            │                └──────────────────┘          │                │
+│            │ > 0                                          │                │
+│            ▼                                              │                │
+│   ┌──────────────────┐                                    │                │
+│   │ Process critical │                                    │                │
+│   │ issues           │                                    │                │
+│   │ (Decomp + Impl)  │                                    │                │
+│   └────────┬─────────┘                                    │                │
+│            │                                              │                │
+│            ▼                                              │                │
+│   ┌──────────────────┐                                    │                │
+│   │ RE-SCAN          │────────────────────────────────────┘                │
+│   │ (loop back)      │                                                     │
+│   └──────────────────┘                                                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 7a: Scan for Critical Issues
 
 ```bash
 CRITICAL_COUNT=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -c "| Status | pending |")
 ```
 
-**If CRITICAL_COUNT > 0:**
+### Step 7b: Critical Loop Logic
 
-1. **Set CRITICAL_MODE = true**
-2. **Display warning:**
+```python
+CRITICAL_ITERATION = 0
+MAX_CRITICAL_ITERATIONS = 10  # Safety limit
+
+WHILE CRITICAL_COUNT > 0:
+    CRITICAL_ITERATION += 1
+
+    IF CRITICAL_ITERATION > MAX_CRITICAL_ITERATIONS:
+        HALT with error: "Critical issue loop exceeded 10 iterations. Manual intervention required."
+
+    # Display status
+    OUTPUT:
+    """
+    ⚠️  CRITICAL BLOCKING ISSUES DETECTED (Iteration $CRITICAL_ITERATION)
+    ═══════════════════════════════════════════════════════════════════════
+
+    Found $CRITICAL_COUNT critical issue(s) that must be resolved first.
+
+    CRITICAL MODE ACTIVE:
+      • Research Agent SKIPPED (no new issues)
+      • Only critical issues will be processed
+      • Will re-scan after fixes complete
+
+    ═══════════════════════════════════════════════════════════════════════
+    """
+
+    # Process critical issues
+    1. Spawn Decomposition Agent with MODE: critical_only
+    2. Wait for completion
+    3. VERIFY tasks were created (Step 7c)
+    4. Run Implementation Agents on critical tasks
+    5. Wait for all critical tasks to complete
+    6. Commit changes
+
+    # RE-SCAN for critical issues (fixes may have created new ones, or failed)
+    CRITICAL_COUNT = grep -A3 "| Priority | critical |" ... | grep -c "| Status | pending |"
+
+    IF CRITICAL_COUNT > 0:
+        OUTPUT: "⚠️  $CRITICAL_COUNT critical issues still pending. Continuing loop..."
+
+# Loop exits when CRITICAL_COUNT == 0
+OUTPUT:
+"""
+✓ CRITICAL QUEUE CLEAR
+═══════════════════════════════════════════════════════════════════════
+
+All critical issues have been resolved after $CRITICAL_ITERATION iteration(s).
+Proceeding with normal orchestration flow.
+
+═══════════════════════════════════════════════════════════════════════
+"""
 ```
-⚠️  CRITICAL BLOCKING ISSUES DETECTED
-═══════════════════════════════════════
 
-Found $CRITICAL_COUNT critical issue(s) in issue_queue.md that may block the build.
+### Step 7c: Verify Tasks Created (within loop)
 
-CRITICAL MODE ACTIVATED:
-  • Research Agent will be SKIPPED (no new issues will be found)
-  • Only critical issues will be converted to tasks
-  • Focus is on fixing blockers first
-
-To proceed: Press Enter or run /orchestrate 1
-To view details: /issues --critical
-═══════════════════════════════════════
-```
-
-3. **Modified flow when CRITICAL_MODE = true:**
-   - Spawn Decomposition Agent with `MODE: critical_only`
-   - Decomposition Agent converts ONLY critical issues to tasks
-   - **VERIFY tasks were created** (see Step 3b below)
-   - **SKIP Research Agent entirely** - don't find more issues
-   - Run implementation agents on critical tasks only
-   - After critical tasks complete, exit loop
-
-### Step 3b: Verify Tasks Created (CRITICAL_MODE only)
-
-**After Decomposition Agent completes in critical_only mode, you MUST verify tasks were created:**
+**After Decomposition Agent completes, verify tasks were created:**
 
 ```bash
 PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
 ```
 
-**If PENDING_TASKS == 0 AND CRITICAL_MODE == true:**
+**If PENDING_TASKS == 0 but CRITICAL_COUNT was > 0:**
 
-This is an ERROR. Critical issues were detected but no tasks were created.
+This is an ERROR - critical issues exist but no tasks were created.
 
 ```
 ⚠️  CRITICAL ERROR: NO TASKS CREATED
-═══════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
 
-$CRITICAL_COUNT critical issues were detected, but the Decomposition Agent
+$CRITICAL_COUNT critical issues were detected, but Decomposition Agent
 created 0 tasks. This indicates a processing failure.
 
 Possible causes:
@@ -130,19 +194,20 @@ Possible causes:
   • Critical issues have unexpected format
   • Decomposition Agent prompt issue
 
-Action: HALT orchestration. Do NOT proceed to improvement loops.
-Manual intervention required.
+Action: HALT orchestration. Manual intervention required.
 
-═══════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════
 ```
 
-**HALT immediately.** Do NOT assume "no pending tasks = issues resolved."
+**HALT immediately.** Do NOT continue the loop or proceed to normal orchestration.
 
-**If PENDING_TASKS > 0:** Proceed with running implementation agents on the critical tasks.
+### Step 7d: After Critical Loop Completes
 
-**If no matches:** Continue with normal flow (CRITICAL_MODE = false).
+Only after CRITICAL_COUNT == 0 should you proceed to:
+- Initial PRD processing (if `/orchestrate` with no loops)
+- Improvement loops (if `/orchestrate N`)
 
-**Note:** This grep scan is the ONLY permitted read of issue_queue.md by the orchestrator. Full issue processing is handled by the Decomposition Agent.
+**Note:** The critical scan is the ONLY permitted read of issue_queue.md by the orchestrator. Full issue processing is handled by the Decomposition Agent.
 
 ---
 

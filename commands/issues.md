@@ -136,25 +136,39 @@ Run /progress agent-abc123 for agent output.
 
 ## Implementation
 
+**IMPORTANT: NEVER use Read() on the entire issue queue - it may exceed token limits (25k max).**
+
 ```
 FUNCTION displayIssues(filter):
     IF NOT EXISTS .orchestrator/issue_queue.md:
         OUTPUT: "No issue queue found. Run /issue to report an issue."
         RETURN
 
-    issues = PARSE .orchestrator/issue_queue.md
-
     IF filter == "pending":
-        issues = issues.filter(i => i.status == "pending")
-        DISPLAY pending list format
+        # Use Grep to find pending issues only
+        Grep(pattern: "Status \\| pending", path: ".orchestrator/issue_queue.md", -B: 10, output_mode: "content")
+        DISPLAY pending list format from grep output
+
     ELSE IF filter matches ISSUE-* pattern:
-        issue = issues.find(i => i.id == filter)
-        IF issue:
+        # Use Grep to find specific issue
+        Grep(pattern: "## {filter}", path: ".orchestrator/issue_queue.md", -A: 30, output_mode: "content")
+        IF match found:
             DISPLAY detail format
         ELSE:
             OUTPUT: "Issue not found: {filter}"
+
     ELSE:
-        DISPLAY full summary format
+        # Summary view - count by status using grep
+        pending_count = Grep(pattern: "Status \\| pending", path: ".orchestrator/issue_queue.md", output_mode: "count")
+        accepted_count = Grep(pattern: "Status \\| accepted", path: ".orchestrator/issue_queue.md", output_mode: "count")
+        in_progress_count = Grep(pattern: "Status \\| in_progress", path: ".orchestrator/issue_queue.md", output_mode: "count")
+        completed_count = Grep(pattern: "Status \\| completed", path: ".orchestrator/issue_queue.md", output_mode: "count")
+        wont_fix_count = Grep(pattern: "Status \\| wont_fix", path: ".orchestrator/issue_queue.md", output_mode: "count")
+
+        # Get pending issues list
+        Grep(pattern: "Status \\| pending", path: ".orchestrator/issue_queue.md", -B: 10, output_mode: "content")
+
+        DISPLAY full summary format with counts and pending list
 ```
 
 ## If No Queue Exists

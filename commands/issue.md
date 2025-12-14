@@ -76,8 +76,8 @@ The orchestrator polls this queue and creates tasks automatically.
 | Allowed | Purpose |
 |---------|---------|
 | Ask questions via `AskUserQuestion` | Gather issue details |
-| Read `.orchestrator/issue_queue.md` | Check for duplicates |
-| Write to `.orchestrator/issue_queue.md` | Record the issue |
+| Grep `.orchestrator/issue_queue.md` | Search for duplicates (NEVER Read entire file) |
+| Edit `.orchestrator/issue_queue.md` | Append new issue to end of file |
 | Output confirmation message | Inform user issue was recorded |
 
 **Your ONLY job is to capture information and write it to the queue. The orchestrator will assign the issue to an appropriate agent for investigation and fixing.**
@@ -146,8 +146,21 @@ Ask if user has a suggested approach.
 Accept 'skip', 's', 'no', 'none' as signals to proceed without this info.
 
 ### Duplicate Detection
-Before writing, check `.orchestrator/issue_queue.md` for similar pending issues.
-If found, ask user if it's the same issue or different.
+
+**IMPORTANT: NEVER use Read() on the issue queue - it may exceed token limits.**
+
+Use Grep to search for potential duplicates:
+
+```bash
+# Search for keywords from the user's summary
+Grep(pattern: "dashboard.*crash|crash.*dashboard", path: ".orchestrator/issue_queue.md", output_mode: "content", -C: 5)
+```
+
+If matches found with `Status | pending` or `Status | accepted`:
+- Show the matching issue summary to user
+- Ask if it's the same issue or different
+- If same: note "merged with ISSUE-XXX" and skip creating new entry
+- If different: proceed with new issue creation
 
 ### Writing to Queue
 Generate issue ID: `ISSUE-YYYYMMDD-NNN` (NNN = sequential number for that day)
@@ -344,32 +357,29 @@ Use `/issue reject` to mark an issue as "won't fix":
 
 ### Rejection Behavior
 
+**IMPORTANT: NEVER use Read() on the entire issue queue - it may exceed token limits.**
+
 ```
 FUNCTION rejectIssue(issue_id, reason):
-    READ .orchestrator/issue_queue.md
+    # Use Grep to find the issue (NOT Read)
+    Grep(pattern: "## {issue_id}", path: ".orchestrator/issue_queue.md", output_mode: "content", -A: 20)
 
-    issue = issues.find(i => i.id == issue_id)
-
-    IF NOT issue:
+    IF no match:
         OUTPUT: "Issue not found: {issue_id}"
         RETURN
 
-    IF issue.status NOT IN ['pending', 'accepted']:
-        OUTPUT: "Cannot reject issue in '{issue.status}' state.
+    # Extract status from grep output
+    IF status NOT IN ['pending', 'accepted']:
+        OUTPUT: "Cannot reject issue in '{status}' state.
                  Only pending or accepted issues can be rejected."
         RETURN
 
-    # Update issue
-    issue.status = "wont_fix"
-    issue.rejected_at = NOW()
-    issue.rejection_reason = reason
-
-    # If task was created, mark it cancelled
-    IF issue.task_ref:
-        UPDATE journal task to cancelled
-        issue.notes += "\nLinked task {issue.task_ref} cancelled."
-
-    WRITE .orchestrator/issue_queue.md
+    # Use Edit to update the status field
+    Edit(
+        file_path: ".orchestrator/issue_queue.md",
+        old_string: "| Status | pending |"  # or accepted
+        new_string: "| Status | wont_fix |\n| Rejected | {NOW()} |\n| Rejection Reason | {reason} |"
+    )
 
     OUTPUT:
         "═══════════════════════════════════════════════════════════

@@ -422,7 +422,8 @@ Historical Data: .orchestrator/history.csv
 8. **ONE Research Agent per loop** - with quotas, not topic-specific agents
 9. **CAN read task_queue.md** - to know what agents to spawn
 10. **CAN mark task as done** - when completion marker detected
-11. **NEVER read issue_queue.md** - Decomposition Agent handles this
+11. **NEVER read issue_queue.md fully** - EXCEPT for critical issue scan at startup:
+    `grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md`
 12. **NEVER convert issues to tasks** - Decomposition Agent handles this
 
 ### Orchestrator CAN vs CANNOT
@@ -430,10 +431,11 @@ Historical Data: .orchestrator/history.csv
 | CAN | CANNOT |
 |-----|--------|
 | Read task_queue.md | Read PRD.md |
-| Mark task status as `done` | Read issue_queue.md |
+| Mark task status as `done` | Read issue_queue.md fully |
 | Spawn predefined agents | Convert issues to tasks |
 | Wait for completion markers | Modify task content |
 | Output final paths | Write code or fix issues |
+| Grep issue_queue for critical blockers | Process issue content directly |
 
 ### Forbidden Behaviors
 

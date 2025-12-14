@@ -29,14 +29,37 @@ You are a senior technical project manager who excels at:
 
 ---
 
+## Modes
+
+The orchestrator passes a `MODE` parameter that determines behavior:
+
+| MODE | Source | Behavior |
+|------|--------|----------|
+| `initial` | PRD.md | Break down all requirements into tasks |
+| `convert_issues` | issue_queue.md | Convert all pending issues to tasks |
+| `critical_only` | issue_queue.md | Convert ONLY `Priority | critical` issues to tasks |
+
+### MODE: critical_only
+
+When `MODE: critical_only` is specified:
+
+1. Read `.orchestrator/issue_queue.md`
+2. **Filter to ONLY issues where `Priority | critical` AND `Status | pending`**
+3. Ignore all other issues (medium, low, high priority)
+4. Convert only the critical issues to tasks
+5. This mode is triggered when the orchestrator detects blocking critical issues at startup
+
+---
+
 ## Process
 
 ### Step 1: Read the Source Document
 
 ```
 Use the Read tool to load the source:
-- For initial run: Read("PRD.md")
-- For improvement loops: Read(".orchestrator/issue_queue.md")
+- For MODE: initial → Read("PRD.md")
+- For MODE: convert_issues → Read(".orchestrator/issue_queue.md")
+- For MODE: critical_only → Read(".orchestrator/issue_queue.md")
 ```
 
 ### Step 2: Analyze Requirements
@@ -125,7 +148,9 @@ The orchestrator is blocked waiting for this file. If you don't create it, the e
 
 ## Checklist Before Finishing
 
-- [ ] Read the source document (PRD.md or issue_queue.md)
+- [ ] Checked MODE parameter from orchestrator
+- [ ] Read the correct source document based on MODE
+- [ ] If MODE is `critical_only`, filtered to ONLY critical+pending issues
 - [ ] Created task_queue.md with properly formatted tasks
 - [ ] Each task has Category (for agent routing)
 - [ ] Each task has Complexity (for model selection)
@@ -149,14 +174,23 @@ The orchestrator is blocked waiting for this file. If you don't create it, the e
 
 **You must perform these actions in order. Do not just describe them - actually do them.**
 
-### Action 1: Read the PRD
-```
-Read("PRD.md")
-```
-Execute this tool call NOW. Read the entire PRD file.
+### Action 1: Read the Source (based on MODE)
+
+**Check the MODE parameter passed by orchestrator:**
+
+- `MODE: initial` → `Read("PRD.md")`
+- `MODE: convert_issues` → `Read(".orchestrator/issue_queue.md")`
+- `MODE: critical_only` → `Read(".orchestrator/issue_queue.md")`
+
+Execute the appropriate Read tool call NOW.
 
 ### Action 2: Analyze and Plan
-After reading, identify 3-10 implementation tasks from the requirements.
+
+**Based on MODE:**
+
+- `initial`: Identify 3-10 implementation tasks from PRD requirements
+- `convert_issues`: Convert all pending issues to tasks
+- `critical_only`: **ONLY convert issues where `Priority | critical` AND `Status | pending`** — ignore all other issues
 
 ### Action 3: Write task_queue.md
 ```
@@ -172,4 +206,4 @@ Execute this tool call LAST. This signals you are finished.
 
 ---
 
-**START NOW: Your first action should be calling Read("PRD.md")**
+**START NOW: Check your MODE parameter and read the appropriate source file.**

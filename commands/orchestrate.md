@@ -68,6 +68,46 @@ Pass QUOTAS to Research Agent so it knows exactly how many issues to find per ca
 4. Get absolute working directory with `pwd` (store for agent prompts)
 5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
 6. Initialize LOOP_NUMBER to 1
+7. **Scan for critical blocking issues** (see below)
+
+### Critical Issue Scan (Step 7)
+
+**IMPORTANT:** Before proceeding, scan for critical blocking issues:
+
+```bash
+grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md 2>/dev/null
+```
+
+**If matches found:**
+
+1. **Set CRITICAL_MODE = true**
+2. **Display warning:**
+```
+⚠️  CRITICAL BLOCKING ISSUES DETECTED
+═══════════════════════════════════════
+
+Found {N} critical issue(s) in issue_queue.md that may block the build.
+
+CRITICAL MODE ACTIVATED:
+  • Research Agent will be SKIPPED (no new issues will be found)
+  • Only critical issues will be converted to tasks
+  • Focus is on fixing blockers first
+
+To proceed: Press Enter or run /orchestrate 1
+To view details: /issues --critical
+═══════════════════════════════════════
+```
+
+3. **Modified flow when CRITICAL_MODE = true:**
+   - Spawn Decomposition Agent with `MODE: critical_only`
+   - Decomposition Agent converts ONLY critical issues to tasks
+   - **SKIP Research Agent entirely** - don't find more issues
+   - Run implementation agents on critical tasks only
+   - After critical tasks complete, exit loop
+
+**If no matches:** Continue with normal flow (CRITICAL_MODE = false).
+
+**Note:** This grep scan is the ONLY permitted read of issue_queue.md by the orchestrator. Full issue processing is handled by the Decomposition Agent.
 
 ---
 
@@ -462,7 +502,11 @@ Historical Data: .orchestrator/history.csv
 
 1. **NEVER read PRD.md yourself** - spawn Decomposition Agent
 2. **CAN read task_queue.md** - to know what agents to spawn
-3. **NEVER read issue_queue.md** - spawn Decomposition Agent to convert issues
+3. **NEVER read issue_queue.md fully** - EXCEPT for the critical issue scan at startup:
+   ```bash
+   grep -E "Priority \| critical.*Status \| pending" .orchestrator/issue_queue.md 2>/dev/null
+   ```
+   Full issue processing is handled by Decomposition Agent.
 4. **CAN mark task as done** - when completion marker detected (minimal update)
 5. **Use category-specific prompts** - agents read their detailed prompt file first
 6. **ONE blocking Bash per agent** - not a polling loop

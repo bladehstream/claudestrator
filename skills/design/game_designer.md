@@ -7,7 +7,7 @@ domain: [game]
 task_types: [design, planning, specification]
 keywords: [game, mechanics, balance, progression, player, experience, loop, difficulty, scoring, rules]
 complexity: [normal, complex]
-pairs_with: [game_feel, user_persona]
+pairs_with: [game_feel, user_persona_reviewer]
 source: original
 ---
 

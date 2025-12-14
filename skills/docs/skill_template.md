@@ -98,9 +98,38 @@ When this skill is applied, the agent should:
 | task_types | Types of tasks this handles | design, implementation, feature, bugfix, refactor, testing, documentation |
 | keywords | Matching keywords | Any relevant terms |
 | complexity | **MUST be array** | [easy], [normal], [complex], [easy, normal] |
-| pairs_with | Complementary skill IDs | Other skill IDs (verify they exist) |
+| pairs_with | Complementary skill IDs | Other skill IDs (must exist, verified by /audit-skills) |
 | source | **REQUIRED** Origin of skill | original, external, local, or URL |
 | external_dependencies | External APIs/services/env vars required | See External Dependencies section |
+
+### ID Naming Convention
+
+The skill `id` field MUST follow these rules:
+
+1. **Use `snake_case`** - Underscores only, no hyphens
+2. **Match the filename** - `id` must equal filename without `.md` extension
+3. **Use full words** - No abbreviations
+
+**Examples:**
+```
+✓ CORRECT:
+  File: svg_asset_generator.md  →  id: svg_asset_generator
+  File: user_persona_reviewer.md →  id: user_persona_reviewer
+  File: device_hardware.md      →  id: device_hardware
+
+✗ WRONG:
+  File: device-hardware.md      →  Use underscores: device_hardware.md
+  id: svg_asset_gen             →  Use full name: svg_asset_generator
+  id: user_persona              →  Use full name: user_persona_reviewer
+```
+
+### pairs_with Field
+
+The `pairs_with` field lists complementary skills that work well together. All IDs listed MUST:
+
+1. Reference existing skill IDs (validated by `/audit-skills`)
+2. Use exact ID matches (no abbreviations)
+3. Consider bidirectional pairing (if A pairs with B, B should pair with A)
 
 ### External Dependencies Field
 

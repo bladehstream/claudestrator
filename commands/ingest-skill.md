@@ -256,26 +256,65 @@ Continue with ingestion? [Y/n]
 
 **Complexity (MUST be array format):** `[easy]`, `[normal]`, `[complex]`, or combinations like `[easy, normal]`
 
+**ID Naming Convention (REQUIRED):**
+
+The skill `id` MUST follow these rules:
+1. Use `snake_case` (underscores, not hyphens)
+2. Match the filename (without `.md` extension)
+3. Use full words, not abbreviations
+
+```
+✓ CORRECT:
+  File: svg_asset_generator.md  →  id: svg_asset_generator
+  File: user_persona_reviewer.md →  id: user_persona_reviewer
+
+✗ WRONG:
+  File: device-hardware.md  →  Use underscores: device_hardware.md
+  id: svg_asset_gen         →  Use full name: svg_asset_generator
+  id: user_persona          →  Use full name: user_persona_reviewer
+```
+
+**Validating pairs_with References:**
+
+Before accepting `pairs_with`, scan the skill directory for all existing skill IDs:
+
+```bash
+# Get all existing skill IDs
+Glob(".claude/skills/**/*.md") → extract id: field from each
+```
+
+For each ID in `pairs_with`:
+1. Check if ID exists in skill directory
+2. If not found, use fuzzy matching to suggest similar IDs
+3. Prompt user to confirm or correct
+
+**Fuzzy match examples:**
+- `svg_asset_gen` → "Did you mean `svg_asset_generator`?"
+- `user_persona` → "Did you mean `user_persona_reviewer`?"
+- `qa` → "Did you mean `qa_agent`?"
+
 **Present suggested metadata to user:**
 ```
 Suggested Metadata for: [skill name]
 ════════════════════════════════════════
 
 name: [suggested]
-id: [suggested]
+id: [suggested - MUST match filename]
 version: 1.0
 category: [suggested - MUST be standard category]
 domain: [suggested list]
 task_types: [suggested list]
 keywords: [suggested list]
 complexity: [suggested - MUST be array format]
-pairs_with: [suggested list - verify IDs exist]
+pairs_with: [suggested list]
 source: [original|external|local|<url>]
 
 ⚠️  Validation checks:
+  • ID: ✓ matches filename / ⚠️ mismatch (id vs filename)
   • Category: ✓ valid (matches directory)
   • Complexity: ✓ array format
-  • pairs_with: ✓ all IDs exist / ⚠️ [id] not found
+  • pairs_with: ✓ all IDs exist
+              / ⚠️ "svg_asset_gen" not found - did you mean "svg_asset_generator"?
   • Version: ✓ X.Y format
 
 Changes from original (if any):
@@ -285,6 +324,22 @@ Accept this metadata? [Y/n/edit]
 ```
 
 If user chooses "edit", use AskUserQuestion to let them modify specific fields.
+
+**If pairs_with validation fails:**
+
+```
+⚠️  pairs_with validation failed
+
+The following IDs do not exist:
+  • "svg_asset_gen" - similar: "svg_asset_generator"
+  • "user_persona" - similar: "user_persona_reviewer"
+
+Options:
+  [1] Auto-correct to suggested IDs
+  [2] Remove invalid IDs
+  [3] Keep as-is (not recommended)
+  [4] Edit manually
+```
 
 ### Step 5: Generate Pre-Flight Check (If Dependencies Detected)
 

@@ -122,55 +122,71 @@ Critical issues need processing if they are in ANY of these states:
 
 **Step 7a.1: Count pending/accepted critical issues**
 
-```bash
-PENDING_CRITICAL=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -cE "Status \| (pending|accepted)" || echo "0")
+Run this command to count actionable critical issues:
+
 ```
+Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/null | grep -cE 'Status \\| (pending|accepted)' || echo '0'")
+```
+
+Store the output as `PENDING_CRITICAL`.
 
 **Step 7a.2: Check for stalled in_progress critical issues**
 
-For each critical issue with `Status | in_progress`, check if it's stalled:
+Run this command to find critical in_progress issues with Task Refs:
 
-```bash
-# Find critical in_progress issues and their Task Refs
-grep -B10 "| Status | in_progress |" .orchestrator/issue_queue.md 2>/dev/null | \
-  grep -B10 "| Priority | critical |" | \
-  grep "| Task Ref |" | \
-  sed 's/.*| Task Ref | \(TASK-[0-9]*\).*/\1/' | \
-  while read TASK_REF; do
-    # Check if task has .done marker (false completion) or .failed marker (needs analysis)
-    if [ -f ".orchestrator/complete/${TASK_REF}.done" ] || [ -f ".orchestrator/complete/${TASK_REF}.failed" ]; then
-      echo "$TASK_REF"  # This task is stalled
-    fi
-  done > /tmp/stalled_tasks.txt
-
-STALLED_COUNT=$(wc -l < /tmp/stalled_tasks.txt 2>/dev/null | tr -d ' ' || echo "0")
+```
+Grep("Task Ref", ".orchestrator/issue_queue.md", output_mode: "content", -B: 10)
 ```
 
-**Step 7a.3: Calculate total actionable critical issues**
+For each result that shows BOTH `Priority | critical` AND `Status | in_progress`:
+1. Extract the Task Ref (e.g., `TASK-078`)
+2. Check if the marker exists:
+   ```
+   Bash("ls .orchestrator/complete/TASK-078.done .orchestrator/complete/TASK-078.failed 2>/dev/null || echo 'none'")
+   ```
 
-```bash
-CRITICAL_COUNT=$((PENDING_CRITICAL + STALLED_COUNT))
+Count how many stalled tasks you find as `STALLED_COUNT`.
+
+**Step 7a.3: Calculate total**
+
+```
+CRITICAL_COUNT = PENDING_CRITICAL + STALLED_COUNT
 ```
 
 **Step 7a.4: Handle stalled issues**
 
-For each stalled task in `/tmp/stalled_tasks.txt`:
+For each stalled task found:
 
-1. If `.failed` marker exists:
-   - Spawn Failure Analysis Agent (if not already done)
-   - The Failure Analysis Agent will create new critical issues
+**If `.failed` marker exists:**
+- Spawn Failure Analysis Agent (if not already done)
+- The Failure Analysis Agent will create new critical issues
 
-2. If `.done` marker exists but issue not `completed`:
-   - This is a **false completion** - the Implementation Agent claimed success but didn't fix the issue
-   - Reset the issue for re-processing:
-     ```
-     Edit issue: Change "| Status | in_progress |" to "| Status | pending |"
-     Edit issue: Remove "| Task Ref | TASK-XXX |" line
-     Delete: .orchestrator/complete/TASK-XXX.done
-     ```
-   - Output: `⚠️ False completion detected: TASK-XXX marked done but issue unresolved. Resetting for re-work.`
+**If `.done` marker exists but issue not `completed`:**
+- This is a **false completion** - the Implementation Agent claimed success but didn't fix the issue
+- Reset the issue for re-processing:
+  ```
+  Edit(
+    file_path: ".orchestrator/issue_queue.md",
+    old_string: "| Status | in_progress |",
+    new_string: "| Status | pending |"
+  )
+  ```
+- Remove the Task Ref line from the issue
+- Delete the stale marker:
+  ```
+  Bash("rm .orchestrator/complete/TASK-XXX.done")
+  ```
+- Output: `⚠️ False completion detected: TASK-XXX marked done but issue unresolved. Resetting for re-work.`
 
-**Note:** After handling stalled issues, re-run the pending/accepted count as some issues may have been reset.
+**Step 7a.5: Re-count after resets**
+
+After handling stalled issues, re-run the pending/accepted count:
+
+```
+Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/null | grep -cE 'Status \\| (pending|accepted)' || echo '0'")
+```
+
+Update `CRITICAL_COUNT` with the new value.
 
 ### Step 7b: Critical Loop Logic
 

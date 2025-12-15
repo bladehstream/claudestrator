@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.4 - Test-first implementation with failure analysis.
+> **Version**: MVP 3.5 - Research Agent gated by clear issue queue.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -422,7 +422,28 @@ If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the i
 
 ### For each loop 1..N:
 
-**1. Spawn Research Agent**
+**1. Check for Outstanding Issues**
+
+Before spawning the Research Agent, check if there are any outstanding issues:
+
+```bash
+OUTSTANDING_COUNT=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
+```
+
+**If OUTSTANDING_COUNT > 0:**
+- Skip Research Agent entirely
+- Output message:
+  ```
+  ⏭️  Skipping Research Agent - $OUTSTANDING_COUNT outstanding issue(s) to process first
+  ```
+- Go directly to Step 4.2 (Decomposition Agent)
+
+**If OUTSTANDING_COUNT == 0:**
+- Proceed with Research Agent (Step 4.1)
+
+---
+
+**2. Spawn Research Agent (only if queue is clear)**
 
 Research Agent finds issues based on quotas:
 
@@ -476,6 +497,8 @@ Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done &
 
 **3. Spawn Decomposition Agent (convert issues to tasks)**
 
+> **Note**: This step runs regardless of whether Research Agent was skipped.
+
 ```
 Task(
   model: "opus",
@@ -518,6 +541,8 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 ```
 
 **7. Repeat** for next loop
+
+> **Note**: Each loop iteration re-checks for outstanding issues. If the previous loop's issues weren't all completed, Research Agent continues to be skipped until the queue is clear.
 
 ---
 

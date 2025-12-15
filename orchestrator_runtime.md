@@ -1,6 +1,6 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 3.4 - Test-first implementation with failure analysis.
+> **Version**: MVP 3.5 - Research Agent gated by clear issue queue.
 
 ## Key Principle: Read Prompt Files
 
@@ -292,7 +292,21 @@ These will be processed in the next loop (or trigger CRITICAL_MODE if detected a
 
 For each loop 1..N:
 
-### 1. Research Agent (if initial complete)
+### 1. Check for Outstanding Issues
+
+```bash
+OUTSTANDING_COUNT=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
+```
+
+**If OUTSTANDING_COUNT > 0:**
+- Skip Research Agent
+- Output: `⏭️ Skipping Research Agent - $OUTSTANDING_COUNT outstanding issue(s) to process first`
+- Go directly to Step 2 (Decomposition)
+
+**If OUTSTANDING_COUNT == 0:**
+- Proceed with Research Agent
+
+### 2. Research Agent (only if queue is clear)
 
 ```
 Task(
@@ -329,7 +343,9 @@ Task(
 Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done && rm .orchestrator/complete/research.done && echo 'done'", timeout: 900000)
 ```
 
-### 2. Spawn Decomposition Agent (convert issues to tasks)
+### 3. Spawn Decomposition Agent (convert issues to tasks)
+
+> Runs regardless of whether Research Agent was skipped.
 
 ```
 Task(
@@ -355,19 +371,23 @@ Task(
 Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
 ```
 
-### 3. Execute Tasks
+### 4. Execute Tasks
 
 Read task_queue.md, spawn implementation agents for pending tasks (same as Initial Step 2).
 
-### 4. Mark Tasks Done
+### 5. Mark Tasks Done
 
 When implementation agent's completion marker is detected, update task status to `done`.
 
-### 5. Commit
+### 6. Commit
 
 ```
 Bash("git add -A && git commit -m 'Loop [LOOP]'")
 ```
+
+### 7. Repeat
+
+Each iteration re-checks outstanding issues. Research Agent stays skipped until the queue is clear.
 
 ---
 
@@ -584,11 +604,12 @@ Issue Lifecycle:
 6. **NEVER spawn ad-hoc agents** - only use predefined agent types
 7. **NEVER improvise** - follow the documented flow exactly
 8. **ONE Research Agent per loop** - with quotas, not topic-specific agents
-9. **CAN read task_queue.md** - to know what agents to spawn
-10. **CAN mark task as done** - when completion marker detected
-11. **NEVER read issue_queue.md fully** - EXCEPT for critical issue scan at startup:
+9. **Research Agent ONLY when queue is clear** - skip if any pending/accepted issues exist
+10. **CAN read task_queue.md** - to know what agents to spawn
+11. **CAN mark task as done** - when completion marker detected
+12. **NEVER read issue_queue.md fully** - EXCEPT for critical issue scan and outstanding check at startup:
     `grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md | grep -qE "Status \| (pending|accepted)"`
-12. **NEVER convert issues to tasks** - Decomposition Agent handles this
+13. **NEVER convert issues to tasks** - Decomposition Agent handles this
 
 ### Orchestrator CAN vs CANNOT
 
@@ -627,4 +648,4 @@ while not exists: Bash("sleep 5")
 
 ---
 
-*MVP Runtime Version: 3.4*
+*MVP Runtime Version: 3.5*

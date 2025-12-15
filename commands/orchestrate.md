@@ -217,12 +217,44 @@ WHILE CRITICAL_COUNT > 0:
     """
 
     # Process critical issues
-    1. Spawn Decomposition Agent with MODE: critical_only
-    2. Wait for completion
-    3. VERIFY tasks were created (Step 7c)
-    4. Run Implementation Agents on critical tasks
-    5. Wait for all critical tasks to complete
-    6. Commit changes
+
+    # 1. Spawn Decomposition Agent with MODE: critical_only
+    Task(
+      model: "opus",
+      run_in_background: true,
+      prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
+
+      ---
+
+      ## Your Task
+
+      WORKING_DIR: [absolute path from pwd]
+      SOURCE: .orchestrator/issue_queue.md
+      MODE: critical_only
+
+      Read .orchestrator/issue_queue.md and create tasks ONLY for issues with Priority: critical.
+      Ignore all non-critical issues.
+
+      For each critical pending/accepted issue:
+      1. Create a task in .orchestrator/task_queue.md
+      2. Mark the issue as in_progress
+      3. Add Task Ref to the issue
+
+      CRITICAL: Write completion marker when done:
+      Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+      The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
+
+      START: Read('.orchestrator/issue_queue.md')"
+    )
+
+    # 2. Wait for completion
+    Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+
+    # 3. VERIFY tasks were created (Step 7c)
+    # 4. Run Implementation Agents on critical tasks
+    # 5. Wait for all critical tasks to complete
+    # 6. Commit changes
 
     # RE-SCAN for critical issues (fixes may have created new ones, or failed)
     CRITICAL_COUNT = grep -A3 "| Priority | critical |" ... | grep -cE "Status \| (pending|accepted)"

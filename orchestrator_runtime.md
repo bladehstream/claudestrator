@@ -118,6 +118,40 @@ WHILE true:
     IF CRITICAL_COUNT == 0:
         BREAK  # Exit loop, proceed to normal orchestration
 
+    # Spawn Decomposition Agent with critical_only mode
+    Task(
+      model: "opus",
+      run_in_background: true,
+      prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
+
+      ---
+
+      ## Your Task
+
+      WORKING_DIR: [absolute path from pwd]
+      SOURCE: .orchestrator/issue_queue.md
+      MODE: critical_only
+
+      Read .orchestrator/issue_queue.md and create tasks ONLY for issues with Priority: critical.
+      Ignore all non-critical issues.
+
+      For each critical pending/accepted issue:
+      1. Create a task in .orchestrator/task_queue.md
+      2. Mark the issue as in_progress
+      3. Add Task Ref to the issue
+
+      CRITICAL: Write completion marker when done:
+      Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+      START: Read('.orchestrator/issue_queue.md')"
+    )
+
+    # Wait for completion
+    Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done", timeout: 600000)
+
+    # Verify tasks were created, run implementation agents, commit
+    # RE-SCAN at end of loop (continues WHILE loop)
+
     CRITICAL_ITERATION += 1
     IF CRITICAL_ITERATION > MAX_CRITICAL_ITERATIONS:
         HALT "Critical loop exceeded 10 iterations"

@@ -101,7 +101,7 @@ WHILE Glob(marker).length == 0:
     Bash("sleep 5")
 
 # ❌ NEVER - reading journals (MVP doesn't use them)
-Read(".claude/journal/task-{id}.md")
+Read(".orchestrator/journal/task-{id}.md")
 
 # ❌ NEVER - knowledge graph queries (MVP doesn't use it)
 knowledge_graph.queryByTags(...)
@@ -115,9 +115,9 @@ The following channels are NOT used in MVP:
 
 | Channel | Path | Reason |
 |---------|------|--------|
-| Task Journal | `.claude/journal/task-*.md` | Agents don't write journals |
-| Knowledge Graph | `.claude/knowledge_graph.json` | No pattern extraction |
-| Context Map | `.claude/journal/index.md` | No context computation |
+| Task Journal | `.orchestrator/journal/task-*.md` | Agents don't write journals |
+| Knowledge Graph | `.orchestrator/knowledge_graph.json` | No pattern extraction |
+| Context Map | `.orchestrator/journal/index.md` | No context computation |
 | Loop Snapshots | `.claude/loop_snapshots/` | No snapshot management |
 
 **When Memory Agent is implemented:**

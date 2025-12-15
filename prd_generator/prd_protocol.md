@@ -577,10 +577,10 @@ FUNCTION saveSkillGapAnalysis(coverage, gaps):
     }
 
     # Ensure .claude directory exists
-    IF NOT EXISTS .claude/:
-        MKDIR .claude/
+    IF NOT EXISTS .orchestrator/:
+        MKDIR .orchestrator/
 
-    WRITE .claude/skill_gaps.json = analysis
+    WRITE .orchestrator/skill_gaps.json = analysis
 ```
 
 ### Requirement Extraction

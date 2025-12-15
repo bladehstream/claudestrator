@@ -17,7 +17,7 @@ If in the middle of a decision:
 
 ### Step 2: Save Orchestrator State
 
-Update `.claude/orchestrator_state.md`:
+Update `.orchestrator/session_state.md`:
 
 ```markdown
 ## Session Info
@@ -53,7 +53,7 @@ Update `.claude/orchestrator_state.md`:
 
 ### Step 3: Save Journal State
 
-Update `.claude/journal/index.md`:
+Update `.orchestrator/journal/index.md`:
 - All task statuses current
 - Context map updated with any new file locations
 - Active blockers documented
@@ -72,8 +72,8 @@ Key accomplishments:
 - [What was achieved]
 
 State saved to:
-- .claude/orchestrator_state.md
-- .claude/journal/index.md
+- .orchestrator/session_state.md
+- .orchestrator/journal/index.md
 
 Next recommended action:
 - [What to do next time]

@@ -14,7 +14,7 @@ The orchestrator maintains a **global project memory** that persists across sess
 ## Memory Architecture (v2)
 
 ```
-project/.claude/
+project/.orchestrator/
 ├── session_state.md          # HOT: Working memory, read/write constantly
 ├── orchestrator_memory.md    # COLD: Long-term memory, append-only
 ├── knowledge_graph.json      # Tag-based index for retrieval
@@ -134,7 +134,7 @@ When user runs `/orchestrate` or starts orchestrator mode:
 
 ```
 1. CHECK for existing state
-   IF .claude/orchestrator_state.md EXISTS:
+   IF .orchestrator/session_state.md EXISTS:
        LOAD state
        DISPLAY resume summary
        ASK: "Resume from where we left off?"
@@ -144,7 +144,7 @@ When user runs `/orchestrate` or starts orchestrator mode:
        CREATE journal structure
 
 2. LOAD configuration
-   READ .claude/config.md if exists
+   READ .orchestrator/config.md if exists
    APPLY skill directory, preferences
 
 3. LOAD task state
@@ -285,10 +285,10 @@ The "Resume Context" section is critical for session continuity:
 ### What Orchestrator Writes
 
 ```
-✅ .claude/orchestrator_state.md  (own memory)
-✅ .claude/journal/index.md       (task registry)
-✅ .claude/journal/task-*.md      (creates, agents fill)
-✅ .claude/config.md              (configuration)
+✅ .orchestrator/session_state.md  (own memory)
+✅ .orchestrator/journal/index.md       (task registry)
+✅ .orchestrator/journal/task-*.md      (creates, agents fill)
+✅ .orchestrator/config.md              (configuration)
 
 ❌ Project source files           (agents only)
 ❌ Project assets                 (agents only)

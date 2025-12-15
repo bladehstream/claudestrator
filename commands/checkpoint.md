@@ -6,7 +6,7 @@ Save the current orchestrator state without exiting. Use this to create a safe r
 
 ### Step 1: Save Orchestrator State
 
-Update `.claude/orchestrator_state.md`:
+Update `.orchestrator/session_state.md`:
 - Current phase
 - Any new key decisions since last checkpoint
 - New learned context
@@ -14,7 +14,7 @@ Update `.claude/orchestrator_state.md`:
 
 ### Step 2: Save Journal State
 
-Update `.claude/journal/index.md`:
+Update `.orchestrator/journal/index.md`:
 - Task statuses
 - Context map additions
 - Any new blockers
@@ -30,8 +30,8 @@ Project: [name]
 Progress: [X/Y] tasks
 
 State saved to:
-- .claude/orchestrator_state.md
-- .claude/journal/index.md
+- .orchestrator/session_state.md
+- .orchestrator/journal/index.md
 
 You can safely pause or continue working.
 ═══════════════════════════════════════════════════════════

@@ -9,7 +9,7 @@ The knowledge graph provides **tag-based retrieval** of project knowledge, enabl
 ## Architecture
 
 ```
-project/.claude/
+project/.orchestrator/
 ├── knowledge_graph.json      # Tag-based index for retrieval
 ├── memories/                 # Episodic memory entries
 │   ├── YYYY-MM-DD-topic.md   # Individual insights/decisions
@@ -23,7 +23,7 @@ project/.claude/
 
 ## Knowledge Graph Schema
 
-### File: `.claude/knowledge_graph.json`
+### File: `.orchestrator/knowledge_graph.json`
 
 ```json
 {
@@ -299,7 +299,7 @@ FUNCTION gatherContext(task):
 
 ## Memory File Format
 
-### File: `.claude/memories/YYYY-MM-DD-topic.md`
+### File: `.orchestrator/memories/YYYY-MM-DD-topic.md`
 
 ```markdown
 ---
@@ -343,7 +343,7 @@ Chose PostgreSQL.
 ### On First `/orchestrate`
 
 ```
-IF NOT EXISTS .claude/knowledge_graph.json:
+IF NOT EXISTS .orchestrator/knowledge_graph.json:
     CREATE {
         version: 1,
         last_updated: NOW(),
@@ -351,14 +351,14 @@ IF NOT EXISTS .claude/knowledge_graph.json:
         tag_index: {}
     }
 
-IF NOT EXISTS .claude/memories/:
+IF NOT EXISTS .orchestrator/memories/:
     CREATE DIRECTORY
 ```
 
 ### Migration from Existing Projects
 
 ```
-IF EXISTS .claude/journal/index.md AND NOT EXISTS knowledge_graph.json:
+IF EXISTS .orchestrator/journal/index.md AND NOT EXISTS knowledge_graph.json:
     # Import existing tasks as nodes
     FOR task IN journal.tasks WHERE status == 'completed':
         READ task file

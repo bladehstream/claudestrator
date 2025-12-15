@@ -40,10 +40,10 @@ FUNCTION backfillHistoricalData(options):
     }
 
     # Find historical data sources
-    journal_archive = GLOB .claude/journal/archive/run-*/
-    journal_current = .claude/journal/
+    journal_archive = GLOB .orchestrator/journal/archive/run-*/
+    journal_current = .orchestrator/journal/
     issue_queue = .orchestrator/issue_queue.md
-    strategy_log = .claude/strategy_log.json
+    strategy_log = .orchestrator/strategy_log.json
 
     # Process archived runs
     FOR run_dir IN journal_archive:
@@ -51,8 +51,8 @@ FUNCTION backfillHistoricalData(options):
         session_id = inferSessionId(run_dir)
 
         # Check if already has instrumented data
-        IF EXISTS .claude/analytics/sessions/{session_id}.json:
-            existing = READ .claude/analytics/sessions/{session_id}.json
+        IF EXISTS .orchestrator/analytics/sessions/{session_id}.json:
+            existing = READ .orchestrator/analytics/sessions/{session_id}.json
             IF existing._meta.confidence_tagging AND existing.data_quality.source == 'instrumented':
                 SKIP  # Don't overwrite good data
                 CONTINUE
@@ -290,7 +290,7 @@ To remove all backfilled data:
 
 ```bash
 # Find and remove backfilled sessions
-for f in .claude/analytics/sessions/*.json; do
+for f in .orchestrator/analytics/sessions/*.json; do
     if grep -q '"source": "backfilled"' "$f"; then
         rm "$f"
     fi

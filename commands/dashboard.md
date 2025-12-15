@@ -53,11 +53,11 @@ The dashboard provides visual insights into:
 ```
 FUNCTION generateDashboard():
     # Load analytics data
-    trends = READ .claude/analytics/trends.json
-    skills = READ .claude/analytics/skill_rankings.json
-    errors = READ .claude/analytics/error_patterns.json
-    insights = READ .claude/analytics/learning_insights.json
-    sessions = READ .claude/analytics/sessions/*.json
+    trends = READ .orchestrator/analytics/trends.json
+    skills = READ .orchestrator/analytics/skill_rankings.json
+    errors = READ .orchestrator/analytics/error_patterns.json
+    insights = READ .orchestrator/analytics/learning_insights.json
+    sessions = READ .orchestrator/analytics/sessions/*.json
 
     # Compile dashboard data
     data = {
@@ -107,7 +107,7 @@ FUNCTION generateDashboard():
     html = replaceTemplatePlaceholders(template, data)
 
     # Write dashboard
-    output_path = .claude/analytics/dashboard.html
+    output_path = .orchestrator/analytics/dashboard.html
     WRITE output_path = html
 
     # Open in browser (unless --no-open)
@@ -182,7 +182,7 @@ FUNCTION selectSkillsWithLearning(task):
     matched = matchSkillsToTask(task)
 
     # Check for learning-based adjustments
-    strategy_log = READ .claude/strategy_log.json
+    strategy_log = READ .orchestrator/strategy_log.json
 
     FOR signal IN strategy_log WHERE signal.type == 'skill_mismatch':
         IF signal.context.task_type == task.type:
@@ -211,7 +211,7 @@ Track issue sources:
 
 ```
 FUNCTION recordIssue(issue, source):
-    insights = READ .claude/analytics/learning_insights.json
+    insights = READ .orchestrator/analytics/learning_insights.json
 
     IF source == 'qa_agent':
         insights.issue_detection.self_detected.count += 1
@@ -227,7 +227,7 @@ FUNCTION recordIssue(issue, source):
     self = insights.issue_detection.self_detected.count
     insights.issue_detection.self_detected.percentage = (self / total) * 100
 
-    WRITE .claude/analytics/learning_insights.json
+    WRITE .orchestrator/analytics/learning_insights.json
 ```
 
 ### Checking for Prevented Issues
@@ -262,7 +262,7 @@ When you run `/dashboard`, it generates:
 DASHBOARD GENERATED
 ═══════════════════════════════════════════════════════════════════════════════
 
-📊 Dashboard created: .claude/analytics/dashboard.html
+📊 Dashboard created: .orchestrator/analytics/dashboard.html
 
 Key Insights:
   • Learning Score: B+ (improving)
@@ -282,8 +282,8 @@ Opening in browser...
 
 | File | Purpose |
 |------|---------|
-| `.claude/analytics/dashboard.html` | Generated dashboard |
-| `.claude/analytics/learning_insights.json` | Issue detection + decision influence data |
+| `.orchestrator/analytics/dashboard.html` | Generated dashboard |
+| `.orchestrator/analytics/learning_insights.json` | Issue detection + decision influence data |
 
 ---
 

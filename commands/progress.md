@@ -18,7 +18,7 @@ Display orchestrator progress, tasks, agents, and metrics.
 
 Read and display information from:
 - `.orchestrator/session_state.md`
-- `.claude/journal/index.md`
+- `.orchestrator/journal/index.md`
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -64,7 +64,7 @@ Commands: /progress tasks | /progress agents | /progress metrics
 
 Display all tasks with their current status and dependency graph.
 
-Read from `.claude/journal/index.md` and display:
+Read from `.orchestrator/journal/index.md` and display:
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -286,7 +286,7 @@ Reading src/config/auth.config.ts for token expiry settings.
 
 **Implementation:**
 1. Look up agent-id in `session_state.md`
-2. Read the task journal file: `.claude/journal/task-{task_id}.md`
+2. Read the task journal file: `.orchestrator/journal/task-{task_id}.md`
 3. Parse the latest "Progress" or "Handoff" section for status
 4. Display agent metadata and status from journal
 
@@ -316,7 +316,7 @@ All acceptance criteria met. Models follow TypeScript
 strict mode with full type coverage.
 ───────────────────────────────────────────────────────────
 
-See: .claude/journal/task-003-design-data-models.md
+See: .orchestrator/journal/task-003-design-data-models.md
 ═══════════════════════════════════════════════════════════
 ```
 
@@ -326,7 +326,7 @@ See: .claude/journal/task-003-design-data-models.md
 
 Show performance metrics, token usage, and cost estimates.
 
-Read from `.claude/metrics.json`.
+Read from `.orchestrator/metrics.json`.
 
 ```
 ═══════════════════════════════════════════════════════════
@@ -392,7 +392,7 @@ TOTALS
 ```
 
 **Implementation:**
-1. Read `.claude/metrics.json`
+1. Read `.orchestrator/metrics.json`
 2. Format aggregates into tables
 3. Calculate derived values (avg time, success rate)
 4. Sort skills by usage count

@@ -51,7 +51,7 @@ The Orchestrator Protocol defines how a primary Claude agent coordinates complex
 The **Task tool** is the orchestrator's primary mechanism for getting work done. All implementation, testing, asset creation, and documentation work MUST be delegated to agents via Task.
 
 ### Orchestrator's Only Outputs
-1. **Journal files** (`.claude/journal/*.md`)
+1. **Journal files** (`.orchestrator/journal/*.md`)
 2. **User communication** (status reports, questions)
 3. **Agent spawning** (via Task tool)
 
@@ -123,7 +123,7 @@ STORE in session_state.md:
 ### 1.1 Check for Existing Journal (Enhanced State Detection)
 
 ```
-IF project/.claude/journal/index.md EXISTS:
+IF project/.orchestrator/journal/index.md EXISTS:
     Read index.md
     DETERMINE project_state:
 
@@ -274,13 +274,13 @@ Create execution sequence respecting dependencies
 ### 2.3 Initialize Journal
 
 ```
-Create: project/.claude/journal/index.md
+Create: project/.orchestrator/journal/index.md
     - Project metadata
     - Task registry (all tasks with status: pending)
     - Empty context map
 
 For each task:
-    Create: project/.claude/journal/task-XXX-name.md
+    Create: project/.orchestrator/journal/task-XXX-name.md
     - Metadata (pending, unassigned)
     - Objective
     - Acceptance criteria
@@ -336,10 +336,10 @@ Before selecting the next task, check for refresh signals from a support session
 
 ```
 FUNCTION checkRefreshSignals():
-    IF NOT EXISTS .claude/refresh_signal.md:
+    IF NOT EXISTS .orchestrator/refresh_signal.md:
         RETURN
 
-    signal = PARSE .claude/refresh_signal.md
+    signal = PARSE .orchestrator/refresh_signal.md
 
     MATCH signal.type:
         'issues':
@@ -371,7 +371,7 @@ FUNCTION checkRefreshSignals():
                 REPORT: "📋 No restart was queued"
 
     # Delete signal file after processing
-    DELETE .claude/refresh_signal.md
+    DELETE .orchestrator/refresh_signal.md
 
 
 FUNCTION reloadSkillDirectory():
@@ -589,8 +589,8 @@ Apply lessons learned from previous runs to improve skill selection:
 
 ```
 FUNCTION applyLearningAdjustments(task, selected_skills):
-    strategy_log = READ .claude/strategy_log.json
-    skill_rankings = READ .claude/analytics/skill_rankings.json
+    strategy_log = READ .orchestrator/strategy_log.json
+    skill_rankings = READ .orchestrator/analytics/skill_rankings.json
 
     adjustments_made = []
 
@@ -641,7 +641,7 @@ FUNCTION applyLearningAdjustments(task, selected_skills):
 
 
 FUNCTION logDecisionInfluences(task, adjustments):
-    insights = READ .claude/analytics/learning_insights.json OR CREATE from template
+    insights = READ .orchestrator/analytics/learning_insights.json OR CREATE from template
 
     FOR adjustment IN adjustments:
         influence = {
@@ -663,7 +663,7 @@ FUNCTION logDecisionInfluences(task, adjustments):
         insights.decisions_influenced_by_learning.categories[adjustment.type].count += 1
         insights.decisions_influenced_by_learning.categories[adjustment.type].examples.append(influence)
 
-    WRITE .claude/analytics/learning_insights.json
+    WRITE .orchestrator/analytics/learning_insights.json
 
 
 FUNCTION checkPreventedIssues(task, approach):
@@ -795,7 +795,7 @@ FUNCTION constructPrompt(task, skills, context, model):
         Your working directory is the PROJECT ROOT: {project_root}
         All paths are relative to this directory:
         - PRD: ./PRD.md (in project root, NOT in .claude/)
-        - Journal: .claude/journal/
+        - Journal: .orchestrator/journal/
         - State: .orchestrator/session_state.md
 
         ## Instructions
@@ -829,7 +829,7 @@ FUNCTION constructPrompt(task, skills, context, model):
            | Forums/Reddit | LOW | Community discussion, may be outdated/wrong |
            | AI-generated content | VERY LOW | Verify everything against primary sources |
 
-        4. Save key findings to `.claude/research/{task.id}/` for reference:
+        4. Save key findings to `.orchestrator/research/{task.id}/` for reference:
            - `sources.md` - URLs consulted with quality rating
            - `notes.md` - Relevant excerpts and findings
 
@@ -904,7 +904,7 @@ WHILE Glob(marker_path).length == 0:
     Bash("sleep 5")
 
 # Read the handoff from the task journal (agent has written this)
-handoff = Read(.claude/journal/task-{task_id}.md) -> parse HANDOFF section only
+handoff = Read(.orchestrator/journal/task-{task_id}.md) -> parse HANDOFF section only
 agent_outcome = {
     success: handoff.outcome == "completed",
     error: handoff.blockers IF handoff.outcome != "completed" ELSE null
@@ -940,7 +940,7 @@ Instead, use file-based completion polling:
 ```
 FUNCTION readTaskJournalHandoff(task_id):
     # Agents write their outcome to task journal files
-    journal_path = ".claude/journal/task-{task_id}.md"
+    journal_path = ".orchestrator/journal/task-{task_id}.md"
     content = Read(journal_path)
 
     # Parse only the HANDOFF section (last ~500 bytes typically)
@@ -1075,11 +1075,11 @@ AFTER agent completes:
 
 Track agent performance, token usage, and costs for analysis and estimation.
 
-**Metrics File:** `.claude/metrics.json`
+**Metrics File:** `.orchestrator/metrics.json`
 
 ```
 FUNCTION updateMetrics(task, agent, handoff):
-    metrics = READ .claude/metrics.json OR CREATE_FROM_TEMPLATE
+    metrics = READ .orchestrator/metrics.json OR CREATE_FROM_TEMPLATE
 
     # Calculate duration
     duration_ms = agent.completed_at - agent.started_at
@@ -1149,7 +1149,7 @@ FUNCTION updateMetrics(task, agent, handoff):
     metrics.aggregates.totals.estimated_cost_usd = calculateCost(metrics.aggregates.by_model)
 
     metrics.last_updated = NOW()
-    WRITE .claude/metrics.json
+    WRITE .orchestrator/metrics.json
 
 
 FUNCTION calculateCost(by_model):
@@ -1251,7 +1251,7 @@ Track how issues are detected to measure QA effectiveness vs user-reported issue
 
 ```
 FUNCTION recordIssueSource(issue, source, detector):
-    insights = READ .claude/analytics/learning_insights.json OR CREATE from template
+    insights = READ .orchestrator/analytics/learning_insights.json OR CREATE from template
 
     issue_record = {
         id: generateIssueRecordId(),
@@ -1286,7 +1286,7 @@ FUNCTION recordIssueSource(issue, source, detector):
     insights.issue_detection.user_reported.percentage =
         (insights.issue_detection.user_reported.count / total) * 100
 
-    WRITE .claude/analytics/learning_insights.json
+    WRITE .orchestrator/analytics/learning_insights.json
 
 FUNCTION categorizeIssue(issue):
     # Categorize based on detection context
@@ -1496,7 +1496,7 @@ FUNCTION archiveSessionForAnalytics():
     session_id = FORMAT(NOW(), "YYYY-MM-DD") + "-run-" + run_number
 
     # Ensure analytics directory exists
-    ENSURE_DIR .claude/analytics/sessions/
+    ENSURE_DIR .orchestrator/analytics/sessions/
 
     # Create session archive from current metrics
     archive = {
@@ -1541,7 +1541,7 @@ FUNCTION archiveSessionForAnalytics():
     }
 
     # Write session archive
-    WRITE .claude/analytics/sessions/{session_id}.json = archive
+    WRITE .orchestrator/analytics/sessions/{session_id}.json = archive
 
     # Update trend data
     updateTrendData(archive)
@@ -1562,7 +1562,7 @@ FUNCTION archiveSessionForAnalytics():
 
 ```
 FUNCTION updateTrendData(archive):
-    READ .claude/analytics/trends.json OR CREATE from template
+    READ .orchestrator/analytics/trends.json OR CREATE from template
 
     # Add session to history
     session_summary = {
@@ -1607,14 +1607,14 @@ FUNCTION updateTrendData(archive):
         # Calculate composite learning score
         trends.learning_score = calculateLearningScore(trends)
 
-    WRITE .claude/analytics/trends.json
+    WRITE .orchestrator/analytics/trends.json
 ```
 
 ### 5.3.4 Skill Rankings Update
 
 ```
 FUNCTION updateSkillRankings(archive):
-    READ .claude/analytics/skill_rankings.json OR CREATE from template
+    READ .orchestrator/analytics/skill_rankings.json OR CREATE from template
 
     # Update skill statistics
     FOR skill, data IN archive.by_skill:
@@ -1653,14 +1653,14 @@ FUNCTION updateSkillRankings(archive):
     rankings.total_tasks_analyzed += archive.summary.tasks_total
     rankings.last_updated = NOW()
 
-    WRITE .claude/analytics/skill_rankings.json
+    WRITE .orchestrator/analytics/skill_rankings.json
 ```
 
 ### 5.3.5 Error Pattern Analysis
 
 ```
 FUNCTION updateErrorPatterns(archive):
-    READ .claude/analytics/error_patterns.json OR CREATE from template
+    READ .orchestrator/analytics/error_patterns.json OR CREATE from template
 
     FOR error IN archive.errors:
         # Categorize error
@@ -1695,7 +1695,7 @@ FUNCTION updateErrorPatterns(archive):
     patterns.total_errors += archive.errors.length
     patterns.last_updated = NOW()
 
-    WRITE .claude/analytics/error_patterns.json
+    WRITE .orchestrator/analytics/error_patterns.json
 ```
 
 ### 5.3.6 Learning Report Generation
@@ -1754,7 +1754,7 @@ Breakdown:
 {generateRecommendations(trends, rankings, patterns)}
 """
 
-    WRITE .claude/analytics/learning_report.md
+    WRITE .orchestrator/analytics/learning_report.md
 ```
 
 ---

@@ -99,7 +99,7 @@ After generating a PRD with `/prdgen`, the system automatically analyzes your re
 1. Extracts requirements from your PRD (tech stack, features, domain expertise)
 2. Matches each requirement against the skill library
 3. Reports coverage and identifies gaps
-4. Saves analysis to `.claude/skill_gaps.json`
+4. Saves analysis to `.orchestrator/skill_gaps.json`
 
 ### Coverage Levels
 
@@ -511,7 +511,7 @@ Optionally focus improvements on specific areas:
 Each loop saves a snapshot for review:
 
 ```
-.claude/loop_snapshots/
+.orchestrator/loop_snapshots/
 ├── run-2025-12-12-001/
 │   ├── loop-01_05/
 │   │   ├── CHANGES.md      # What changed
@@ -887,8 +887,8 @@ Each task file contains:
 
 You can inspect the journal anytime:
 ```bash
-cat project/.claude/journal/index.md      # See overall state
-cat project/.claude/journal/task-003-*.md # See specific task
+cat project/.orchestrator/journal/index.md      # See overall state
+cat project/.orchestrator/journal/task-003-*.md # See specific task
 ```
 
 ---
@@ -1222,7 +1222,7 @@ Standalone agent that interviews you and generates `PRD.md`.
 **Features:**
 - Web access for researching competitors
 - Skill gap analysis after generation
-- Saves gap analysis to `.claude/skill_gaps.json`
+- Saves gap analysis to `.orchestrator/skill_gaps.json`
 
 ### Skill Ingestion (`/ingest-skill`)
 

@@ -13,7 +13,7 @@ The orchestrator's strategies evolve based on execution feedback. Instead of sta
 ### Location
 
 ```
-project/.claude/
+project/.orchestrator/
 ├── strategies.md           # Evolved strategies for this project
 └── strategy_log.json       # Raw feedback data for analysis
 ```

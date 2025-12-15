@@ -63,7 +63,7 @@
 
 **Exception**: Orchestrator MAY use `Write` for:
 - Journal files (`journal/*.md`)
-- Configuration files (`.claude/orchestrator_config.md`)
+- Configuration files (`.orchestrator/config.md`)
 - PRD files (if saving interview results)
 
 ---
@@ -136,9 +136,9 @@ IF task involves changing project state:
 ### Rule 4: Journal is Orchestrator's Only Output
 ```
 ORCHESTRATOR WRITES TO:
-    ✅ .claude/journal/index.md
-    ✅ .claude/journal/task-*.md
-    ✅ .claude/orchestrator_config.md
+    ✅ .orchestrator/journal/index.md
+    ✅ .orchestrator/journal/task-*.md
+    ✅ .orchestrator/config.md
 
 ORCHESTRATOR DOES NOT WRITE TO:
     ❌ Any source code files

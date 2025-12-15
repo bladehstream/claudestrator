@@ -11,7 +11,7 @@ The orchestrator maintains two distinct state files following the "Context Econo
 ## Architecture
 
 ```
-project/.claude/
+project/.orchestrator/
 ├── session_state.md          # HOT: Working memory, read/write constantly
 ├── orchestrator_memory.md    # COLD: Long-term memory, read at start, append-only
 ├── knowledge_graph.json      # COLD: Tag-based index for retrieval

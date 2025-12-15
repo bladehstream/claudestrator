@@ -86,18 +86,45 @@ See [Architecture Guide](docs/architecture.md) for full details.
 
 ## File Structure
 
+**IMPORTANT**: The `.claude/` and `.orchestrator/` folders have distinct purposes:
+
+| Folder | Purpose | Safe to Delete? |
+|--------|---------|-----------------|
+| `.claude/` | **Orchestrator code** - commands, prompts, skills | ✅ Yes - reinstall from GitHub |
+| `.orchestrator/` | **Runtime state** - queues, reports, history | ❌ No - loses run history |
+
 ```
 project/
-├── PRD.md                          # Your requirements (created by /prdgen)
-├── .claude/
-│   ├── task_queue.md               # Tasks for orchestrator
-│   ├── issue_queue.md              # Issues from research/user
-│   ├── session_state.md            # Orchestration state
-│   └── agent_complete/*.done       # Completion markers
-└── .claudestrator/                 # Framework (git clone)
-    ├── orchestrator_runtime.md     # Runtime protocol
-    ├── commands/                   # Slash commands
-    └── skills/                     # Skill library
+├── PRD.md                              # Your requirements (created by /prdgen)
+│
+├── .claude/                            # ORCHESTRATOR CODE (reinstallable)
+│   ├── commands/                       #   Slash command definitions
+│   ├── prompts/                        #   Agent prompt files
+│   │   └── implementation/             #   Implementation agent prompts
+│   ├── skills/                         #   Skill library (if installed)
+│   └── hooks/                          #   Safety hooks (if configured)
+│
+├── .orchestrator/                      # RUNTIME STATE (preserve this!)
+│   ├── task_queue.md                   #   Current tasks
+│   ├── issue_queue.md                  #   Issues from research/user
+│   ├── session_state.md                #   Current session state
+│   ├── complete/                       #   Completion markers (.done, .failed)
+│   ├── reports/                        #   Task execution reports (JSON)
+│   ├── research/                       #   Research artifacts (screenshots, etc.)
+│   ├── history.csv                     #   Cumulative run history
+│   ├── analytics.json                  #   Aggregated analytics
+│   └── analytics.html                  #   Human-readable dashboard
+│
+└── .claudestrator/                     # Framework source (git clone)
+    ├── orchestrator_runtime.md         #   Runtime protocol
+    ├── commands/                       #   Command source files
+    └── prompts/                        #   Prompt source files
+```
+
+**To upgrade Claudestrator** without losing state:
+```bash
+rm -rf .claude           # Remove old code
+# Reinstall from GitHub - .orchestrator/ state preserved
 ```
 
 ---

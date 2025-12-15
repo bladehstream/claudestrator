@@ -32,10 +32,10 @@ Analyze orchestrator learning and performance over time. Tracks how effectively 
 
 Analytics requires historical data. The orchestrator automatically archives session data when a run completes:
 
-**Archive Location**: `.claude/analytics/`
+**Archive Location**: `.orchestrator/analytics/`
 
 ```
-.claude/analytics/
+.orchestrator/analytics/
 ├── sessions/
 │   ├── 2025-12-01-run-001.json   # Archived metrics
 │   ├── 2025-12-05-run-002.json
@@ -511,7 +511,7 @@ FUNCTION archiveSession():
     session_id = FORMAT(NOW(), "YYYY-MM-DD") + "-run-" + run_number
 
     # Copy metrics to archive
-    COPY .claude/metrics.json TO .claude/analytics/sessions/{session_id}.json
+    COPY .orchestrator/metrics.json TO .orchestrator/analytics/sessions/{session_id}.json
 
     # Update trends
     updateTrendData(session_id, metrics)
@@ -530,7 +530,7 @@ FUNCTION archiveSession():
 
 ```
 FUNCTION updateTrendData(session_id, metrics):
-    READ .claude/analytics/trends.json
+    READ .orchestrator/analytics/trends.json
 
     session_summary = {
         id: session_id,
@@ -553,7 +553,7 @@ FUNCTION updateTrendData(session_id, metrics):
             trends.sessions[0].success_rate
         ) / trends.sessions.length
 
-    WRITE .claude/analytics/trends.json
+    WRITE .orchestrator/analytics/trends.json
 ```
 
 ### Learning Score
@@ -593,11 +593,11 @@ FUNCTION calculateLearningScore():
 
 | File | Purpose |
 |------|---------|
-| `.claude/analytics/sessions/*.json` | Archived session metrics |
-| `.claude/analytics/trends.json` | Aggregated trend data |
-| `.claude/analytics/skill_rankings.json` | Skill effectiveness over time |
-| `.claude/analytics/error_patterns.json` | Classified error patterns |
-| `.claude/analytics/learning_report.md` | Latest full analysis |
+| `.orchestrator/analytics/sessions/*.json` | Archived session metrics |
+| `.orchestrator/analytics/trends.json` | Aggregated trend data |
+| `.orchestrator/analytics/skill_rankings.json` | Skill effectiveness over time |
+| `.orchestrator/analytics/error_patterns.json` | Classified error patterns |
+| `.orchestrator/analytics/learning_report.md` | Latest full analysis |
 
 ---
 

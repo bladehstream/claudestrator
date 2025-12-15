@@ -24,14 +24,14 @@ This command does NOT spawn an agent. It directly writes a signal file that the 
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  WRITE: .claude/refresh_signal.md                           │
+│  WRITE: .orchestrator/refresh_signal.md                           │
 │  Content: { type: "issues", action: "immediate" }           │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  TERMINAL 1: Orchestrator (on next loop iteration)          │
-│  1. Reads .claude/refresh_signal.md                         │
+│  1. Reads .orchestrator/refresh_signal.md                         │
 │  2. Processes signal (polls issue queue)                    │
 │  3. Deletes signal file                                     │
 └─────────────────────────────────────────────────────────────┘
@@ -208,7 +208,7 @@ FUNCTION refresh(target):
             requested: NOW(),
             action: "cancel_restart"
         }
-        WRITE .claude/refresh_signal.md
+        WRITE .orchestrator/refresh_signal.md
 
         OUTPUT: "PRD restart cancelled (if one was queued)."
         RETURN
@@ -220,7 +220,7 @@ FUNCTION refresh(target):
             action: "restart_after_completion",
             reason: "PRD updated via /refresh prd"
         }
-        WRITE .claude/refresh_signal.md
+        WRITE .orchestrator/refresh_signal.md
 
         OUTPUT: "PRD restart queued.
                  Current run will complete, then restart with new PRD.
@@ -233,7 +233,7 @@ FUNCTION refresh(target):
         requested: NOW(),
         action: "immediate"
     }
-    WRITE .claude/refresh_signal.md
+    WRITE .orchestrator/refresh_signal.md
 
     OUTPUT: "Refresh signal sent: {target}
              The orchestrator will process this before its next task."

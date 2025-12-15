@@ -196,7 +196,7 @@ In `dashboard.html`:
 
 ```bash
 # Delete analytics with inferred data
-rm -rf .claude/analytics/
+rm -rf .orchestrator/analytics/
 
 # Re-run to generate clean observed-only data
 /dashboard

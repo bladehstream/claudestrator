@@ -289,7 +289,7 @@ The orchestrator detects multiple states and offers appropriate options:
 #### State A: Tasks In Progress
 
 ```
-IF ./.claude/journal/index.md EXISTS AND
+IF ./.orchestrator/journal/index.md EXISTS AND
    any task has status == 'in_progress' OR pending with met dependencies:
 
 ORCHESTRATOR OUTPUT:
@@ -312,7 +312,7 @@ Resuming from task-004...
 #### State B: Project Complete (All Tasks Done)
 
 ```
-IF ./.claude/journal/index.md EXISTS AND
+IF ./.orchestrator/journal/index.md EXISTS AND
    all tasks have status == 'completed' AND
    index.phase == 'complete':
 
@@ -363,7 +363,7 @@ OPTIONS:
 #### State C: Deorchestrated (Paused Session)
 
 ```
-IF ./.claude/journal/index.md EXISTS AND
+IF ./.orchestrator/journal/index.md EXISTS AND
    (index.phase == 'paused' OR index.deorchestrated == true):
 
 ORCHESTRATOR PROMPT (using AskUserQuestion):
@@ -406,7 +406,7 @@ Continuing with task-[next]...
 #### State D: Failed/Blocked State
 
 ```
-IF ./.claude/journal/index.md EXISTS AND
+IF ./.orchestrator/journal/index.md EXISTS AND
    (active_blockers exist OR multiple tasks have status == 'failed'):
 
 ORCHESTRATOR PROMPT (using AskUserQuestion):
@@ -630,7 +630,7 @@ CONFIGURATION:
   • Skills: 12 loaded from ~/.claude/skills/
   • Project: [project name]
   • Tasks: 8 tasks planned
-  • Journal: ./.claude/journal/
+  • Journal: ./.orchestrator/journal/
 
 EXECUTION PLAN:
   Starting with: task-001 (Set up project structure)
@@ -665,13 +665,13 @@ Beginning task 001...
 
 ## Configuration Persistence
 
-After first run, settings are saved to `.claude/orchestrator_config.md`:
+After first run, settings are saved to `.orchestrator/config.md`:
 
 ```yaml
 ---
 skill_directory: ~/.claude/skills/
 default_model: sonnet
-journal_location: ./.claude/journal/
+journal_location: ./.orchestrator/journal/
 auto_save_prd: true
 ---
 ```

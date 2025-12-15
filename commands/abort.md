@@ -66,7 +66,7 @@ Completed:     3 tasks (archived)
 Purged:        5 pending tasks
 Running:       1 agent terminated
 
-Archived to:   .claude/journal/archive/run-003-aborted/
+Archived to:   .orchestrator/journal/archive/run-003-aborted/
 
 To start fresh:
   1. Fix the issues in PRD.md
@@ -154,7 +154,7 @@ FUNCTION abort(confirmed):
     session_state.completed_agents = []
 
     # 7. Clear any pending signals
-    DELETE .claude/refresh_signal.md IF EXISTS
+    DELETE .orchestrator/refresh_signal.md IF EXISTS
 
     WRITE journal/index.md
     WRITE session_state.md
@@ -169,7 +169,7 @@ FUNCTION abort(confirmed):
 After abort:
 
 ```
-.claude/journal/
+.orchestrator/journal/
 ├── index.md                           # Reset, phase: aborted
 ├── archive/
 │   └── run-003-aborted/

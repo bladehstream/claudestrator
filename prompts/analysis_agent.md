@@ -321,25 +321,11 @@ Create a human-readable dashboard.
 Write(".orchestrator/analytics.html", <formatted_html>)
 ```
 
----
-
-## Phase 5: Cleanup
-
-### 5.1 Delete Processed Reports
-
-After successfully writing to history.csv:
-
-```
-Bash("rm -f .orchestrator/reports/*.json")
-```
-
-Or individually for each file processed.
-
-**CRITICAL**: Only delete after confirming history.csv was updated successfully.
+<!-- TODO: Add report cleanup phase when no longer needed for debugging -->
 
 ---
 
-## Phase 6: Complete
+## Phase 5: Complete
 
 **CRITICAL - DO NOT SKIP**
 
@@ -356,7 +342,6 @@ Write(".orchestrator/complete/analysis.done", "done")
 - [ ] Appended new rows to history.csv (never overwrote)
 - [ ] Generated analytics.json with aggregated stats
 - [ ] Generated analytics.html dashboard
-- [ ] Deleted processed JSON reports
 - [ ] Wrote completion marker
 
 ---
@@ -366,7 +351,6 @@ Write(".orchestrator/complete/analysis.done", "done")
 | Mistake | Impact | Fix |
 |---------|--------|-----|
 | Overwriting history.csv | Data loss | Always append, never overwrite |
-| Deleting reports before CSV write | Data loss | Delete only after successful append |
 | Missing reports | Incomplete data | Check Glob results before proceeding |
 | Malformed JSON handling | Crash | Wrap parsing in error handling |
 

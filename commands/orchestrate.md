@@ -248,15 +248,13 @@ WHILE CRITICAL_COUNT > 0:
       START: Read('.orchestrator/issue_queue.md')"
     )
 
-    # 2. Wait for completion
-    Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'done'", timeout: 600000)
+    # 2. Wait for completion (and clean up marker)
+    Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
 
     # 3. VERIFY tasks were created (Step 7c)
-    # 4. Run Implementation Agents on critical tasks
+    # 4. Run Implementation Agents on critical tasks (markers cleaned inline per Step 2c)
     # 5. Wait for all critical tasks to complete (including TASK-99999)
-    # 6. Clean up TASK-99999 marker for next iteration
-    Bash("rm -f .orchestrator/complete/TASK-99999.done .orchestrator/complete/TASK-99999.failed 2>/dev/null || true")
-    # 7. Commit changes
+    # 6. Commit changes
 
     # RE-SCAN for critical issues (fixes may have created new ones, or failed)
     CRITICAL_COUNT = grep -A3 "| Priority | critical |" ... | grep -cE "Status \| (pending|accepted)"
@@ -378,9 +376,9 @@ Task(
 )
 ```
 
-**Wait for completion:**
+**Wait for completion (and clean up marker):**
 ```
-Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && echo 'Decomposition complete'", timeout: 600000)
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'Decomposition complete'", timeout: 600000)
 ```
 
 ---
@@ -450,18 +448,20 @@ Task(
 )
 ```
 
-### 2c. Wait for Completion or Failure
+### 2c. Wait for Completion, Check Result, Clean Up (single command)
 
 ```
-Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && echo '[TASK-ID] finished'", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && (test -f '.orchestrator/complete/[TASK-ID].done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/[TASK-ID].done .orchestrator/complete/[TASK-ID].failed", timeout: 1800000)
 ```
 
-### 2d. Check Result and Handle
+Output is `SUCCESS` or `FAILED`. Markers are cleaned immediately (task_queue.md status is source of truth).
 
-**If `.orchestrator/complete/[TASK-ID].done` exists:**
+### 2d. Handle Result
+
+**If output was SUCCESS:**
 - Change `Status | pending` to `Status | completed` in task_queue.md
 
-**If `.orchestrator/complete/[TASK-ID].failed` exists:**
+**If output was FAILED:**
 - Task status already set to `failed` by implementation agent
 - Spawn Failure Analysis Agent (see Step 2e below)
 
@@ -638,21 +638,14 @@ Read task_queue.md to get new pending tasks, spawn implementation agents (same a
 
 **5. Mark tasks done**
 
-When implementation agent's completion marker is detected, update task status to `done` in task_queue.md.
+When task completes (Step 2c cleans markers and outputs SUCCESS/FAILED), update task status in task_queue.md.
 
-**6. Clean up TASK-99999 marker**
-
-After all tasks complete (including TASK-99999), clean up the verification task marker:
-```
-Bash("rm -f .orchestrator/complete/TASK-99999.done .orchestrator/complete/TASK-99999.failed 2>/dev/null || true")
-```
-
-**7. Commit:**
+**6. Commit:**
 ```
 Bash("git add -A && git commit -m 'Improvement loop [N]'")
 ```
 
-**8. Repeat** for next loop
+**7. Repeat** for next loop
 
 > **Note**: Each loop iteration re-checks for outstanding issues. If the previous loop's issues weren't all completed, Research Agent continues to be skipped until the queue is clear.
 

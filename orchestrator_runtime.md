@@ -1,6 +1,6 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 3.5 - Research Agent gated by clear issue queue.
+> **Version**: MVP 3.6 - Inline marker cleanup in wait commands.
 
 ## Key Principle: Read Prompt Files
 
@@ -291,20 +291,14 @@ For each pending task in `.orchestrator/task_queue.md`:
    )
    ```
 
-4. **Wait for completion OR failure:**
+4. **Wait for completion, check result, clean up (single command):**
    ```
-   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+   Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && (test -f '.orchestrator/complete/[TASK-ID].done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/[TASK-ID].done .orchestrator/complete/[TASK-ID].failed", timeout: 1800000)
    ```
 
-5. **Check result and update status:**
-   ```
-   IF .orchestrator/complete/[TASK-ID].done exists:
-       Update task status to "completed" in task_queue.md
-
-   IF .orchestrator/complete/[TASK-ID].failed exists:
-       Task status already set to "failed" by implementation agent
-       Spawn Failure Analysis Agent (see below)
-   ```
+5. **Handle result based on output:**
+   - If output shows `SUCCESS`: Update task status to "completed" in task_queue.md
+   - If output shows `FAILED`: Spawn Failure Analysis Agent (see below)
 
 6. **After all tasks:**
    ```
@@ -702,17 +696,22 @@ Issue Lifecycle:
 ## Waiting Pattern
 
 ```bash
-# CORRECT - single blocking call, check for success OR failure
-Bash("while [ ! -f '.orchestrator/complete/{id}.done' ] && [ ! -f '.orchestrator/complete/{id}.failed' ]; do sleep 10; done && echo 'done'", timeout: 1800000)
+# CORRECT - single blocking call that waits, checks result, AND cleans up markers
+Bash("while [ ! -f '.orchestrator/complete/{id}.done' ] && [ ! -f '.orchestrator/complete/{id}.failed' ]; do sleep 10; done && (test -f '.orchestrator/complete/{id}.done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/{id}.done .orchestrator/complete/{id}.failed", timeout: 1800000)
 
-# Then check which marker exists:
-# - {id}.done = success, mark task completed
-# - {id}.failed = failure, spawn Failure Analysis Agent
+# Handle based on output:
+# - 'SUCCESS' = task completed, update status
+# - 'FAILED' = spawn Failure Analysis Agent
 
 # WRONG - fills context
 while not exists: Bash("sleep 5")
+
+# WRONG - separate check/cleanup steps add complexity
+Bash("while ... ; do sleep 10; done")
+Bash("test -f .done && echo SUCCESS")  # separate check
+Bash("rm -f .done .failed")             # separate cleanup
 ```
 
 ---
 
-*MVP Runtime Version: 3.5*
+*MVP Runtime Version: 3.6*

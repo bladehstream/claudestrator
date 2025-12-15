@@ -43,14 +43,19 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 
 ### Examples
 
-| Command | Loops | Research | Per-Loop Quotas |
-|---------|-------|----------|-----------------|
-| `/orchestrate` | 0 | No | Initial build only |
-| `/orchestrate 3` | 3 | No | Process existing issues only |
-| `/orchestrate 3 --research` | 3 | Yes | General improvements |
+| Command | Loops | Research | Behavior |
+|---------|-------|----------|----------|
+| `/orchestrate` | 0 | No | Initial build OR process pending issues (single pass) |
+| `/orchestrate 3` | 3 | No | Process existing issues only (3 loops max) |
+| `/orchestrate 3 --research` | 3 | Yes | General improvements + new issue discovery |
 | `/orchestrate 3 --research security` | 3 | Yes | Security focus (no quota) |
-| `/orchestrate 3 --research 2 security` | 3 | Yes | 2 security per loop |
+| `/orchestrate 3 --research 2 security` | 3 | Yes | 2 security items per loop |
 | `/orchestrate 3 --research 2 security 3 UI` | 3 | Yes | 2 security + 3 UI per loop |
+
+**Note on `/orchestrate` (no loops):**
+- On a **new project** (no task_queue.md): Processes PRD.md → creates tasks → executes → Analysis Agent
+- On an **existing project** with pending issues: Processes those issues → Analysis Agent
+- On an **existing project** with no pending issues: Runs Analysis Agent only
 
 ### Parsed Output
 
@@ -316,9 +321,30 @@ Action: HALT orchestration. Manual intervention required.
 
 ### Step 7d: After Critical Loop Completes
 
-Only after CRITICAL_COUNT == 0 should you proceed to:
-- Initial PRD processing (if `/orchestrate` with no loops)
-- Improvement loops (if `/orchestrate N`)
+Only after CRITICAL_COUNT == 0 should you proceed. The next step depends on:
+
+**1. Check for pending non-critical issues:**
+
+```bash
+PENDING_ISSUES=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
+```
+
+**2. Check if task queue exists (indicates prior PRD processing):**
+
+```bash
+TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "no")
+```
+
+**3. Route based on state:**
+
+| LOOP_COUNT | PENDING_ISSUES | TASK_QUEUE_EXISTS | Action |
+|------------|----------------|-------------------|--------|
+| 0 | > 0 | yes | **Process issues** - Go to Step 4.3 (Decomposition for issues) |
+| 0 | 0 | no | **Initial build** - Go to Step 1 (Decomposition for PRD.md) |
+| 0 | 0 | yes | **Nothing to do** - Go to Step 5 (Analysis Agent) |
+| > 0 | any | any | **Improvement loops** - Go to Step 4 |
+
+**Key insight:** `/orchestrate` (no loops) on an existing project with pending issues should still process those issues. The "no loops" setting means no Research Agent loops, NOT "ignore pending issues."
 
 **Note:** The critical scan is the ONLY permitted read of issue_queue.md by the orchestrator. Full issue processing is handled by the Decomposition Agent.
 

@@ -196,6 +196,24 @@ OUTPUT "✓ Critical queue clear. Proceeding with normal orchestration."
 - Safety limit of 10 iterations
 - HALTs if tasks aren't created for detected critical issues
 
+### Post-Critical Routing
+
+After critical queue clears, route based on state:
+
+```bash
+PENDING_ISSUES=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
+TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "no")
+```
+
+| LOOP_COUNT | PENDING_ISSUES | TASK_QUEUE_EXISTS | Action |
+|------------|----------------|-------------------|--------|
+| 0 | > 0 | yes | **Process issues** - Decomposition Agent (issues mode) → Implementation → Analysis |
+| 0 | 0 | no | **Initial build** - Step 1 (Decomposition for PRD.md) |
+| 0 | 0 | yes | **Nothing to do** - Analysis Agent only |
+| > 0 | any | any | **Improvement loops** - Go to Improvement Loop section |
+
+**Key insight:** `/orchestrate` (no loops) on an existing project with pending issues should still process those issues.
+
 ---
 
 ## Initial Run (`/orchestrate`)

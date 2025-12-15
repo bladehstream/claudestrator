@@ -253,8 +253,10 @@ WHILE CRITICAL_COUNT > 0:
 
     # 3. VERIFY tasks were created (Step 7c)
     # 4. Run Implementation Agents on critical tasks
-    # 5. Wait for all critical tasks to complete
-    # 6. Commit changes
+    # 5. Wait for all critical tasks to complete (including TASK-99999)
+    # 6. Clean up TASK-99999 marker for next iteration
+    Bash("rm -f .orchestrator/complete/TASK-99999.done .orchestrator/complete/TASK-99999.failed 2>/dev/null || true")
+    # 7. Commit changes
 
     # RE-SCAN for critical issues (fixes may have created new ones, or failed)
     CRITICAL_COUNT = grep -A3 "| Priority | critical |" ... | grep -cE "Status \| (pending|accepted)"
@@ -638,12 +640,19 @@ Read task_queue.md to get new pending tasks, spawn implementation agents (same a
 
 When implementation agent's completion marker is detected, update task status to `done` in task_queue.md.
 
-**6. Commit:**
+**6. Clean up TASK-99999 marker**
+
+After all tasks complete (including TASK-99999), clean up the verification task marker:
+```
+Bash("rm -f .orchestrator/complete/TASK-99999.done .orchestrator/complete/TASK-99999.failed 2>/dev/null || true")
+```
+
+**7. Commit:**
 ```
 Bash("git add -A && git commit -m 'Improvement loop [N]'")
 ```
 
-**7. Repeat** for next loop
+**8. Repeat** for next loop
 
 > **Note**: Each loop iteration re-checks for outstanding issues. If the previous loop's issues weren't all completed, Research Agent continues to be skipped until the queue is clear.
 

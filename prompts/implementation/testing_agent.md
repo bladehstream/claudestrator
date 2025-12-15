@@ -768,7 +768,40 @@ VERIFICATION RESULTS:
 
 ---
 
-## Phase 10: Write Task Report
+## Phase 10: Process Management & Task Report
+
+### 10.1 Process Management Protocol
+
+**CRITICAL**: If you spawned any background processes (dev servers, test databases, watchers), you MUST track and clean them up.
+
+#### When Starting Any Background Process
+
+```bash
+# 1. Create PID tracking directory
+Bash("mkdir -p .orchestrator/pids .orchestrator/process-logs")
+
+# 2. Start process with PID capture
+Bash("<your-command> > .orchestrator/process-logs/<process-name>.log 2>&1 & echo $! > .orchestrator/pids/<process-name>.pid")
+
+# 3. Log to manifest
+Bash("echo \"$(date -Iseconds) | <process-name> | $(cat .orchestrator/pids/<process-name>.pid) | <your-command>\" >> .orchestrator/pids/manifest.log")
+```
+
+#### Graceful Shutdown Before Completion
+
+```bash
+# For each service, use its native stop command
+Bash("npm run stop 2>/dev/null || true")           # If project has stop script
+Bash("docker compose down 2>/dev/null || true")    # If using docker
+```
+
+#### Check for Running Processes
+
+```bash
+Bash("for pidfile in .orchestrator/pids/*.pid 2>/dev/null; do [ -f \"$pidfile\" ] || continue; PID=$(cat \"$pidfile\"); NAME=$(basename \"$pidfile\" .pid); if ps -p $PID > /dev/null 2>&1; then CMD=$(ps -p $PID -o comm= 2>/dev/null || echo 'unknown'); echo \"⚠️  RUNNING: $NAME (PID: $PID, CMD: $CMD)\"; else echo \"✓ STOPPED: $NAME (PID: $PID)\"; rm \"$pidfile\" 2>/dev/null; fi; done")
+```
+
+### 10.2 Write Task Report
 
 **CRITICAL**: Before writing the completion marker, write a JSON report.
 
@@ -786,6 +819,7 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
 - acceptance criteria met (count and details)
 - errors, workarounds, assumptions
 - technical_debt, future_work recommendations
+- **spawned_processes**: tracked processes, still_running, cleanup_attempted
 
 ```
 Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
@@ -803,6 +837,9 @@ Before completing, verify:
 - [ ] Verification steps executed (Phase 9)
 - [ ] Critical failures written to issue queue with `Auto-Retry: true`
 - [ ] **Source Issues marked as `completed` for PASSED tasks (Phase 9.5)**
+- [ ] **Tracked PIDs for any spawned background processes**
+- [ ] **Attempted graceful shutdown of spawned processes**
+- [ ] **Reported any still-running processes in task report**
 - [ ] Task report JSON written
 
 Then write the completion marker:
@@ -832,6 +869,7 @@ The orchestrator is BLOCKED waiting for this file.
 | **Not marking Source Issues completed** | **Critical loop never exits** | **Always run Phase 9.5** |
 | **Marking issues completed without running tests** | **Bugs slip through, false completion** | **MUST run actual build/test commands** |
 | **Trusting task status instead of verifying** | **Implementation Agent may have lied** | **Run verification yourself** |
+| **Orphaned background processes** | **Resource leaks, port conflicts** | **Track PIDs, attempt graceful shutdown** |
 
 ---
 

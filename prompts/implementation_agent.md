@@ -242,6 +242,49 @@ Use the Edit tool for modifications:
 Edit("path/to/file.ts", <old_string>, <new_string>)
 ```
 
+### 3.4 Process Management Protocol
+
+**CRITICAL**: When spawning background processes (dev servers, watchers, databases), you MUST track them for cleanup.
+
+#### When Starting Any Background Process
+
+```bash
+# 1. Create PID tracking directory
+Bash("mkdir -p .orchestrator/pids .orchestrator/process-logs")
+
+# 2. Start process with PID capture
+# Format: <command> > log 2>&1 & echo $! > pidfile
+Bash("<your-command> > .orchestrator/process-logs/<process-name>.log 2>&1 & echo $! > .orchestrator/pids/<process-name>.pid")
+
+# 3. Log to manifest
+Bash("echo \"$(date -Iseconds) | <process-name> | $(cat .orchestrator/pids/<process-name>.pid) | <your-command>\" >> .orchestrator/pids/manifest.log")
+```
+
+**Examples:**
+```bash
+# Dev server
+Bash("npm run dev > .orchestrator/process-logs/dev-server.log 2>&1 & echo $! > .orchestrator/pids/dev-server.pid")
+
+# Database
+Bash("docker compose up -d postgres > .orchestrator/process-logs/postgres.log 2>&1 & echo $! > .orchestrator/pids/postgres.pid")
+
+# Watch mode
+Bash("npm run watch > .orchestrator/process-logs/watcher.log 2>&1 & echo $! > .orchestrator/pids/watcher.pid")
+```
+
+#### Graceful Shutdown Before Completion
+
+Before writing the completion marker, attempt graceful shutdown of all spawned processes:
+
+```bash
+# For each service, use its native stop command
+Bash("npm run stop 2>/dev/null || true")           # If project has stop script
+Bash("docker compose down 2>/dev/null || true")    # If using docker
+# etc.
+```
+
+**Note**: The `kill` command may be restricted. Always attempt graceful shutdown using the service's native stop mechanism.
+
 ===============================================================================
 PHASE 4: VERIFY (BUILD + TESTS)
 ===============================================================================
@@ -449,6 +492,15 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json`:
   "recommendations": {
     "technical_debt": ["items to address later"],
     "future_work": ["suggested improvements"]
+  },
+  "spawned_processes": {
+    "tracked": [
+      {"name": "process-name", "pid": 12345, "command": "npm run dev", "status": "stopped"}
+    ],
+    "still_running": [
+      {"name": "process-name", "pid": 12346, "command": "docker compose up", "reason": "graceful stop failed"}
+    ],
+    "cleanup_attempted": true
   }
 }
 ```
@@ -508,6 +560,11 @@ Bash("{build_command} 2>&1")
 # 3. Run tests one final time
 Bash("{test_command} 2>&1")
 # If any test fails, you CANNOT write .done
+
+# 4. Check for running processes and report status
+Bash("for pidfile in .orchestrator/pids/*.pid 2>/dev/null; do [ -f \"$pidfile\" ] || continue; PID=$(cat \"$pidfile\"); NAME=$(basename \"$pidfile\" .pid); if ps -p $PID > /dev/null 2>&1; then CMD=$(ps -p $PID -o comm= 2>/dev/null || echo 'unknown'); echo \"⚠️  RUNNING: $NAME (PID: $PID, CMD: $CMD)\"; else echo \"✓ STOPPED: $NAME (PID: $PID)\"; rm \"$pidfile\" 2>/dev/null; fi; done")
+# Note: Running processes are reported but do not block .done
+# Include them in spawned_processes.still_running in your task report
 ```
 
 **If any verification fails:**
@@ -538,6 +595,9 @@ EXECUTION CHECKLIST
 - [ ] **Ran TESTS after each attempt (only if build passed)**
 - [ ] No security vulnerabilities introduced
 - [ ] **Build passes AND ALL tests pass** (or followed FAILURE PROTOCOL if 3 attempts exhausted)
+- [ ] **Tracked PIDs for any spawned background processes**
+- [ ] **Attempted graceful shutdown of spawned processes**
+- [ ] **Reported any still-running processes in task report**
 - [ ] **WROTE THE TASK REPORT JSON**
 - [ ] **WROTE THE COMPLETION MARKER FILE** (.done if success, .failed if failed)
 
@@ -553,6 +613,7 @@ COMMON MISTAKES
 | **Same approach each attempt** | Repeating failure | Try different approach |
 | **Writing .done when build/tests fail** | False completion | Only .done when build AND tests pass |
 | **Importing non-existent files** | Build failure | Verify imports exist before using |
+| **Orphaned background processes** | Resource leaks, port conflicts | Track PIDs, attempt graceful shutdown |
 | Ignoring existing patterns | Inconsistent codebase | Study conventions first |
 | Over-engineering | Complexity, maintenance | Only build what's needed |
 | Hardcoding values | Inflexibility | Use config/env vars |

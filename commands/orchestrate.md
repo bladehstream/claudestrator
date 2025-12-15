@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.5 - Research Agent gated by clear issue queue.
+> **Version**: MVP 3.7 - Research requires explicit --research flag.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -9,8 +9,10 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 ```
 /orchestrate                              # Single pass - decompose PRD and execute tasks
 /orchestrate --dry-run                    # Preview tasks without executing
-/orchestrate N                            # Run N improvement loops after initial build
-/orchestrate N <focus>                    # Run N loops focused on specific area
+/orchestrate N                            # Run N loops processing existing issues only
+/orchestrate N --research                 # Run N loops with research for new issues
+/orchestrate N --research <focus>         # Run N loops researching specific area
+/orchestrate N --research 2 security 3 UI # Run N loops with quotas per category
 ```
 
 ### Argument Parsing
@@ -18,45 +20,51 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 **CRITICAL**: Parse arguments in this order:
 
 ```
-/orchestrate <loops> [<count> <category>]...
+/orchestrate <loops> [--research [<count> <category>]...]
 ```
 
 1. **First token** → LOOP_COUNT (number of improvement loops)
-2. **Remaining tokens** → Parse as `<count> <category>` pairs (quotas per loop)
-3. **If a token is NOT a number** → Treat as category with no quota (general focus)
+2. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
+3. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas per loop)
+4. **If a token following `--research` is NOT a number** → Treat as category with no quota (general focus)
+
+**Without `--research`:** Only process existing issues. When queue is clear, skip to Analysis Agent.
+**With `--research`:** Launch Research Agent when queue is clear to find new issues.
 
 ### Parsing Rules
 
 | Token Pattern | Interpretation |
 |---------------|----------------|
 | `3` (first) | 3 loops |
-| `2 security` | 2 security items per loop |
-| `3 UI` | 3 UI items per loop |
-| `performance` (no number before) | Focus on performance, no quota |
+| `--research` | Enable Research Agent |
+| `2 security` (after --research) | 2 security items per loop |
+| `3 UI` (after --research) | 3 UI items per loop |
+| `performance` (after --research, no number before) | Focus on performance, no quota |
 
 ### Examples
 
-| Command | Loops | Per-Loop Quotas | Total Items |
-|---------|-------|-----------------|-------------|
-| `/orchestrate` | 0 | Initial build only | - |
-| `/orchestrate 3` | 3 | General improvements | Variable |
-| `/orchestrate 3 security` | 3 | Security focus (no quota) | Variable |
-| `/orchestrate 3 2 security` | 3 | 2 security | 6 security |
-| `/orchestrate 3 2 security 3 UI` | 3 | 2 security + 3 UI | 6 security + 9 UI |
-| `/orchestrate 2 1 security 2 performance 1 docs` | 2 | 1 sec + 2 perf + 1 docs | 2 + 4 + 2 = 8 |
+| Command | Loops | Research | Per-Loop Quotas |
+|---------|-------|----------|-----------------|
+| `/orchestrate` | 0 | No | Initial build only |
+| `/orchestrate 3` | 3 | No | Process existing issues only |
+| `/orchestrate 3 --research` | 3 | Yes | General improvements |
+| `/orchestrate 3 --research security` | 3 | Yes | Security focus (no quota) |
+| `/orchestrate 3 --research 2 security` | 3 | Yes | 2 security per loop |
+| `/orchestrate 3 --research 2 security 3 UI` | 3 | Yes | 2 security + 3 UI per loop |
 
 ### Parsed Output
 
 Store as structured data:
 ```
 LOOP_COUNT: 3
+RESEARCH_ENABLED: true
 QUOTAS: [
   { category: "security", count: 2 },
   { category: "UI", count: 3 }
 ]
 ```
 
-Pass QUOTAS to Research Agent so it knows exactly how many issues to find per category.
+If `RESEARCH_ENABLED` is false, QUOTAS will be empty and Research Agent will not be spawned.
 
 ---
 
@@ -529,26 +537,25 @@ If user runs `/orchestrate N` (where N > 0), run N improvement loops AFTER the i
 
 **1. Check for Outstanding Issues**
 
-Before spawning the Research Agent, check if there are any outstanding issues:
-
 ```bash
 OUTSTANDING_COUNT=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
 ```
 
 **If OUTSTANDING_COUNT > 0:**
-- Skip Research Agent entirely
-- Output message:
-  ```
-  ⏭️  Skipping Research Agent - $OUTSTANDING_COUNT outstanding issue(s) to process first
-  ```
-- Go directly to Step 4.2 (Decomposition Agent)
+- Skip Research Agent (issues still pending)
+- Output: `⏭️  Skipping Research Agent - $OUTSTANDING_COUNT outstanding issue(s) to process first`
+- Go directly to Step 4.3 (Decomposition Agent)
 
-**If OUTSTANDING_COUNT == 0:**
-- Proceed with Research Agent (Step 4.1)
+**If OUTSTANDING_COUNT == 0 AND RESEARCH_ENABLED == false:**
+- Output: `✓ Issue queue clear. No --research flag, skipping to Analysis Agent.`
+- Skip remaining loops, go to Step 5 (Analysis Agent)
+
+**If OUTSTANDING_COUNT == 0 AND RESEARCH_ENABLED == true:**
+- Proceed with Research Agent (Step 4.2)
 
 ---
 
-**2. Spawn Research Agent (only if queue is clear)**
+**2. Spawn Research Agent (only if RESEARCH_ENABLED and queue is clear)**
 
 Research Agent finds issues based on quotas:
 
@@ -647,7 +654,7 @@ Bash("git add -A && git commit -m 'Improvement loop [N]'")
 
 **7. Repeat** for next loop
 
-> **Note**: Each loop iteration re-checks for outstanding issues. If the previous loop's issues weren't all completed, Research Agent continues to be skipped until the queue is clear.
+> **Note**: Each loop iteration re-checks for outstanding issues. If issues remain, Research Agent is skipped. If queue is clear but `--research` was not specified, orchestration skips to Analysis Agent.
 
 ---
 
@@ -788,7 +795,7 @@ Historical Data: .orchestrator/history.csv
 7. **NEVER use TaskOutput** - adds 50-100k tokens to context
 8. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
 9. **NEVER improvise the flow** - follow the documented steps exactly
-10. **ONE Research Agent per loop** - with quotas, not multiple topic-specific agents
+10. **Research Agent requires `--research` flag** - only spawned when enabled and queue is clear
 
 ### Orchestrator is a COORDINATOR
 
@@ -812,7 +819,7 @@ The orchestrator NEVER:
 | Agent | When to Spawn | Prompt File |
 |-------|---------------|-------------|
 | Decomposition | Initial PRD breakdown | `prompts/decomposition_agent.md` |
-| Research | Start of each improvement loop | `prompts/research_agent.md` |
+| Research | When `--research` enabled and queue clear | `prompts/research_agent.md` |
 | **Failure Analysis** | When task has `.failed` marker | `prompts/failure_analysis_agent.md` |
 | Frontend | Frontend tasks | `prompts/implementation/frontend_agent.md` |
 | Backend | Backend tasks | `prompts/implementation/backend_agent.md` |

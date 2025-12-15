@@ -1,6 +1,6 @@
 # Orchestrator Runtime (MVP)
 
-> **Version**: MVP 3.6 - Inline marker cleanup in wait commands.
+> **Version**: MVP 3.7 - Research requires explicit --research flag.
 
 ## Key Principle: Read Prompt Files
 
@@ -30,30 +30,33 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 
 ## Argument Parsing
 
-**CRITICAL**: Parse as `<loops> [<count> <category>]...`
+**CRITICAL**: Parse as `<loops> [--research [<count> <category>]...]`
 
 1. **First token** → LOOP_COUNT (number of loops)
-2. **Remaining tokens** → Parse as `<count> <category>` pairs (quotas)
-3. **Token without preceding number** → Category with no quota
+2. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
+3. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas)
+4. **If a token following `--research` is NOT a number** → Category with no quota
 
-| Command | Loops | Quotas (per loop) |
-|---------|-------|-------------------|
-| `/orchestrate` | 0 | Initial only |
-| `/orchestrate 3` | 3 | General (no quota) |
-| `/orchestrate 3 security` | 3 | Security focus (no quota) |
-| `/orchestrate 3 2 security` | 3 | 2 security per loop |
-| `/orchestrate 3 2 security 3 UI` | 3 | 2 security + 3 UI per loop |
+| Command | Loops | Research | Quotas (per loop) |
+|---------|-------|----------|-------------------|
+| `/orchestrate` | 0 | No | Initial only |
+| `/orchestrate 3` | 3 | No | Process existing issues only |
+| `/orchestrate 3 --research` | 3 | Yes | General improvements |
+| `/orchestrate 3 --research security` | 3 | Yes | Security focus (no quota) |
+| `/orchestrate 3 --research 2 security` | 3 | Yes | 2 security per loop |
+| `/orchestrate 3 --research 2 security 3 UI` | 3 | Yes | 2 security + 3 UI per loop |
 
 Store parsed values:
 ```
 LOOP_COUNT: 3
+RESEARCH_ENABLED: true
 QUOTAS: [
   { category: "security", count: 2 },
   { category: "UI", count: 3 }
 ]
 ```
 
-Pass QUOTAS to Research Agent each loop.
+If `RESEARCH_ENABLED` is false, QUOTAS will be empty and Research Agent will not be spawned.
 
 ---
 
@@ -65,7 +68,7 @@ Pass QUOTAS to Research Agent each loop.
 4. Get absolute working directory with `pwd`
 5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS`
 6. Initialize LOOP_NUMBER to 1
-7. Parse arguments → set LOOP_COUNT and RESEARCH_FOCUS
+7. Parse arguments → set LOOP_COUNT and RESEARCH_ENABLED
 8. **Run Critical Issue Resolution Loop** (see below)
 
 ---
@@ -360,14 +363,18 @@ OUTSTANDING_COUNT=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_
 ```
 
 **If OUTSTANDING_COUNT > 0:**
-- Skip Research Agent
+- Skip Research Agent (issues still pending)
 - Output: `⏭️ Skipping Research Agent - $OUTSTANDING_COUNT outstanding issue(s) to process first`
-- Go directly to Step 2 (Decomposition)
+- Go directly to Step 3 (Decomposition)
 
-**If OUTSTANDING_COUNT == 0:**
-- Proceed with Research Agent
+**If OUTSTANDING_COUNT == 0 AND RESEARCH_ENABLED == false:**
+- Output: `✓ Issue queue clear. No --research flag, skipping to Analysis Agent.`
+- Skip remaining loops, go to Analysis Agent
 
-### 2. Research Agent (only if queue is clear)
+**If OUTSTANDING_COUNT == 0 AND RESEARCH_ENABLED == true:**
+- Proceed with Research Agent (Step 2)
+
+### 2. Research Agent (only if RESEARCH_ENABLED and queue is clear)
 
 ```
 Task(
@@ -448,7 +455,7 @@ Bash("git add -A && git commit -m 'Loop [LOOP]'")
 
 ### 7. Repeat
 
-Each iteration re-checks outstanding issues. Research Agent stays skipped until the queue is clear.
+Each iteration re-checks outstanding issues. If issues remain, Research Agent is skipped. If queue is clear but `--research` was not specified, orchestration skips to Analysis Agent.
 
 ---
 
@@ -664,8 +671,8 @@ Issue Lifecycle:
 5. **Pass LOOP_NUMBER and RUN_ID** - to all implementation agents
 6. **NEVER spawn ad-hoc agents** - only use predefined agent types
 7. **NEVER improvise** - follow the documented flow exactly
-8. **ONE Research Agent per loop** - with quotas, not topic-specific agents
-9. **Research Agent ONLY when queue is clear** - skip if any pending/accepted issues exist
+8. **Research Agent requires `--research` flag** - only spawned when enabled and queue is clear
+9. **Without `--research`, halt when queue clear** - skip to Analysis Agent
 10. **CAN read task_queue.md** - to know what agents to spawn
 11. **CAN mark task as done** - when completion marker detected
 12. **NEVER read issue_queue.md fully** - EXCEPT for critical issue scan and outstanding check at startup:
@@ -714,4 +721,4 @@ Bash("rm -f .done .failed")             # separate cleanup
 
 ---
 
-*MVP Runtime Version: 3.6*
+*MVP Runtime Version: 3.7*

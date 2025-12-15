@@ -74,12 +74,51 @@ Pass QUOTAS to Research Agent each loop.
 
 **This loop runs BEFORE initial processing or improvement loops.**
 
+### Actionable Critical Issues
+
+An issue needs processing if it matches ANY of these conditions:
+
+| Status | Condition | Action |
+|--------|-----------|--------|
+| `pending` | - | Process normally |
+| `accepted` | - | Process normally |
+| `in_progress` | Task has `.failed` marker | Run Failure Analysis |
+| `in_progress` | Task has `.done` but issue not `completed` | Reset to `pending` (false completion) |
+
+### Stalled Issue Detection
+
+Before counting, check for stalled `in_progress` issues:
+
+```python
+# For each critical in_progress issue with Task Ref:
+FOR issue IN critical_in_progress_issues:
+    task_ref = issue.task_ref  # e.g., TASK-078
+
+    IF exists(".orchestrator/complete/{task_ref}.failed"):
+        # Spawn Failure Analysis Agent if not already done
+        spawn_failure_analysis(task_ref)
+
+    ELIF exists(".orchestrator/complete/{task_ref}.done"):
+        # False completion - task claimed done but issue unresolved
+        OUTPUT "⚠️ False completion: {task_ref} marked done but issue unresolved"
+
+        # Reset issue for re-processing
+        Edit(issue, status: "pending")
+        Remove(issue.task_ref)
+        Delete(".orchestrator/complete/{task_ref}.done")
+```
+
+### Critical Loop
+
 ```
 CRITICAL_ITERATION = 0
 MAX_CRITICAL_ITERATIONS = 10
 
 WHILE true:
-    # Scan for critical pending/accepted issues
+    # First: Handle stalled in_progress issues (resets them to pending)
+    handle_stalled_issues()
+
+    # Then: Count actionable critical issues
     CRITICAL_COUNT = Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/null | grep -cE 'Status \\| (pending|accepted)' || echo '0'")
 
     IF CRITICAL_COUNT == 0:

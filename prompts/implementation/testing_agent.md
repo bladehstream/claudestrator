@@ -660,21 +660,77 @@ Critical Issues (will auto-retry):
 ═══════════════════════════════════════════════════════════════════════════════
 ```
 
-### 9.5 Mark Source Issues as Completed (CRITICAL)
+### 9.5 Mark Source Issues as Completed (CRITICAL - WITH ACTUAL VERIFICATION)
 
-**After verification, you MUST update the status of Source Issues for tasks that PASSED.**
+**YOU MUST ACTUALLY RUN THE TESTS for each task before marking its source issue as completed.**
 
 #### 9.5.1 Find Tasks with Source Issues
 
 ```
-Grep("Source Issue", ".orchestrator/task_queue.md", output_mode: "content", -B: 5, -A: 2)
+Grep("Source Issue", ".orchestrator/task_queue.md", output_mode: "content", -B: 10, -A: 5)
 ```
 
 This will show tasks that came from issues (not initial PRD tasks).
 
-#### 9.5.2 For Each PASSED Task with Source Issue
+#### 9.5.2 For Each Task with Source Issue - RUN ACTUAL VERIFICATION
 
-If the task's verification passed, mark the source issue as `completed`:
+**DO NOT just check the task status. You MUST run the actual verification commands.**
+
+For each task with a Source Issue field:
+
+```python
+# 1. Extract task details
+TASK_ID = task.id                    # e.g., TASK-078
+SOURCE_ISSUE = task.source_issue     # e.g., ISSUE-20251215-032
+TEST_FILE = task.test_file           # e.g., backend/tests/test_db_pool.py
+BUILD_CMD = task.build_command       # e.g., cd backend && pip install -r requirements.txt
+TEST_CMD = task.test_command         # e.g., cd backend && pytest tests/test_db_pool.py -v
+
+# 2. Verify test file exists (MANDATORY)
+Read(TEST_FILE)
+IF file not found:
+    RESULT = "FAILED - test file does not exist"
+    # DO NOT mark issue as completed!
+
+# 3. Run build command (MANDATORY)
+build_output = Bash(BUILD_CMD)
+IF build fails (non-zero exit code):
+    RESULT = "FAILED - build error"
+    # DO NOT mark issue as completed!
+
+# 4. Run test command (MANDATORY)
+test_output = Bash(TEST_CMD)
+IF any tests fail:
+    RESULT = "FAILED - tests failing"
+    # DO NOT mark issue as completed!
+
+# 5. ONLY if all 3 checks pass
+IF test file exists AND build passes AND tests pass:
+    # NOW you can mark the issue as completed
+    Mark source issue as completed
+```
+
+#### 9.5.3 Verification Commands for Each Task
+
+**You MUST run these commands for EACH task with a Source Issue:**
+
+```bash
+# Check 1: Test file exists
+Read("{test_file}")
+# If "file not found" → FAIL
+
+# Check 2: Build passes
+Bash("{build_command} 2>&1")
+# If exit code != 0 → FAIL
+
+# Check 3: Tests pass
+Bash("{test_command} 2>&1")
+# If any test fails → FAIL
+
+# ONLY if all three pass → Mark issue completed
+```
+
+#### 9.5.4 Mark Issue as Completed (ONLY if verification passed)
 
 ```
 Edit(
@@ -684,25 +740,31 @@ Edit(
 )
 ```
 
-**Important**: Only update issues for tasks that PASSED verification. Tasks that FAILED:
-- Leave the issue as `in_progress`
-- The auto-retry mechanism will create a new issue if needed
-- The orchestrator will re-scan and find pending/in_progress critical issues
+#### 9.5.5 If Verification FAILS
 
-#### 9.5.3 Track Issue Completion
+**If ANY verification check fails:**
 
-For each issue you mark as completed, record it:
+1. **Do NOT mark the issue as completed** - leave it as `in_progress`
+2. Output the failure:
+   ```
+   ❌ VERIFICATION FAILED for {TASK_ID} (Source: {SOURCE_ISSUE})
+
+   Reason: [test file missing / build failed / tests failed]
+   Output: [error output]
+   ```
+3. The issue will be detected by the stalled issue scan on next run
+4. The orchestrator will reset and re-process it
+
+#### 9.5.6 Track Verification Results
 
 ```
-ISSUES MARKED COMPLETED:
-  - ISSUE-20241215-001 (from TASK-003) ✓
-  - ISSUE-20241215-002 (from TASK-004) ✓
-
-ISSUES LEFT IN_PROGRESS (verification failed):
-  - ISSUE-20241215-003 (from TASK-005) - build failed
+VERIFICATION RESULTS:
+  ✅ TASK-003 (ISSUE-20241215-001) - tests pass, marked completed
+  ✅ TASK-004 (ISSUE-20241215-002) - tests pass, marked completed
+  ❌ TASK-078 (ISSUE-20251215-032) - test file missing, LEFT as in_progress
 ```
 
-**Why this matters:** The orchestrator RE-SCANS for critical issues. If you don't mark issues as `completed`, the loop will think critical issues still exist and won't proceed to normal orchestration.
+**Why this matters:** The orchestrator trusts you. If you mark an issue as `completed` without running verification, bugs will slip through and the user will have to manually re-trigger the fix.
 
 ---
 
@@ -768,6 +830,8 @@ The orchestrator is BLOCKED waiting for this file.
 | Skipping verification execution | Critical bugs reach user | Always run Phase 9 |
 | Not flagging critical failures | No auto-retry | Set Auto-Retry: true for blocking issues |
 | **Not marking Source Issues completed** | **Critical loop never exits** | **Always run Phase 9.5** |
+| **Marking issues completed without running tests** | **Bugs slip through, false completion** | **MUST run actual build/test commands** |
+| **Trusting task status instead of verifying** | **Implementation Agent may have lied** | **Run verification yourself** |
 
 ---
 
@@ -800,4 +864,4 @@ expect(handler).toHaveBeenCalledTimes(1);
 
 ---
 
-*Testing Implementation Agent v1.2 - Issue lifecycle management*
+*Testing Implementation Agent v1.3 - Mandatory verification before marking issues completed*

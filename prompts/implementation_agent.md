@@ -460,18 +460,70 @@ Write(".orchestrator/reports/{task_id}-loop-{loop_number}.json", <json_content>)
 ```
 
 ===============================================================================
-PHASE 6: COMPLETE
+PHASE 6: COMPLETE (WITH MANDATORY VERIFICATION)
 ===============================================================================
+
+**YOU CANNOT SKIP THIS VERIFICATION. The .done marker is FORBIDDEN unless ALL checks pass.**
+
+### 6.0 MANDATORY PRE-COMPLETION VERIFICATION
+
+Before writing the `.done` marker, you MUST verify ALL of the following:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     .done MARKER VERIFICATION GATE                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CHECK 1: Test file exists?                                                 │
+│           Read("{test_file_path}") → Must return file contents              │
+│           ❌ If file not found → CANNOT write .done                         │
+│                                                                             │
+│  CHECK 2: Build passes?                                                     │
+│           Bash("{build_command}") → Exit code must be 0                     │
+│           ❌ If build fails → CANNOT write .done                            │
+│                                                                             │
+│  CHECK 3: Tests pass?                                                       │
+│           Bash("{test_command}") → All tests must pass                      │
+│           ❌ If any test fails → CANNOT write .done                         │
+│                                                                             │
+│  ALL THREE CHECKS MUST PASS → Write .done                                   │
+│  ANY CHECK FAILS → Follow FAILURE PROTOCOL (write .failed instead)         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.0.1 Run Final Verification
+
+**You MUST run these commands immediately before writing .done:**
+
+```bash
+# 1. Verify test file exists
+Read("{test_file_path}")
+# If this fails with "file not found", you CANNOT write .done
+
+# 2. Run build one final time
+Bash("{build_command} 2>&1")
+# If exit code != 0, you CANNOT write .done
+
+# 3. Run tests one final time
+Bash("{test_command} 2>&1")
+# If any test fails, you CANNOT write .done
+```
+
+**If any verification fails:**
+- Do NOT write `.done`
+- Follow the FAILURE PROTOCOL (Phase F)
+- Write `.failed` instead
 
 ### 6.1 Write Completion Marker
 
-**CRITICAL - DO NOT SKIP**
+**ONLY after ALL verification checks pass:**
 
 ```
 Write(".orchestrator/complete/{task_id}.done", "done")
 ```
 
-The orchestrator is BLOCKED waiting for this file. Create it when implementation is complete.
+The orchestrator is BLOCKED waiting for this file. Create it ONLY when ALL verification passes.
 
 ===============================================================================
 EXECUTION CHECKLIST

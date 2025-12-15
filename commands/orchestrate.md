@@ -111,11 +111,66 @@ This is a LOOP that continues until the critical queue is empty:
 
 ### Step 7a: Scan for Critical Issues
 
+Critical issues need processing if they are in ANY of these states:
+
+| Status | Condition | Meaning |
+|--------|-----------|---------|
+| `pending` | - | New issue, ready to start |
+| `accepted` | - | Acknowledged, ready to start |
+| `in_progress` | Task has `.failed` marker | Implementation failed, needs Failure Analysis |
+| `in_progress` | Task has `.done` marker but issue not `completed` | False completion, needs re-work |
+
+**Step 7a.1: Count pending/accepted critical issues**
+
 ```bash
-CRITICAL_COUNT=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -cE "Status \| (pending|accepted)")
+PENDING_CRITICAL=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | grep -cE "Status \| (pending|accepted)" || echo "0")
 ```
 
-**Note:** Issues can be `pending` (new) or `accepted` (acknowledged but not started). Both need processing.
+**Step 7a.2: Check for stalled in_progress critical issues**
+
+For each critical issue with `Status | in_progress`, check if it's stalled:
+
+```bash
+# Find critical in_progress issues and their Task Refs
+grep -B10 "| Status | in_progress |" .orchestrator/issue_queue.md 2>/dev/null | \
+  grep -B10 "| Priority | critical |" | \
+  grep "| Task Ref |" | \
+  sed 's/.*| Task Ref | \(TASK-[0-9]*\).*/\1/' | \
+  while read TASK_REF; do
+    # Check if task has .done marker (false completion) or .failed marker (needs analysis)
+    if [ -f ".orchestrator/complete/${TASK_REF}.done" ] || [ -f ".orchestrator/complete/${TASK_REF}.failed" ]; then
+      echo "$TASK_REF"  # This task is stalled
+    fi
+  done > /tmp/stalled_tasks.txt
+
+STALLED_COUNT=$(wc -l < /tmp/stalled_tasks.txt 2>/dev/null | tr -d ' ' || echo "0")
+```
+
+**Step 7a.3: Calculate total actionable critical issues**
+
+```bash
+CRITICAL_COUNT=$((PENDING_CRITICAL + STALLED_COUNT))
+```
+
+**Step 7a.4: Handle stalled issues**
+
+For each stalled task in `/tmp/stalled_tasks.txt`:
+
+1. If `.failed` marker exists:
+   - Spawn Failure Analysis Agent (if not already done)
+   - The Failure Analysis Agent will create new critical issues
+
+2. If `.done` marker exists but issue not `completed`:
+   - This is a **false completion** - the Implementation Agent claimed success but didn't fix the issue
+   - Reset the issue for re-processing:
+     ```
+     Edit issue: Change "| Status | in_progress |" to "| Status | pending |"
+     Edit issue: Remove "| Task Ref | TASK-XXX |" line
+     Delete: .orchestrator/complete/TASK-XXX.done
+     ```
+   - Output: `⚠️ False completion detected: TASK-XXX marked done but issue unresolved. Resetting for re-work.`
+
+**Note:** After handling stalled issues, re-run the pending/accepted count as some issues may have been reset.
 
 ### Step 7b: Critical Loop Logic
 

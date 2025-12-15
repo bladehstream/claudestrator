@@ -26,6 +26,50 @@ Focus Areas:    {focus_areas OR "General improvements"}
 Previous Loops: {summary_of_previous_loops OR "This is the first loop"}
 
 ═══════════════════════════════════════════════════════════════════════════════
+PHASE 0: MINE HISTORICAL INSIGHTS (Use Glob, Read)
+═══════════════════════════════════════════════════════════════════════════════
+
+Before exploring the codebase fresh, mine insights from previous implementation work.
+
+### 0.1 Scan Task Reports
+
+```
+Glob(".orchestrator/reports/*.json")
+```
+
+For each report found, read and extract these fields:
+- `assumptions` - Implementation assumptions that may need validation
+- `technical_debt` - Items flagged but not yet addressed
+- `future_work` - Suggested improvements from implementers
+
+### 0.2 Aggregate Patterns
+
+Build a frequency map of recurring themes:
+
+| Field | Item | Occurrences | First Seen |
+|-------|------|-------------|------------|
+| future_work | "Add password strength meter" | 3 | TASK-012 |
+| future_work | "Implement MFA" | 2 | TASK-015 |
+| technical_debt | "Refactor auth middleware" | 1 | TASK-023 |
+| assumptions | "Redis available for sessions" | 4 | TASK-008 |
+
+### 0.3 Prioritize Historical Signals
+
+**High-priority candidates for this loop:**
+- `future_work` items appearing 2+ times across tasks (consensus signal)
+- `technical_debt` items older than 3 loops (accumulating risk)
+- `assumptions` in critical paths that haven't been verified
+
+**Output:** Internal list of historically-grounded improvement candidates to consider alongside fresh research in Phase 3.
+
+### 0.4 Check for Stale Assumptions
+
+For each unique assumption found:
+- Does it still hold true?
+- Has the codebase changed in ways that invalidate it?
+- Should this become a verification issue?
+
+═══════════════════════════════════════════════════════════════════════════════
 PHASE 1: PROJECT UNDERSTANDING (Use Read, Glob, Grep)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -77,6 +121,236 @@ Map the high-level structure:
 - Data flow (how does data move through the system?)
 - External integrations (APIs, services, databases)
 - Authentication and authorization patterns
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 1.5: WEB INTERFACE INSPECTION (Use Bash, Playwright)
+═══════════════════════════════════════════════════════════════════════════════
+
+If the project has a web interface, inspect it directly using Playwright.
+
+### 1.5.1 Detect Web Interface
+
+Check for indicators of a web frontend:
+```bash
+# Check for frontend indicators
+ls package.json vite.config.* next.config.* webpack.config.* angular.json 2>/dev/null
+grep -l "react\|vue\|angular\|svelte" package.json 2>/dev/null
+grep -E '"(dev|start|serve)"' package.json 2>/dev/null
+```
+
+**If NO web interface detected:** Skip to Phase 2.
+
+**If web interface detected:** Continue with inspection.
+
+### 1.5.2 Check Playwright Availability
+
+```bash
+npx playwright --version 2>/dev/null && echo "PLAYWRIGHT_AVAILABLE"
+```
+
+**If Playwright not available:**
+- Log: "Web interface detected but Playwright unavailable - skipping visual inspection"
+- Note in Phase 6 summary: "Web inspection: SKIPPED (Playwright not installed)"
+- Skip to Phase 2
+
+### 1.5.3 Start Development Server (if not running)
+
+```bash
+# Check if dev server already running on common ports
+curl -s http://localhost:3000 > /dev/null 2>&1 && echo "DEV_SERVER_RUNNING:3000"
+curl -s http://localhost:5173 > /dev/null 2>&1 && echo "DEV_SERVER_RUNNING:5173"
+curl -s http://localhost:4200 > /dev/null 2>&1 && echo "DEV_SERVER_RUNNING:4200"
+curl -s http://localhost:8080 > /dev/null 2>&1 && echo "DEV_SERVER_RUNNING:8080"
+```
+
+**If not running, start in background:**
+```bash
+# Create research directory
+mkdir -p .orchestrator/research
+
+# Start dev server (adjust command based on package.json scripts)
+npm run dev > .orchestrator/research/dev-server.log 2>&1 &
+DEV_PID=$!
+echo $DEV_PID > .orchestrator/research/dev-server.pid
+sleep 15  # Wait for server to start
+```
+
+**Note the port** for Playwright to connect to.
+
+### 1.5.4 Playwright Inspection Script
+
+Create and run an inspection script:
+
+```bash
+mkdir -p .orchestrator/research
+
+cat > .orchestrator/research/inspect-ui.js << 'INSPECT_EOF'
+const { chromium } = require('playwright');
+
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const results = { pages: [], errors: [], accessibility: [], performance: {} };
+
+  // Capture console errors
+  page.on('console', msg => {
+    if (msg.type() === 'error') results.errors.push(msg.text());
+  });
+
+  // Try common ports
+  const ports = [3000, 5173, 4200, 8080];
+  let baseUrl = null;
+  for (const port of ports) {
+    try {
+      await page.goto(`http://localhost:${port}/`, { timeout: 5000 });
+      baseUrl = `http://localhost:${port}`;
+      break;
+    } catch (e) { continue; }
+  }
+
+  if (!baseUrl) {
+    console.log(JSON.stringify({ error: 'No dev server found on common ports' }));
+    await browser.close();
+    return;
+  }
+
+  // Define key pages to inspect
+  const pagesToInspect = [
+    { name: 'home', path: '/' },
+    { name: 'login', path: '/login' },
+    { name: 'signup', path: '/signup' },
+    { name: 'dashboard', path: '/dashboard' },
+    { name: 'settings', path: '/settings' },
+    { name: 'profile', path: '/profile' }
+  ];
+
+  for (const p of pagesToInspect) {
+    try {
+      const response = await page.goto(`${baseUrl}${p.path}`, {
+        waitUntil: 'networkidle',
+        timeout: 10000
+      });
+
+      if (!response || response.status() === 404) continue;
+
+      // Screenshot
+      await page.screenshot({
+        path: `.orchestrator/research/${p.name}.png`,
+        fullPage: true
+      });
+
+      // Check for accessibility issues (basic)
+      const a11y = await page.evaluate(() => {
+        const issues = [];
+        // Images without alt
+        document.querySelectorAll('img:not([alt])').forEach(img =>
+          issues.push({ type: 'missing-alt', element: img.src || 'unknown' }));
+        // Buttons without accessible text
+        document.querySelectorAll('button').forEach(btn => {
+          if (!btn.textContent?.trim() && !btn.getAttribute('aria-label')) {
+            issues.push({ type: 'empty-button', element: btn.className || 'unknown' });
+          }
+        });
+        // Inputs without labels
+        document.querySelectorAll('input:not([type="hidden"])').forEach(inp => {
+          const id = inp.id;
+          const hasLabel = id && document.querySelector(`label[for="${id}"]`);
+          const hasAriaLabel = inp.getAttribute('aria-label');
+          if (!hasLabel && !hasAriaLabel) {
+            issues.push({ type: 'unlabeled-input', element: inp.name || inp.type || 'unknown' });
+          }
+        });
+        // Low contrast detection (basic - checks for light gray text)
+        document.querySelectorAll('*').forEach(el => {
+          const style = window.getComputedStyle(el);
+          const color = style.color;
+          if (color.includes('rgb(') && el.textContent?.trim()) {
+            const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (match) {
+              const [, r, g, b] = match.map(Number);
+              // Very light text on white background
+              if (r > 200 && g > 200 && b > 200) {
+                issues.push({ type: 'low-contrast', element: el.tagName });
+              }
+            }
+          }
+        });
+        return issues;
+      });
+
+      results.pages.push({
+        name: p.name,
+        path: p.path,
+        status: response.status(),
+        a11yIssues: a11y.length
+      });
+      results.accessibility.push(...a11y.map(i => ({ ...i, page: p.name })));
+
+    } catch (e) {
+      // Page doesn't exist or error - skip silently
+    }
+  }
+
+  // Performance metrics
+  if (results.pages.length > 0) {
+    results.performance = await page.evaluate(() => {
+      const timing = performance.timing;
+      return {
+        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+        fullyLoaded: timing.loadEventEnd - timing.navigationStart,
+        firstPaint: performance.getEntriesByType('paint')
+          .find(p => p.name === 'first-contentful-paint')?.startTime || null
+      };
+    });
+  }
+
+  results.baseUrl = baseUrl;
+  results.pagesInspected = results.pages.length;
+
+  await browser.close();
+  console.log(JSON.stringify(results, null, 2));
+})();
+INSPECT_EOF
+
+npx playwright install chromium --with-deps 2>/dev/null || true
+node .orchestrator/research/inspect-ui.js > .orchestrator/research/ui-inspection.json 2>&1
+```
+
+### 1.5.5 Analyze Inspection Results
+
+```
+Read(".orchestrator/research/ui-inspection.json")
+```
+
+Look for:
+- **Console errors** - JavaScript errors visible to users
+- **Accessibility issues** - Missing alt text, unlabeled inputs, empty buttons
+- **Performance** - Slow load times (>3000ms is problematic)
+- **Missing pages** - Expected pages that returned 404
+
+Review screenshots for visual issues:
+```
+Read(".orchestrator/research/home.png")
+Read(".orchestrator/research/dashboard.png")
+```
+
+### 1.5.6 Clean Up
+
+```bash
+# Kill dev server if we started it
+if [ -f .orchestrator/research/dev-server.pid ]; then
+  kill $(cat .orchestrator/research/dev-server.pid) 2>/dev/null || true
+  rm .orchestrator/research/dev-server.pid
+fi
+```
+
+### 1.5.7 Record Findings
+
+Add web interface findings to your internal notes for Phase 3 gap analysis:
+- Console errors → potential bug issues
+- Accessibility problems → accessibility issues
+- Slow performance → performance issues
+- Visual problems → UX issues
 
 ═══════════════════════════════════════════════════════════════════════════════
 PHASE 2: EXTERNAL RESEARCH (Use WebSearch, WebFetch, web_research_agent)
@@ -201,11 +475,15 @@ What's new that might benefit this project?
 PHASE 3: GAP ANALYSIS
 ═══════════════════════════════════════════════════════════════════════════════
 
-Compare what you learned about the project (Phase 1) with what you learned about best practices (Phase 2).
+Combine insights from ALL previous phases:
+- **Phase 0**: Historical patterns from task reports (`future_work`, `technical_debt`, `assumptions`)
+- **Phase 1**: Codebase analysis (structure, tech stack, current state)
+- **Phase 1.5**: Web interface inspection (UI/UX, accessibility, performance, console errors)
+- **Phase 2**: External research (best practices, industry standards, competitors)
 
 ### 3.1 Identify Gaps
 
-For each area, note the delta:
+Synthesize findings into a gap analysis. For each area, note the delta:
 
 | Area | Current State | Best Practice | Gap |
 |------|---------------|---------------|-----|
@@ -447,12 +725,25 @@ PROJECT PROFILE
   Domain:   {business_domain}
   Health:   {overall_assessment: healthy | needs_attention | critical}
 
-RESEARCH CONDUCTED
-  Visual:   {AVAILABLE | SKIPPED (dependencies missing)}
+HISTORICAL INSIGHTS MINED (Phase 0)
+  Reports scanned:         {count}
+  Recurring future_work:   {count} items (top: {most_common})
+  Outstanding tech_debt:   {count} items
+  Assumptions to verify:   {count}
+
+WEB INTERFACE INSPECTION (Phase 1.5)
+  Status:       {INSPECTED | SKIPPED (no web UI) | SKIPPED (Playwright unavailable)}
+  Pages:        {count} inspected
+  Console errors: {count}
+  A11y issues:  {count}
+  Load time:    {avg_ms}ms average
+
+EXTERNAL RESEARCH (Phase 2)
+  Visual capture: {AVAILABLE | SKIPPED}
+  Searches:
   - {search_1}
   - {search_2}
   - {search_3}
-  - ... (list key searches performed)
 
 KEY FINDINGS
   • {finding_1}
@@ -460,11 +751,11 @@ KEY FINDINGS
   • {finding_3}
 
 IMPROVEMENTS QUEUED (5)
-  1. [{priority}] {title} ({complexity})
-  2. [{priority}] {title} ({complexity})
-  3. [{priority}] {title} ({complexity})
-  4. [{priority}] {title} ({complexity})
-  5. [{priority}] {title} ({complexity})
+  1. [{priority}] {title} ({complexity}) {source: historical|inspection|research}
+  2. [{priority}] {title} ({complexity}) {source}
+  3. [{priority}] {title} ({complexity}) {source}
+  4. [{priority}] {title} ({complexity}) {source}
+  5. [{priority}] {title} ({complexity}) {source}
 
 DEFERRED FOR FUTURE LOOPS
   • {improvement_not_selected_1} - Reason: {why_deferred}
@@ -532,13 +823,15 @@ EXECUTION CHECKLIST
 
 Before finishing, verify:
 
+- [ ] Mined historical insights from task reports (Phase 0)
 - [ ] Read and understood project structure (Phase 1)
+- [ ] Inspected web interface with Playwright if applicable (Phase 1.5)
 - [ ] Conducted web searches for current best practices (Phase 2)
 - [ ] Used HIGH-weight sources for recommendations
-- [ ] Identified gaps between current state and best practices (Phase 3)
+- [ ] Combined all sources in gap analysis (Phase 3)
 - [ ] Generated 5 specific, actionable improvements (Phase 4)
 - [ ] Wrote issues to .orchestrator/issue_queue.md (Phase 5)
-- [ ] Generated summary report (Phase 6)
+- [ ] Generated summary report with all sections (Phase 6)
 - [ ] **WROTE THE COMPLETION MARKER FILE** (Phase 7)
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -578,3 +871,4 @@ Variables to substitute:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-12-12 | Initial comprehensive prompt |
+| 1.1 | 2025-12-15 | Added Phase 0 (historical insights mining) and Phase 1.5 (Playwright web inspection) |

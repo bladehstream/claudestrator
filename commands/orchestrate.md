@@ -13,6 +13,7 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 /orchestrate N --research                 # Run N loops with research for new issues
 /orchestrate N --research <focus>         # Run N loops researching specific area
 /orchestrate N --research 2 security 3 UI # Run N loops with quotas per category
+/orchestrate --source external_spec       # Use projectspec/*.json instead of PRD.md
 ```
 
 ### Argument Parsing
@@ -20,22 +21,26 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 **CRITICAL**: Parse arguments in this order:
 
 ```
-/orchestrate <loops> [--research [<count> <category>]...]
+/orchestrate <loops> [--source <source_type>] [--research [<count> <category>]...]
 ```
 
 1. **First token** → LOOP_COUNT (number of improvement loops)
-2. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
-3. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas per loop)
-4. **If a token following `--research` is NOT a number** → Treat as category with no quota (general focus)
+2. **Check for `--source` flag** → SOURCE_TYPE (default: "prd", or "external_spec")
+3. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
+4. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas per loop)
+5. **If a token following `--research` is NOT a number** → Treat as category with no quota (general focus)
 
 **Without `--research`:** Only process existing issues. When queue is clear, skip to Analysis Agent.
 **With `--research`:** Launch Research Agent when queue is clear to find new issues.
+**With `--source external_spec`:** Use projectspec/spec-final.json and projectspec/test-plan-output.json instead of PRD.md.
 
 ### Parsing Rules
 
 | Token Pattern | Interpretation |
 |---------------|----------------|
 | `3` (first) | 3 loops |
+| `--source external_spec` | Use projectspec/*.json files |
+| `--source prd` | Use PRD.md (default) |
 | `--research` | Enable Research Agent |
 | `2 security` (after --research) | 2 security items per loop |
 | `3 UI` (after --research) | 3 UI items per loop |
@@ -43,14 +48,16 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 
 ### Examples
 
-| Command | Loops | Research | Behavior |
-|---------|-------|----------|----------|
-| `/orchestrate` | 0 | No | Initial build OR process pending issues (single pass) |
-| `/orchestrate 3` | 3 | No | Process existing issues only (3 loops max) |
-| `/orchestrate 3 --research` | 3 | Yes | General improvements + new issue discovery |
-| `/orchestrate 3 --research security` | 3 | Yes | Security focus (no quota) |
-| `/orchestrate 3 --research 2 security` | 3 | Yes | 2 security items per loop |
-| `/orchestrate 3 --research 2 security 3 UI` | 3 | Yes | 2 security + 3 UI per loop |
+| Command | Loops | Source | Research | Behavior |
+|---------|-------|--------|----------|----------|
+| `/orchestrate` | 0 | prd | No | Initial build OR process pending issues (single pass) |
+| `/orchestrate 3` | 3 | prd | No | Process existing issues only (3 loops max) |
+| `/orchestrate --source external_spec` | 0 | external_spec | No | Build from projectspec/*.json files |
+| `/orchestrate 3 --source external_spec` | 3 | external_spec | No | Build + 3 improvement loops |
+| `/orchestrate 3 --research` | 3 | prd | Yes | General improvements + new issue discovery |
+| `/orchestrate 3 --research security` | 3 | prd | Yes | Security focus (no quota) |
+| `/orchestrate 3 --research 2 security` | 3 | prd | Yes | 2 security items per loop |
+| `/orchestrate 3 --research 2 security 3 UI` | 3 | prd | Yes | 2 security + 3 UI per loop |
 
 **Note on `/orchestrate` (no loops):**
 - On a **new project** (no task_queue.md): Processes PRD.md → creates tasks → executes → Analysis Agent
@@ -62,6 +69,7 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 Store as structured data:
 ```
 LOOP_COUNT: 3
+SOURCE_TYPE: prd | external_spec
 RESEARCH_ENABLED: true
 QUOTAS: [
   { category: "security", count: 2 },
@@ -70,12 +78,15 @@ QUOTAS: [
 ```
 
 If `RESEARCH_ENABLED` is false, QUOTAS will be empty and Research Agent will not be spawned.
+If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD.md.
 
 ---
 
 ## Startup Checklist
 
-1. Check PRD.md exists → if not, tell user to run `/prdgen` first
+1. **Check source files exist:**
+   - If `SOURCE_TYPE = prd`: Check PRD.md exists → if not, tell user to run `/prdgen` first
+   - If `SOURCE_TYPE = external_spec`: Check projectspec/spec-final.json AND projectspec/test-plan-output.json exist → if not, tell user to provide spec files
 2. Check git → init if needed
 3. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
 4. Get absolute working directory with `pwd` (store for agent prompts)
@@ -383,7 +394,18 @@ Select model based on task complexity:
 
 ## Step 1: Spawn Decomposition Agent
 
-**DO NOT read PRD.md yourself** - that adds thousands of tokens to your context.
+**DO NOT read source files yourself** - that adds thousands of tokens to your context.
+
+### Step 1a: Choose Mode Based on SOURCE_TYPE
+
+| SOURCE_TYPE | MODE | SOURCE | START Action |
+|-------------|------|--------|--------------|
+| `prd` | `initial` | PRD.md | `Read('PRD.md')` |
+| `external_spec` | `external_spec` | projectspec/*.json | `Read('prompts/external_spec_mapping.md')` |
+
+### Step 1b: Spawn Agent
+
+**For SOURCE_TYPE = prd (default):**
 
 ```
 Task(
@@ -407,6 +429,35 @@ Task(
   The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
 
   START: Read('PRD.md')"
+)
+```
+
+**For SOURCE_TYPE = external_spec:**
+
+```
+Task(
+  model: "opus",
+  run_in_background: true,
+  prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
+
+  ---
+
+  ## Your Task
+
+  WORKING_DIR: [absolute path from pwd]
+  SOURCE: projectspec/spec-final.json + projectspec/test-plan-output.json
+  MODE: external_spec
+
+  Parse the external spec files and create .orchestrator/task_queue.md with:
+  - BUILD tasks from spec-final.json core_functionality
+  - TEST tasks from test-plan-output.json, linked to BUILD tasks via dependencies
+
+  CRITICAL: Write completion marker when done:
+  Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
+
+  The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
+
+  START: Read('prompts/external_spec_mapping.md')"
 )
 ```
 

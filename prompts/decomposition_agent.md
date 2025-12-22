@@ -32,6 +32,7 @@ Mode:              {mode} (initial | improvement_loop | critical_only)
 | `initial` | PRD.md | All requirements from PRD |
 | `improvement_loop` | issue_queue.md | All pending issues |
 | `critical_only` | issue_queue.md | **ONLY** issues with `Priority \| critical` |
+| `external_spec` | projectspec/*.json | Features from spec-final.json + tests from test-plan-output.json |
 
 ===============================================================================
 PHASE 1: MODE BRANCH (READ THIS FIRST)
@@ -47,6 +48,7 @@ PHASE 1: MODE BRANCH (READ THIS FIRST)
 │   MODE = "initial"           → Go to BRANCH A (PRD Processing)              │
 │   MODE = "improvement_loop"  → Go to BRANCH B (All Issues)                  │
 │   MODE = "critical_only"     → Go to BRANCH C (Critical Issues Only)        │
+│   MODE = "external_spec"     → Go to BRANCH D (External Spec Files)         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -188,6 +190,288 @@ This task:
 See "REQUIRED: Final Testing & Verification Task" section below for format.
 
 **→ Skip to Section 1.3 (Build/Test Commands), then Phase 3, 4**
+
+---
+
+## BRANCH D: External Spec Mode (JSON Spec Files)
+
+**When:** `MODE = external_spec`
+**Source:** `projectspec/spec-final.json` + `projectspec/test-plan-output.json`
+**Action:** Create BUILD tasks from features + TEST tasks from test plan, with proper dependencies
+
+This mode processes externally-generated specification files that contain:
+1. **spec-final.json**: Project requirements, features, architecture, data model
+2. **test-plan-output.json**: Comprehensive test plan with 100+ tests across categories
+
+### D.1 Read the Mapping Reference
+
+First, read the category mapping to understand how tests relate to features:
+
+```
+Read("prompts/external_spec_mapping.md")
+```
+
+### D.2 Read and Parse Spec Files
+
+```
+Read("projectspec/spec-final.json")
+Read("projectspec/test-plan-output.json")
+```
+
+Parse the JSON structures:
+
+**spec-final.json structure:**
+```json
+{
+  "metadata": { "project_name": "...", "version": "..." },
+  "core_functionality": [
+    { "feature": "...", "description": "...", "priority": "must_have|nice_to_have" }
+  ],
+  "architecture": "...",
+  "data_model": "...",
+  "api_contracts": "...",
+  "constraints": { "tech_stack": {...}, "design_system": {...} }
+}
+```
+
+**test-plan-output.json structure:**
+```json
+{
+  "tests": {
+    "unit": [ { "id": "UNIT-001", "name": "...", "category": "...", "priority": "...", "steps": [...] } ],
+    "integration": [...],
+    "e2e": [...],
+    "security": [...],
+    "performance": [...],
+    "edge_cases": [...]
+  }
+}
+```
+
+### D.3 Create BUILD Tasks from Features
+
+For each item in `core_functionality[]`:
+
+1. **Assign Task ID**: TASK-001, TASK-002, etc. (in order)
+2. **Determine Category** from feature description:
+   - "dashboard", "UI", "chart", "KPI" → `frontend`
+   - "API", "endpoint", "database", "LLM", "polling" → `backend`
+   - Features touching both → `fullstack`
+3. **Determine Complexity** from priority:
+   - `must_have` → `complex`
+   - `nice_to_have` → `normal`
+4. **Extract Acceptance Criteria** from description and related `success_criteria`
+5. **Note Dependencies** based on logical order (e.g., data model before API)
+
+**Feature → Category Mapping Reference:**
+
+| Feature Keywords | Category |
+|-----------------|----------|
+| Dashboard, UI, Chart, KPI, Table, Filter controls | `frontend` |
+| API, Database, LLM, Polling, Background job, Enrichment | `backend` |
+| Full flow, End-to-end feature, Both UI and API | `fullstack` |
+| Docker, CI/CD, Deployment | `devops` |
+
+### D.4 Create TEST Tasks from Test Plan
+
+Group tests by category and create TEST batch tasks:
+
+**Test Task Naming:** `TASK-T{category_number}` (e.g., TASK-T01 for unit tests)
+
+| Test Type | Task ID Range | Dependencies |
+|-----------|---------------|--------------|
+| unit (vulnerability-validation) | TASK-T01 | Related build tasks |
+| unit (llm-processing) | TASK-T02 | Related build tasks |
+| unit (filtering) | TASK-T03 | Related build tasks |
+| unit (dashboard-ui) | TASK-T04 | Related build tasks |
+| unit (data-ingestion) | TASK-T05 | Related build tasks |
+| unit (admin-maintenance) | TASK-T06 | Related build tasks |
+| integration | TASK-T10 | All related unit test tasks |
+| e2e | TASK-T20 | ALL build tasks |
+| security | TASK-T30 | ALL build tasks |
+| performance | TASK-T40 | ALL build tasks |
+| edge_cases | TASK-T50 | Related build tasks |
+
+**Category → Build Task Dependency Mapping:**
+
+```
+CATEGORY_DEPENDENCIES = {
+  "vulnerability-validation": ["Vulnerability Dashboard", "Vulnerability Table"],
+  "dashboard-ui": ["Vulnerability Dashboard", "Filter-Responsive Statistics", "Trend Chart"],
+  "llm-processing": ["LLM Integration", "Two-Table Async Processing", "Low-Confidence Review Queue"],
+  "data-ingestion": ["Data Source Management", "EPSS Enrichment", "Two-Table Async Processing"],
+  "filtering": ["Vulnerability Table with Filters", "Filter-Responsive Statistics"],
+  "admin-maintenance": ["Product Inventory Management", "Source Health Monitoring", "Low-Confidence Review Queue", "Data Source Management"],
+  "security": "ALL_BUILD_TASKS",
+  "performance": "ALL_BUILD_TASKS"
+}
+```
+
+### D.5 Test Task Format
+
+Each test batch task should include:
+
+```markdown
+### TASK-T01
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | testing |
+| Complexity | normal |
+| Test IDs | UNIT-001, UNIT-002, UNIT-019, UNIT-023 |
+| Build Command | pytest tests/unit/test_vulnerability_validation.py |
+| Test Command | pytest tests/unit/test_vulnerability_validation.py -v |
+
+**Objective:** Run vulnerability validation unit tests
+
+**Acceptance Criteria:**
+- All tests in UNIT-001, UNIT-002, UNIT-019, UNIT-023 pass
+- Test coverage for CVE format validation
+- Test coverage for CVSS normalization
+- Test coverage for KEV status logic
+
+**Dependencies:** TASK-001, TASK-002
+
+**Notes:** Tests from test-plan-output.json category: vulnerability-validation
+
+**Test Code:**
+
+[Include the actual test implementations from the test plan steps]
+```
+
+### D.6 Generate Test Code from Test Plan
+
+For each test in the test plan, generate actual test code:
+
+1. Use the test's `steps` as test case structure
+2. Use `expected_result` as assertion basis
+3. Follow project test patterns (pytest for Python/FastAPI)
+4. Reference the test ID in docstring
+
+**Example transformation:**
+
+From test-plan-output.json:
+```json
+{
+  "id": "UNIT-001",
+  "name": "CVE ID Format Validation",
+  "steps": [
+    "Pass valid CVE IDs: CVE-2024-1234, CVE-2023-1234567",
+    "Pass invalid formats: 2024-1234, CVE-24-123, CVE2024-123",
+    "Check edge cases: CVE-1999-0001, future years"
+  ],
+  "expected_result": "Standard formats pass; malformed or non-compliant strings are rejected."
+}
+```
+
+Generated test code:
+```python
+import pytest
+from app.utils.validators import validate_cve_id
+
+class TestCVEIDFormatValidation:
+    """UNIT-001: CVE ID Format Validation"""
+
+    @pytest.mark.parametrize("cve_id", [
+        "CVE-2024-1234",
+        "CVE-2023-1234567",
+        "CVE-1999-0001",
+    ])
+    def test_valid_cve_ids_accepted(self, cve_id):
+        """Step 1: Pass valid CVE IDs"""
+        assert validate_cve_id(cve_id) is True
+
+    @pytest.mark.parametrize("invalid_id", [
+        "2024-1234",      # Missing CVE prefix
+        "CVE-24-123",     # 2-digit year
+        "CVE2024-123",    # Missing hyphen
+    ])
+    def test_invalid_formats_rejected(self, invalid_id):
+        """Step 2: Reject invalid formats"""
+        assert validate_cve_id(invalid_id) is False
+
+    def test_future_year_handling(self):
+        """Step 3: Edge case - future years"""
+        # Future years should be valid format but may be flagged
+        assert validate_cve_id("CVE-2030-0001") is True
+```
+
+### D.7 Task Queue Structure
+
+The final task_queue.md should have this structure:
+
+```markdown
+# Task Queue
+
+Generated: {timestamp}
+Source: projectspec/spec-final.json + projectspec/test-plan-output.json
+Mode: external_spec
+Total Tasks: {build_count + test_count + 1}
+
+## Project Commands
+
+| Command | Value |
+|---------|-------|
+| Build | pytest (inferred from tech_stack) |
+| Test | pytest |
+
+## Build Tasks
+
+### TASK-001
+[Feature 1 - Vulnerability Dashboard]
+
+### TASK-002
+[Feature 2 - Vulnerability Table with Filters]
+
+...
+
+## Test Tasks
+
+### TASK-T01
+[Unit Tests - Vulnerability Validation]
+Dependencies: TASK-001, TASK-002
+
+### TASK-T02
+[Unit Tests - LLM Processing]
+Dependencies: TASK-003, TASK-005
+
+...
+
+### TASK-T30
+[Security Tests]
+Dependencies: ALL build tasks (TASK-001 through TASK-N)
+
+### TASK-T40
+[Performance Tests]
+Dependencies: ALL build tasks
+
+## Final Verification
+
+### TASK-99999
+[E2E Verification & Documentation]
+Dependencies: ALL tasks
+```
+
+### D.8 Execution Checklist for External Spec Mode
+
+Before finishing, verify:
+
+- [ ] Read external_spec_mapping.md for category mappings
+- [ ] Parsed spec-final.json completely
+- [ ] Parsed test-plan-output.json completely
+- [ ] Created BUILD tasks for all `core_functionality[]` items with `must_have` priority
+- [ ] Created BUILD tasks for `nice_to_have` items (lower priority)
+- [ ] Determined correct Category for each build task
+- [ ] Created TEST batch tasks grouped by test category
+- [ ] Linked TEST tasks to BUILD tasks via Dependencies
+- [ ] Cross-cutting tests (security, performance, e2e) depend on ALL build tasks
+- [ ] Generated test code for each test batch
+- [ ] Created TASK-99999 for final verification
+- [ ] Wrote task_queue.md with proper structure
+- [ ] **WROTE THE COMPLETION MARKER FILE**
+
+**→ Continue to Section 1.3 (Build/Test Commands), then Phase 4 (Write Task Queue)**
 
 ---
 

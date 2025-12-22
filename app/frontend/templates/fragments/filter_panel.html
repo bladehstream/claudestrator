@@ -1,0 +1,194 @@
+<!-- Filter Panel Fragment -->
+<div class="glass-panel rounded-lg p-6 mb-8">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">filter_list</span>
+            Filters
+        </h2>
+        <button
+            id="resetFilters"
+            class="px-3 py-1.5 text-sm bg-surface-dark text-slate-400 border border-surface-border rounded hover:border-primary transition"
+            onclick="resetFilters()"
+        >
+            Reset All
+        </button>
+    </div>
+
+    <form id="filterForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Severity Filter -->
+        <div>
+            <label for="severityFilter" class="block text-sm font-medium text-slate-300 mb-2">
+                Severity
+            </label>
+            <select
+                id="severityFilter"
+                name="severity"
+                class="w-full px-3 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none transition"
+                onchange="applyFilters()"
+            >
+                <option value="">All Severities</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+            </select>
+        </div>
+
+        <!-- KEV Only Filter -->
+        <div>
+            <label for="kevFilter" class="block text-sm font-medium text-slate-300 mb-2">
+                KEV Status
+            </label>
+            <select
+                id="kevFilter"
+                name="kev_only"
+                class="w-full px-3 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none transition"
+                onchange="applyFilters()"
+            >
+                <option value="false">All</option>
+                <option value="true">KEV Only</option>
+            </select>
+        </div>
+
+        <!-- EPSS Threshold Filter -->
+        <div>
+            <label for="epssFilter" class="block text-sm font-medium text-slate-300 mb-2">
+                EPSS Threshold
+            </label>
+            <select
+                id="epssFilter"
+                name="epss_threshold"
+                class="w-full px-3 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none transition"
+                onchange="applyFilters()"
+            >
+                <option value="">All EPSS Scores</option>
+                <option value="0.1">≥ 10%</option>
+                <option value="0.3">≥ 30%</option>
+                <option value="0.5">≥ 50%</option>
+                <option value="0.7">≥ 70%</option>
+                <option value="0.9">≥ 90%</option>
+            </select>
+        </div>
+
+        <!-- Days Range Filter -->
+        <div>
+            <label for="daysFilter" class="block text-sm font-medium text-slate-300 mb-2">
+                Published In Last
+            </label>
+            <select
+                id="daysFilter"
+                name="days"
+                class="w-full px-3 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none transition"
+                onchange="applyFilters()"
+            >
+                <option value="">All Time</option>
+                <option value="7">7 Days</option>
+                <option value="30" selected>30 Days</option>
+                <option value="90">90 Days</option>
+                <option value="180">180 Days</option>
+                <option value="365">365 Days</option>
+            </select>
+        </div>
+    </form>
+
+    <!-- Active Filters Display -->
+    <div id="activeFilters" class="mt-4 flex flex-wrap gap-2" style="display: none;">
+        <!-- Active filter chips will be inserted here -->
+    </div>
+</div>
+
+<script>
+function applyFilters() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+
+    // Build query string
+    const params = new URLSearchParams();
+
+    for (const [key, value] of formData.entries()) {
+        if (value && value !== 'false' && value !== '') {
+            params.append(key, value);
+        }
+    }
+
+    const queryString = params.toString();
+
+    // Update KPI cards using HTMX
+    htmx.ajax('GET', `/fragments/kpi-cards?${queryString}`, {
+        target: '#kpiCards',
+        swap: 'outerHTML'
+    });
+
+    // Update trend chart with days filter (use form days value)
+    const days = formData.get('days') || '30';
+    const chartParams = new URLSearchParams(params);
+    chartParams.set('days', days);  // Ensure days is always set for chart
+
+    htmx.ajax('GET', `/fragments/trend-chart?${chartParams.toString()}`, {
+        target: '#trendChartContainer',
+        swap: 'innerHTML'
+    });
+
+    // Update active filters display
+    updateActiveFiltersDisplay();
+}
+
+function resetFilters() {
+    // Reset form
+    document.getElementById('filterForm').reset();
+
+    // Set default days to 30
+    document.getElementById('daysFilter').value = '30';
+
+    // Apply filters (will load defaults)
+    applyFilters();
+
+    // Hide active filters
+    document.getElementById('activeFilters').style.display = 'none';
+}
+
+function updateActiveFiltersDisplay() {
+    const form = document.getElementById('filterForm');
+    const formData = new FormData(form);
+    const activeFiltersDiv = document.getElementById('activeFilters');
+
+    const activeFilters = [];
+
+    // Check each filter
+    const severity = formData.get('severity');
+    if (severity) {
+        activeFilters.push(`Severity: ${severity}`);
+    }
+
+    const kevOnly = formData.get('kev_only');
+    if (kevOnly === 'true') {
+        activeFilters.push('KEV Only');
+    }
+
+    const epss = formData.get('epss_threshold');
+    if (epss) {
+        activeFilters.push(`EPSS ≥ ${(parseFloat(epss) * 100).toFixed(0)}%`);
+    }
+
+    const days = formData.get('days');
+    if (days) {
+        activeFilters.push(`Last ${days} days`);
+    }
+
+    // Display active filters
+    if (activeFilters.length > 0) {
+        activeFiltersDiv.innerHTML = '<span class="text-sm text-slate-400 mr-2">Active:</span>' +
+            activeFilters.map(filter =>
+                `<span class="px-2 py-1 text-xs bg-primary/20 text-primary border border-primary/30 rounded">${filter}</span>`
+            ).join('');
+        activeFiltersDiv.style.display = 'flex';
+    } else {
+        activeFiltersDiv.style.display = 'none';
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    updateActiveFiltersDisplay();
+});
+</script>

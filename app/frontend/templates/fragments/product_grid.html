@@ -1,0 +1,145 @@
+<!-- Product Grid Fragment for HTMX swapping -->
+
+{% if products %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for product in products %}
+    <div class="bg-surface-dark border border-surface-border rounded-lg p-4 hover:border-primary transition">
+        <!-- Product Header -->
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex-1">
+                <h3 class="font-bold text-white uppercase tracking-tight">{{ product.product_name }}</h3>
+                <p class="text-sm text-slate-400 mt-1">{{ product.vendor }}</p>
+            </div>
+
+            <!-- Monitoring Toggle -->
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                    type="checkbox"
+                    class="sr-only peer"
+                    {% if product.is_monitored %}checked{% endif %}
+                    onclick="toggleMonitoring({{ product.id }}, {{ 'true' if product.is_monitored else 'false' }})"
+                >
+                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+        </div>
+
+        <!-- Product Details -->
+        <div class="space-y-2 text-sm">
+            {% if product.version %}
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs text-slate-500">tag</span>
+                <span class="text-slate-300">Version: {{ product.version }}</span>
+            </div>
+            {% endif %}
+
+            {% if product.cpe_uri %}
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs text-slate-500">link</span>
+                <span class="text-slate-400 font-mono text-xs truncate">{{ product.cpe_uri }}</span>
+            </div>
+            {% endif %}
+
+            {% if product.description %}
+            <p class="text-slate-400 text-xs mt-2 line-clamp-2">{{ product.description }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Product Meta -->
+        <div class="mt-4 pt-4 border-t border-surface-border flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <!-- Source Badge -->
+                <span class="px-2 py-1 rounded-sm text-xs font-bold uppercase {% if product.source == 'custom' %}bg-accent-pink{% else %}bg-primary{% endif %} text-white">
+                    {{ product.source }}
+                </span>
+
+                <!-- Monitored Badge -->
+                {% if product.is_monitored %}
+                <span class="px-2 py-1 rounded-sm text-xs font-bold uppercase bg-green-600 text-white">
+                    MONITORED
+                </span>
+                {% else %}
+                <span class="px-2 py-1 rounded-sm text-xs font-bold uppercase bg-slate-700 text-slate-300">
+                    INACTIVE
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            {% if product.source == 'custom' %}
+            <button
+                class="text-red-400 hover:text-red-300 transition"
+                hx-delete="/api/products/{{ product.id }}"
+                hx-confirm="Are you sure you want to delete this product?"
+                hx-swap="none"
+                hx-on="htmx:afterRequest: refreshProductGrid()"
+            >
+                <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination Info -->
+<div class="mt-6 text-center text-sm text-slate-400">
+    Showing {{ products|length }} of {{ total }} products
+    {% if page > 1 or (page * page_size) < total %}
+    <div class="mt-4 flex items-center justify-center gap-2">
+        {% if page > 1 %}
+        <button
+            class="px-4 py-2 bg-surface-dark border border-surface-border rounded hover:border-primary transition"
+            hx-get="/api/products/search?page={{ page - 1 }}&page_size={{ page_size }}"
+            hx-target="#productGrid"
+            hx-include="#searchInput, [name='filter']"
+        >
+            <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        {% endif %}
+
+        <span class="px-4 py-2 bg-primary text-white rounded font-mono">{{ page }}</span>
+
+        {% if (page * page_size) < total %}
+        <button
+            class="px-4 py-2 bg-surface-dark border border-surface-border rounded hover:border-primary transition"
+            hx-get="/api/products/search?page={{ page + 1 }}&page_size={{ page_size }}"
+            hx-target="#productGrid"
+            hx-include="#searchInput, [name='filter']"
+        >
+            <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="text-center py-12">
+    <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">inventory_2</span>
+    <h3 class="text-xl font-bold text-white mb-2">No Products Found</h3>
+    <p class="text-slate-400 mb-6">
+        {% if search_query %}
+        No products match your search criteria. Try different keywords.
+        {% else %}
+        Get started by importing products from the NVD CPE dictionary or adding custom products.
+        {% endif %}
+    </p>
+    {% if not search_query %}
+    <div class="flex gap-3 justify-center">
+        <button
+            onclick="openAddProductModal()"
+            class="px-4 py-2 bg-primary text-white rounded font-medium hover:bg-primary-glow transition"
+        >
+            Add Custom Product
+        </button>
+        <button
+            onclick="openImportModal()"
+            class="px-4 py-2 bg-accent-cyan text-black rounded font-medium hover:opacity-80 transition"
+        >
+            Import from NVD
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endif %}

@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Queue - VulnDash Admin</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <style>
+        /* Cyberpunk theme configuration */
+        :root {
+            --primary: #2b4bee;
+            --primary-glow: #4d6df8;
+            --accent-pink: #ff2a6d;
+            --accent-cyan: #05d9e8;
+            --accent-yellow: #ffd60a;
+            --bg-dark: #050505;
+            --surface-dark: #0f111a;
+            --surface-border: #1f2335;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-dark);
+            color: #e2e8f0;
+        }
+
+        /* Glass panel effect */
+        .glass-panel {
+            background: rgba(15, 17, 26, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--surface-border);
+        }
+
+        /* Neon glow effects */
+        .glow-primary {
+            box-shadow: 0 0 20px rgba(43, 75, 238, 0.3);
+        }
+
+        .glow-primary:hover {
+            box-shadow: 0 0 30px rgba(43, 75, 238, 0.5);
+        }
+
+        .glow-danger {
+            box-shadow: 0 0 20px rgba(255, 42, 109, 0.3);
+        }
+
+        .glow-danger:hover {
+            box-shadow: 0 0 30px rgba(255, 42, 109, 0.5);
+        }
+
+        /* Cyber grid background */
+        .cyber-grid {
+            background-image:
+                linear-gradient(rgba(43, 75, 238, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(43, 75, 238, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-glow);
+        }
+
+        /* Confidence badge */
+        .confidence-low {
+            background: rgba(255, 42, 109, 0.2);
+            color: #ff2a6d;
+        }
+
+        .confidence-medium {
+            background: rgba(255, 214, 10, 0.2);
+            color: #ffd60a;
+        }
+
+        /* Severity badges */
+        .severity-critical {
+            background: rgba(255, 42, 109, 0.2);
+            color: #ff2a6d;
+        }
+
+        .severity-high {
+            background: rgba(255, 107, 0, 0.2);
+            color: #ff6b00;
+        }
+
+        .severity-medium {
+            background: rgba(255, 214, 10, 0.2);
+            color: #ffd60a;
+        }
+
+        .severity-low {
+            background: rgba(5, 217, 232, 0.2);
+            color: #05d9e8;
+        }
+
+        /* Editable field indicator */
+        .field-edited {
+            border-left: 3px solid var(--accent-cyan);
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#2b4bee',
+                        'primary-glow': '#4d6df8',
+                        'accent-pink': '#ff2a6d',
+                        'accent-cyan': '#05d9e8',
+                        'accent-yellow': '#ffd60a',
+                        'bg-dark': '#050505',
+                        'surface-dark': '#0f111a',
+                        'surface-border': '#1f2335',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="cyber-grid">
+    <div class="min-h-screen p-6">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-white tracking-tight uppercase">
+                        Review Queue
+                    </h1>
+                    <p class="text-slate-400 mt-2">Low-confidence LLM extractions requiring manual review (threshold: &lt; 0.8)</p>
+                </div>
+                <a href="/" class="px-4 py-2 bg-surface-dark border border-surface-border rounded text-sm hover:border-primary transition">
+                    <span class="material-symbols-outlined inline-block align-middle">arrow_back</span>
+                    Back to Dashboard
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="glass-panel rounded-lg p-6 mb-6" id="statsBar">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="text-center">
+                    <p class="text-sm text-slate-400 uppercase tracking-wide mb-1">Total Queue</p>
+                    <p class="text-3xl font-bold text-white" id="stat-total">-</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-slate-400 uppercase tracking-wide mb-1">Critical</p>
+                    <p class="text-3xl font-bold text-accent-pink" id="stat-critical">-</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-slate-400 uppercase tracking-wide mb-1">High</p>
+                    <p class="text-3xl font-bold text-orange-500" id="stat-high">-</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-slate-400 uppercase tracking-wide mb-1">Avg Confidence</p>
+                    <p class="text-3xl font-bold text-accent-yellow" id="stat-avg-conf">-</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-slate-400 uppercase tracking-wide mb-1">Threshold</p>
+                    <p class="text-3xl font-bold text-slate-300" id="stat-threshold">0.8</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Actions -->
+        <div class="glass-panel rounded-lg p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <!-- Filters -->
+                <div class="flex gap-2">
+                    <select
+                        id="severityFilter"
+                        class="px-4 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none"
+                        onchange="applyFilters()"
+                    >
+                        <option value="">All Severities</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                        <option value="UNKNOWN">Unknown</option>
+                    </select>
+
+                    <select
+                        id="sortBy"
+                        class="px-4 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none"
+                        onchange="applyFilters()"
+                    >
+                        <option value="confidence_score">Sort by Confidence</option>
+                        <option value="created_at">Sort by Created</option>
+                        <option value="severity">Sort by Severity</option>
+                    </select>
+
+                    <select
+                        id="sortOrder"
+                        class="px-4 py-2 bg-surface-dark border border-surface-border rounded text-white focus:border-primary focus:outline-none"
+                        onchange="applyFilters()"
+                    >
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                    </select>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div class="flex gap-2">
+                    <button
+                        onclick="bulkApprove()"
+                        class="px-4 py-2 bg-primary text-white rounded font-medium uppercase text-sm tracking-wide glow-primary hover:bg-primary-glow transition"
+                        id="bulkApproveBtn"
+                        disabled
+                    >
+                        <span class="material-symbols-outlined inline-block align-middle text-lg">check_circle</span>
+                        Bulk Approve (<span id="selectedCount">0</span>)
+                    </button>
+
+                    <button
+                        onclick="bulkReject()"
+                        class="px-4 py-2 bg-accent-pink text-white rounded font-medium uppercase text-sm tracking-wide glow-danger hover:opacity-80 transition"
+                        id="bulkRejectBtn"
+                        disabled
+                    >
+                        <span class="material-symbols-outlined inline-block align-middle text-lg">delete</span>
+                        Bulk Reject (<span id="selectedCountReject">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Queue Table -->
+        <div class="glass-panel rounded-lg p-6">
+            <div id="reviewQueueTable">
+                <!-- Table will be loaded here via HTMX -->
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-pulse text-slate-400">Loading review queue...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-6 flex items-center justify-center gap-2" id="pagination">
+            <!-- Pagination controls will be added dynamically -->
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="glass-panel rounded-lg p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white uppercase tracking-tight">Review & Edit Vulnerability</h2>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form id="editForm" onsubmit="submitApproval(event)">
+                <input type="hidden" id="edit-cve-id" name="cve_id">
+
+                <div class="space-y-4">
+                    <!-- CVE ID (readonly) -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">CVE ID</label>
+                        <input
+                            type="text"
+                            id="edit-cve-display"
+                            readonly
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:outline-none"
+                        >
+                    </div>
+
+                    <!-- Confidence Score (readonly) -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Confidence Score</label>
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="text"
+                                id="edit-confidence"
+                                readonly
+                                class="flex-1 px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:outline-none"
+                            >
+                            <span class="px-3 py-2 rounded text-xs font-bold" id="edit-confidence-badge"></span>
+                        </div>
+                    </div>
+
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Title</label>
+                        <input
+                            type="text"
+                            id="edit-title"
+                            name="title"
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="Enter vulnerability title"
+                        >
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Description</label>
+                        <textarea
+                            id="edit-description"
+                            name="description"
+                            rows="4"
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="Enter vulnerability description"
+                        ></textarea>
+                    </div>
+
+                    <!-- Vendor and Product -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Vendor</label>
+                            <input
+                                type="text"
+                                id="edit-vendor"
+                                name="vendor"
+                                class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                                placeholder="e.g., microsoft"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Product</label>
+                            <input
+                                type="text"
+                                id="edit-product"
+                                name="product"
+                                class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                                placeholder="e.g., windows_10"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Severity and CVSS Score -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Severity</label>
+                            <select
+                                id="edit-severity"
+                                name="severity"
+                                class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            >
+                                <option value="">Select Severity</option>
+                                <option value="CRITICAL">Critical</option>
+                                <option value="HIGH">High</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="LOW">Low</option>
+                                <option value="NONE">None</option>
+                                <option value="UNKNOWN">Unknown</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">CVSS Score</label>
+                            <input
+                                type="number"
+                                id="edit-cvss-score"
+                                name="cvss_score"
+                                min="0"
+                                max="10"
+                                step="0.1"
+                                class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                                placeholder="0.0 - 10.0"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- CVSS Vector -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">CVSS Vector</label>
+                        <input
+                            type="text"
+                            id="edit-cvss-vector"
+                            name="cvss_vector"
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="e.g., CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                        >
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button
+                        type="submit"
+                        class="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium uppercase text-sm tracking-wide glow-primary hover:bg-primary-glow transition"
+                    >
+                        <span class="material-symbols-outlined inline-block align-middle text-lg">check_circle</span>
+                        Approve & Save
+                    </button>
+                    <button
+                        type="button"
+                        onclick="rejectFromModal()"
+                        class="px-4 py-3 bg-accent-pink text-white rounded-lg font-medium uppercase text-sm tracking-wide glow-danger hover:opacity-80 transition"
+                    >
+                        <span class="material-symbols-outlined inline-block align-middle text-lg">delete</span>
+                        Reject
+                    </button>
+                    <button
+                        type="button"
+                        onclick="closeEditModal()"
+                        class="px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white hover:border-primary transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let currentPage = 1;
+        let selectedItems = new Set();
+        let currentEditCve = null;
+
+        // Load stats on page load
+        loadStats();
+
+        // Load review queue on page load
+        loadReviewQueue();
+
+        function loadStats() {
+            fetch('/admin/review-queue/stats')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('stat-total').textContent = data.total_needs_review;
+                    document.getElementById('stat-critical').textContent = data.by_severity.CRITICAL || 0;
+                    document.getElementById('stat-high').textContent = data.by_severity.HIGH || 0;
+                    document.getElementById('stat-avg-conf').textContent = data.average_confidence.toFixed(3);
+                    document.getElementById('stat-threshold').textContent = data.threshold.toFixed(1);
+                })
+                .catch(err => console.error('Failed to load stats:', err));
+        }
+
+        function loadReviewQueue(page = 1) {
+            currentPage = page;
+            const severity = document.getElementById('severityFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const sortOrder = document.getElementById('sortOrder').value;
+
+            let url = `/admin/review-queue/?page=${page}&page_size=20`;
+            if (severity) url += `&severity=${severity}`;
+            if (sortBy) url += `&sort_by=${sortBy}`;
+            if (sortOrder) url += `&sort_order=${sortOrder}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    renderTable(data);
+                    renderPagination(data);
+                })
+                .catch(err => {
+                    document.getElementById('reviewQueueTable').innerHTML =
+                        '<div class="text-center py-12 text-accent-pink">Error loading review queue</div>';
+                    console.error('Failed to load review queue:', err);
+                });
+        }
+
+        function renderTable(data) {
+            if (data.items.length === 0) {
+                document.getElementById('reviewQueueTable').innerHTML =
+                    '<div class="text-center py-12 text-slate-400">No items in review queue</div>';
+                return;
+            }
+
+            let html = `
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="border-b border-surface-border">
+                            <tr class="text-left text-slate-400 uppercase text-xs tracking-wider">
+                                <th class="pb-3 pr-2">
+                                    <input type="checkbox" onchange="toggleSelectAll(this)"
+                                           class="w-4 h-4 text-primary bg-surface-dark border-surface-border rounded">
+                                </th>
+                                <th class="pb-3 pr-4">CVE ID</th>
+                                <th class="pb-3 pr-4">Title</th>
+                                <th class="pb-3 pr-4">Vendor/Product</th>
+                                <th class="pb-3 pr-4">Severity</th>
+                                <th class="pb-3 pr-4">CVSS</th>
+                                <th class="pb-3 pr-4">Confidence</th>
+                                <th class="pb-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+            `;
+
+            data.items.forEach(item => {
+                const confidenceClass = item.confidence_score < 0.5 ? 'confidence-low' : 'confidence-medium';
+                const severityClass = `severity-${(item.severity || 'unknown').toLowerCase()}`;
+
+                html += `
+                    <tr class="border-b border-surface-border hover:bg-surface-dark transition">
+                        <td class="py-3 pr-2">
+                            <input type="checkbox" value="${item.cve_id}"
+                                   onchange="toggleSelect(this)"
+                                   class="row-checkbox w-4 h-4 text-primary bg-surface-dark border-surface-border rounded">
+                        </td>
+                        <td class="py-3 pr-4 font-mono text-accent-cyan">${item.cve_id}</td>
+                        <td class="py-3 pr-4 text-white max-w-xs truncate">${item.title || '<span class="text-slate-500">No title</span>'}</td>
+                        <td class="py-3 pr-4 text-slate-300">
+                            ${item.vendor && item.product ? `${item.vendor}/${item.product}` : '<span class="text-slate-500">Unknown</span>'}
+                        </td>
+                        <td class="py-3 pr-4">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${severityClass}">
+                                ${item.severity || 'UNKNOWN'}
+                            </span>
+                        </td>
+                        <td class="py-3 pr-4 text-white">${item.cvss_score !== null ? item.cvss_score.toFixed(1) : '-'}</td>
+                        <td class="py-3 pr-4">
+                            <span class="px-2 py-1 rounded text-xs font-bold ${confidenceClass}">
+                                ${item.confidence_score.toFixed(3)}
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            <button onclick="openEditModal('${item.cve_id}')"
+                                    class="px-3 py-1 bg-primary text-white rounded text-xs hover:bg-primary-glow transition">
+                                <span class="material-symbols-outlined text-sm align-middle">edit</span>
+                                Review
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('reviewQueueTable').innerHTML = html;
+        }
+
+        function renderPagination(data) {
+            if (data.total_pages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            // Previous button
+            if (data.page > 1) {
+                html += `
+                    <button onclick="loadReviewQueue(${data.page - 1})"
+                            class="px-3 py-1 bg-surface-dark border border-surface-border rounded text-sm hover:border-primary transition">
+                        Previous
+                    </button>
+                `;
+            }
+
+            // Page numbers
+            for (let i = 1; i <= data.total_pages; i++) {
+                if (i === data.page) {
+                    html += `
+                        <button class="px-3 py-1 bg-primary text-white rounded text-sm font-bold">
+                            ${i}
+                        </button>
+                    `;
+                } else if (i === 1 || i === data.total_pages || Math.abs(i - data.page) <= 2) {
+                    html += `
+                        <button onclick="loadReviewQueue(${i})"
+                                class="px-3 py-1 bg-surface-dark border border-surface-border rounded text-sm hover:border-primary transition">
+                            ${i}
+                        </button>
+                    `;
+                } else if (Math.abs(i - data.page) === 3) {
+                    html += `<span class="px-2 text-slate-500">...</span>`;
+                }
+            }
+
+            // Next button
+            if (data.page < data.total_pages) {
+                html += `
+                    <button onclick="loadReviewQueue(${data.page + 1})"
+                            class="px-3 py-1 bg-surface-dark border border-surface-border rounded text-sm hover:border-primary transition">
+                        Next
+                    </button>
+                `;
+            }
+
+            document.getElementById('pagination').innerHTML = html;
+        }
+
+        function applyFilters() {
+            selectedItems.clear();
+            updateBulkButtons();
+            loadReviewQueue(1);
+        }
+
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                if (checkbox.checked) {
+                    selectedItems.add(cb.value);
+                } else {
+                    selectedItems.delete(cb.value);
+                }
+            });
+            updateBulkButtons();
+        }
+
+        function toggleSelect(checkbox) {
+            if (checkbox.checked) {
+                selectedItems.add(checkbox.value);
+            } else {
+                selectedItems.delete(checkbox.value);
+            }
+            updateBulkButtons();
+        }
+
+        function updateBulkButtons() {
+            const count = selectedItems.size;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('selectedCountReject').textContent = count;
+            document.getElementById('bulkApproveBtn').disabled = count === 0;
+            document.getElementById('bulkRejectBtn').disabled = count === 0;
+        }
+
+        function openEditModal(cveId) {
+            currentEditCve = cveId;
+
+            // Fetch vulnerability details
+            fetch(`/admin/review-queue/?page=1&page_size=1000`)
+                .then(res => res.json())
+                .then(data => {
+                    const item = data.items.find(v => v.cve_id === cveId);
+                    if (!item) throw new Error('Vulnerability not found');
+
+                    // Populate form
+                    document.getElementById('edit-cve-id').value = item.cve_id;
+                    document.getElementById('edit-cve-display').value = item.cve_id;
+                    document.getElementById('edit-confidence').value = item.confidence_score.toFixed(3);
+                    document.getElementById('edit-title').value = item.title || '';
+                    document.getElementById('edit-description').value = item.description || '';
+                    document.getElementById('edit-vendor').value = item.vendor || '';
+                    document.getElementById('edit-product').value = item.product || '';
+                    document.getElementById('edit-severity').value = item.severity || '';
+                    document.getElementById('edit-cvss-score').value = item.cvss_score !== null ? item.cvss_score : '';
+                    document.getElementById('edit-cvss-vector').value = item.cvss_vector || '';
+
+                    // Update confidence badge
+                    const badge = document.getElementById('edit-confidence-badge');
+                    if (item.confidence_score < 0.5) {
+                        badge.className = 'px-3 py-2 rounded text-xs font-bold confidence-low';
+                        badge.textContent = 'LOW';
+                    } else {
+                        badge.className = 'px-3 py-2 rounded text-xs font-bold confidence-medium';
+                        badge.textContent = 'MEDIUM';
+                    }
+
+                    // Show modal
+                    document.getElementById('editModal').classList.remove('hidden');
+                })
+                .catch(err => {
+                    alert('Error loading vulnerability details');
+                    console.error(err);
+                });
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            currentEditCve = null;
+        }
+
+        function submitApproval(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const data = {
+                cve_id: formData.get('cve_id'),
+                title: formData.get('title') || null,
+                description: formData.get('description') || null,
+                vendor: formData.get('vendor') || null,
+                product: formData.get('product') || null,
+                severity: formData.get('severity') || null,
+                cvss_score: formData.get('cvss_score') ? parseFloat(formData.get('cvss_score')) : null,
+                cvss_vector: formData.get('cvss_vector') || null
+            };
+
+            fetch('/admin/review-queue/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Approval failed');
+                return res.json();
+            })
+            .then(result => {
+                closeEditModal();
+                loadStats();
+                loadReviewQueue(currentPage);
+                alert(`Vulnerability ${result.cve_id} approved successfully`);
+            })
+            .catch(err => {
+                alert('Error approving vulnerability');
+                console.error(err);
+            });
+        }
+
+        function rejectFromModal() {
+            if (!currentEditCve) return;
+
+            if (!confirm(`Are you sure you want to PERMANENTLY DELETE ${currentEditCve}? This cannot be undone.`)) {
+                return;
+            }
+
+            fetch('/admin/review-queue/reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cve_id: currentEditCve })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Rejection failed');
+                return res.json();
+            })
+            .then(result => {
+                closeEditModal();
+                loadStats();
+                loadReviewQueue(currentPage);
+                alert(`Vulnerability ${result.cve_id} rejected and deleted`);
+            })
+            .catch(err => {
+                alert('Error rejecting vulnerability');
+                console.error(err);
+            });
+        }
+
+        function bulkApprove() {
+            if (selectedItems.size === 0) return;
+
+            if (!confirm(`Approve ${selectedItems.size} vulnerabilities without edits?`)) {
+                return;
+            }
+
+            fetch('/admin/review-queue/bulk-approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cve_ids: Array.from(selectedItems) })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Bulk approval failed');
+                return res.json();
+            })
+            .then(result => {
+                selectedItems.clear();
+                updateBulkButtons();
+                loadStats();
+                loadReviewQueue(currentPage);
+                alert(`Bulk approved ${result.approved_count} vulnerabilities`);
+            })
+            .catch(err => {
+                alert('Error in bulk approval');
+                console.error(err);
+            });
+        }
+
+        function bulkReject() {
+            if (selectedItems.size === 0) return;
+
+            if (!confirm(`PERMANENTLY DELETE ${selectedItems.size} vulnerabilities? This cannot be undone.`)) {
+                return;
+            }
+
+            fetch('/admin/review-queue/bulk-reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cve_ids: Array.from(selectedItems) })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Bulk rejection failed');
+                return res.json();
+            })
+            .then(result => {
+                selectedItems.clear();
+                updateBulkButtons();
+                loadStats();
+                loadReviewQueue(currentPage);
+                alert(`Bulk rejected and deleted ${result.deleted_count} vulnerabilities`);
+            })
+            .catch(err => {
+                alert('Error in bulk rejection');
+                console.error(err);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!-- Trend Chart Fragment for HTMX swapping -->
+<div class="glass-panel rounded-lg p-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">show_chart</span>
+                Vulnerability Trend
+            </h2>
+            <p class="text-sm text-slate-400 mt-1">
+                {{ data.total_count }} vulnerabilities over {{ data.filters_applied.days }} days
+                {% if data.filters_applied.severity %}
+                    • Severity: {{ data.filters_applied.severity }}
+                {% endif %}
+                {% if data.filters_applied.kev_only %}
+                    • KEV Only
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="relative" style="height: 300px;">
+        <canvas id="trendChart"></canvas>
+    </div>
+
+    <!-- Legend -->
+    <div class="mt-4 flex items-center justify-center gap-6 text-sm">
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <span class="text-slate-300">Critical</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+            <span class="text-slate-300">High</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <span class="text-slate-300">Medium</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+            <span class="text-slate-300">Low</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-primary"></div>
+            <span class="text-slate-300">Total</span>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Chart data from backend
+    const chartData = {{ chart_data|tojson }};
+
+    // Extract labels and datasets
+    const labels = chartData.data_points.map(dp => {
+        const date = new Date(dp.date);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    const criticalData = chartData.data_points.map(dp => dp.critical);
+    const highData = chartData.data_points.map(dp => dp.high);
+    const mediumData = chartData.data_points.map(dp => dp.medium);
+    const lowData = chartData.data_points.map(dp => dp.low);
+    const totalData = chartData.data_points.map(dp => dp.count);
+
+    // Destroy existing chart if it exists
+    if (window.trendChartInstance) {
+        window.trendChartInstance.destroy();
+    }
+
+    // Create chart
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    window.trendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Critical',
+                    data: criticalData,
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgb(239, 68, 68)',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'High',
+                    data: highData,
+                    borderColor: 'rgb(249, 115, 22)',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgb(249, 115, 22)',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'Medium',
+                    data: mediumData,
+                    borderColor: 'rgb(234, 179, 8)',
+                    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgb(234, 179, 8)',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'Low',
+                    data: lowData,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgb(59, 130, 246)',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: 'Total',
+                    data: totalData,
+                    borderColor: '#2b4bee',
+                    backgroundColor: 'rgba(43, 75, 238, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#2b4bee',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 17, 26, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#e2e8f0',
+                    borderColor: '#2b4bee',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed.y;
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(43, 75, 238, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#94a3b8',
+                        maxRotation: 0,
+                        autoSkipPadding: 20
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(43, 75, 238, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#94a3b8',
+                        precision: 0
+                    }
+                }
+            },
+            animation: {
+                duration: 750,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+})();
+</script>

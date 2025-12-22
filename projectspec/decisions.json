@@ -1,0 +1,17 @@
+{
+  "decisions": [
+    {
+      "id": "AMB-1",
+      "question": "How should the hybrid confidence scoring system weight format validation (regex for CVE patterns) vs LLM self-rating?",
+      "decision": "Prioritize format validation (regex for CVEs) over LLM self-rating",
+      "rationale": "Heuristic format checks are deterministic and reliable; LLM self-assessment can be overconfident or inconsistent. Format validation catches obvious errors before trusting LLM output."
+    },
+    {
+      "id": "AMB-2",
+      "question": "How to prevent concurrent polling jobs from running for the same data source when manually triggered?",
+      "decision": "Use database lock via DataSource.is_running flag to prevent concurrent jobs",
+      "rationale": "DB-level flag provides persistence across worker restarts and visibility for debugging. Simple to implement and query."
+    }
+  ],
+  "validated_at": "2025-12-21T01:35:00Z"
+}

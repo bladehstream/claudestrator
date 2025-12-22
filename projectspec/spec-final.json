@@ -1,0 +1,269 @@
+{
+  "metadata": {
+    "project_name": "VulnDash",
+    "version": "1.0.0",
+    "generated_at": "2025-12-20T15:15:48.613Z",
+    "interview_completed": "2025-12-20T20:45:00Z",
+    "council_completed": "2025-12-20T15:09:41.175Z",
+    "council_config": {
+      "responders": "3:default",
+      "evaluators": "3:default",
+      "chairman": "claude:heavy"
+    }
+  },
+  "validated_decisions": {
+    "AMB-1": {
+      "decision": "Prioritize format validation (regex for CVEs) over LLM self-rating",
+      "rationale": "Heuristic format checks are deterministic and reliable; LLM self-assessment can be overconfident or inconsistent. Format validation catches obvious errors before trusting LLM output."
+    },
+    "AMB-2": {
+      "decision": "Use database lock via DataSource.is_running flag to prevent concurrent jobs",
+      "rationale": "DB-level flag provides persistence across worker restarts and visibility for debugging. Simple to implement and query."
+    }
+  },
+  "problem_statement": {
+    "summary": "Cybersecurity analysts need a centralized dashboard to aggregate, filter, and prioritize vulnerability data from multiple sources.",
+    "context": "Analysts face thousands of new CVEs monthly across fragmented sources (NVD, vendor advisories, RSS feeds, security blogs). Manual correlation against their product inventory is time-consuming and error-prone. CVSS scores alone don't indicate real-world exploitation likelihood.",
+    "motivation": "Reduce time-to-insight for vulnerability management by automating source aggregation, LLM-powered data extraction, product matching, and threat prioritization (KEV + EPSS) in a single modern dashboard."
+  },
+  "users_and_actors": [
+    {
+      "name": "Security Analyst",
+      "description": "Primary user. SOC analyst or vulnerability management specialist monitoring vulnerability feeds, assessing relevance to their environment, and prioritizing remediation.",
+      "goals": [
+        "See all relevant vulnerabilities affecting configured products in one place",
+        "Filter and sort by severity, EPSS score, KEV status, vendor, product",
+        "Quickly identify high-priority vulnerabilities requiring immediate attention",
+        "Understand trends in vulnerability activity over time"
+      ]
+    },
+    {
+      "name": "Administrator",
+      "description": "Configures the system. Manages data sources, product inventory, LLM settings, and reviews low-confidence LLM extractions.",
+      "goals": [
+        "Add and configure vulnerability data sources (NVD, KEV, RSS, custom APIs)",
+        "Manage product inventory for vulnerability matching",
+        "Configure Ollama LLM connection and model selection",
+        "Review and remediate low-confidence LLM extractions",
+        "Monitor data source health and troubleshoot failures"
+      ]
+    }
+  ],
+  "success_criteria": [
+    "Dashboard loads in under 2 seconds with 1000+ vulnerabilities",
+    "All KPIs, charts, and table update within 500ms when filters change",
+    "LLM extraction achieves >90% accuracy on structured fields (CVE ID, vendor, product)",
+    "NVD/KEV polling runs reliably on schedule with proper error handling",
+    "Admin can configure a new RSS source and see extracted vulnerabilities within one LLM processing cycle",
+    "Low-confidence extractions surface in review queue for manual remediation",
+    "Browser-based testing via Claude-in-Chrome validates all UI flows work correctly",
+    "Clean dark cyberpunk aesthetic that looks distinct from generic dashboards"
+  ],
+  "out_of_scope": [
+    "User authentication and authorization (deferred - design for segregation only)",
+    "Multi-user support and role-based access control",
+    "Mobile applications (responsive web only)",
+    "SIEM integration (Splunk, Sentinel webhooks)",
+    "Ticket system integration (Jira, ServiceNow)",
+    "Vulnerability scanning of assets",
+    "Asset discovery and automatic inventory",
+    "Compliance mapping (PCI, HIPAA, SOC2)",
+    "Paid threat intelligence feed integration",
+    "Public API for external consumers",
+    "Detailed audit logging",
+    "Multi-tenancy",
+    "SSO/SAML/enterprise identity providers",
+    "Real-time WebSocket updates (HTMX polling is sufficient)",
+    "PDF/scheduled report generation"
+  ],
+  "constraints": {
+    "tech_stack": {
+      "backend": "Python 3.11+ with FastAPI",
+      "frontend": "FastAPI + Jinja2 templates + HTMX for dynamic updates",
+      "styling": "Tailwind CSS (CDN, utility classes) with custom cyberpunk theme configuration",
+      "charts": "Chart.js with custom cyberpunk theme matching design system colors",
+      "icons": "Material Symbols Outlined (Google Fonts)",
+      "fonts": "Space Grotesk (Google Fonts)",
+      "database": "SQLite (development), PostgreSQL (production)",
+      "orm": "SQLAlchemy 2.0",
+      "scheduler": "APScheduler for background jobs",
+      "http_client": "httpx (async)",
+      "llm": "Ollama Python SDK",
+      "testing": "pytest + Claude-in-Chrome for browser verification"
+    },
+    "deployment": "Local self-hosted with simplified stack. No Node.js build step for frontend. Tailwind via CDN.",
+    "design_system": {
+      "mockups_location": "stitch_cyberpunk_vulnerability_dashboard/",
+      "mockup_files": {
+        "dashboard": "cyberpunk_vulnerability_dashboard_1/",
+        "intelligence": "cyberpunk_vulnerability_dashboard_2/",
+        "assets_admin": "cyberpunk_vulnerability_dashboard_3/"
+      },
+      "color_palette": {
+        "primary": "#2b4bee",
+        "primary_glow": "#4d6df8",
+        "accent_pink": "#ff2a6d",
+        "accent_cyan": "#05d9e8",
+        "background_dark": "#050505",
+        "surface_dark": "#0f111a",
+        "surface_border": "#1f2335"
+      },
+      "severity_colors": {
+        "critical": "#ff2a6d (accent-pink)",
+        "high": "#f97316 (orange-500)",
+        "medium": "#eab308 (yellow-500)",
+        "low": "#64748b (slate-500)"
+      },
+      "typography": {
+        "font_family": "Space Grotesk",
+        "headings": "Bold, uppercase, tracking-tight",
+        "body": "Regular weight",
+        "mono_elements": "Space Grotesk with monospace styling for CVE IDs, timestamps, technical data"
+      },
+      "effects": {
+        "glass_panels": "rgba(15, 17, 26, 0.7) with backdrop-blur(8px)",
+        "neon_glow": "box-shadow with primary color glow on interactive elements",
+        "cyber_grid": "Subtle grid background pattern using CSS gradients",
+        "hover_states": "Color transitions, border glow effects"
+      },
+      "components": {
+        "severity_badges": "Rounded-sm, colored background/border matching severity, bold uppercase text",
+        "kpi_cards": "Glass panel with large numeric value, trend indicator, subtle chart/visualization",
+        "data_table": "Sticky header, hover row highlight, sortable columns with icon indicators",
+        "filter_dropdowns": "Surface-dark background, border highlight on active, uppercase labels",
+        "pagination": "Icon buttons with page counter, monospace font"
+      }
+    },
+    "views": {
+      "dashboard": {
+        "description": "Main vulnerability feed view",
+        "components": [
+          "Header with nav tabs",
+          "Filter bar",
+          "KPI cards (Threat Velocity, Top Targets, Criticality Matrix)",
+          "Vulnerability table with pagination"
+        ],
+        "mockup": "cyberpunk_vulnerability_dashboard_1/"
+      },
+      "intelligence": {
+        "description": "Threat intelligence view (placeholder for MVP)",
+        "components": [
+          "Critical advisory cards",
+          "Recent exploits feed",
+          "Mitigation coverage stats",
+          "Vendor advisory feed"
+        ],
+        "mockup": "cyberpunk_vulnerability_dashboard_2/",
+        "status": "Deferred - placeholder only in MVP"
+      },
+      "assets_admin": {
+        "description": "Product inventory management (modal overlay)",
+        "components": [
+          "Vendor list sidebar",
+          "Product grid with toggle switches",
+          "CPE search/import",
+          "Add vendor/product forms"
+        ],
+        "mockup": "cyberpunk_vulnerability_dashboard_3/"
+      }
+    },
+    "performance": {
+      "dashboard_load": "< 2 seconds initial render",
+      "filter_response": "< 500ms",
+      "concurrent_users": 5
+    }
+  },
+  "core_functionality": [
+    {
+      "feature": "Vulnerability Dashboard",
+      "description": "Main view displaying KPI cards (total vulns, KEV count, high EPSS, new today/week), a filterable vulnerability table, and trend charts. All components are responsive to filter selections.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Vulnerability Table with Filters",
+      "description": "Sortable table of curated vulnerabilities with columns for CVE ID, Vendor, Product, CVSS severity, EPSS score, KEV status, and date. Filters for CVE search, vendor, product, severity, EPSS threshold, and KEV-only toggle.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Filter-Responsive Statistics",
+      "description": "All KPI cards, trend charts, and summary statistics dynamically update based on the currently applied filters. User sees statistics only for the filtered dataset.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Trend Chart",
+      "description": "Animated line/area chart showing vulnerability count over time (per day). Responsive to filters. Dark cyberpunk aesthetic matching overall theme.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Data Source Management",
+      "description": "Admin page to configure fixed sources (NVD, CISA KEV) and add custom sources (RSS feeds, APIs, URL scraping). Per-source polling interval (1-72 hours), enable/disable toggle, manual poll trigger, health status display.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Product Inventory Management",
+      "description": "Admin page to manage products being monitored. Search and import from NVD CPE dictionary (synced weekly). Add custom vendor/product entries. Vulnerabilities are filtered at display time against this inventory.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "LLM Integration (Ollama)",
+      "description": "Configure Ollama server endpoint, test connection, discover and select models. LLM processes raw ingested entries to extract structured vulnerability data (CVE ID, vendor, product, severity, description).",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Two-Table Async Processing",
+      "description": "Raw entries from feeds stored in raw_entries table. Background LLM job processes entries on configurable schedule (1-60 min) or manual trigger, extracts structured data, deduplicates, and moves to curated vulnerabilities table. Raw entries purged after successful processing.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "EPSS Enrichment",
+      "description": "Separate background job queries FIRST.org EPSS API to enrich curated CVEs with exploitation probability scores. Scriptable, not LLM-based.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Low-Confidence Review Queue",
+      "description": "Admin page showing LLM extractions with low confidence scores marked as needs_review. Admin can delete or manually classify entries.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Source Health Monitoring",
+      "description": "Admin console displays health status for each source with visual indicators (highlight + warning icon for failures). Sources retry on schedule up to 20 consecutive failures before considered persistently failing.",
+      "priority": "must_have"
+    },
+    {
+      "feature": "Authentication (Deferred)",
+      "description": "Design admin pages with segregation to allow authentication to be added later. Do not implement auth for MVP, but ensure admin routes are separable.",
+      "priority": "nice_to_have"
+    },
+    {
+      "feature": "Mark as Remediated",
+      "description": "Allow marking vulnerabilities as remediated to track status.",
+      "priority": "nice_to_have"
+    },
+    {
+      "feature": "Export Filtered View",
+      "description": "Export current filtered vulnerability list to CSV or JSON.",
+      "priority": "nice_to_have"
+    },
+    {
+      "feature": "Email Notifications",
+      "description": "Alert on new KEV or high-EPSS vulnerabilities.",
+      "priority": "nice_to_have"
+    },
+    {
+      "feature": "Multi-LLM Support",
+      "description": "Support for Claude, Gemini APIs alongside Ollama.",
+      "priority": "nice_to_have"
+    },
+    {
+      "feature": "Intelligence Page",
+      "description": "Threat intelligence view with critical advisories, recent exploits feed, mitigation coverage stats, and vendor advisory feed. Placeholder in MVP with full implementation deferred.",
+      "priority": "nice_to_have"
+    }
+  ],
+  "architecture": "{\n  \"overview\": \"A three-tier 'Collector-Processor-Viewer' architecture designed for fault isolation and low-latency presentation. Ingestion and LLM processing are decoupled from the web layer via a shared persistent store and background job orchestration.\",\n  \"components\": [\n    {\n      \"name\": \"Web/API Server\",\n      \"purpose\": \"Serves the dashboard UI via Jinja2, handles HTMX partial updates, and manages Admin operations.\",\n      \"technology\": \"FastAPI, HTMX, Jinja2\",\n      \"interfaces\": [\n        \"REST API\",\n        \"HTMX Fragments\",\n        \"Web UI\"\n      ]\n    },\n    {\n      \"name\": \"Background Worker\",\n      \"purpose\": \"Orchestrates multi-source polling, LLM extraction (Ollama), and EPSS API enrichment. Runs as a separate container in production to ensure UI responsiveness.\",\n      \"technology\": \"APScheduler, Taskiq\",\n      \"interfaces\": [\n        \"Internal Database access\",\n        \"Ollama REST API\",\n        \"External Security APIs\"\n      ]\n    },\n    {\n      \"name\": \"LLM Engine\",\n      \"purpose\": \"Processes raw text from RSS/custom APIs to extract structured vulnerability data (CVE, Vendor, Product).\",\n      \"technology\": \"Ollama (local/network-based)\",\n      \"interfaces\": [\n        \"Ollama API (v1/generate)\"\n      ]\n    },\n    {\n      \"name\": \"Persistence Layer\",\n      \"purpose\": \"Stores configuration, raw entries, curated vulnerabilities, and the massive CPE dictionary.\",\n      \"technology\": \"PostgreSQL (Prod) / SQLite (Dev) with FTS5\",\n      \"interfaces\": [\n        \"SQLAlchemy 2.0 (Async)\"\n      ]\n    },\n    {\n      \"name\": \"Reverse Proxy\",\n      \"purpose\": \"TLS termination, static asset caching, and basic auth for the admin sub-paths.\",\n      \"technology\": \"Nginx / Caddy\",\n      \"interfaces\": [\n        \"HTTPS (Port 443)\"\n      ]\n    }\n  ],\n  \"communication_patterns\": \"Asynchronous background jobs for ingestion; synchronous internal API calls for LLM processing; RESTful API with HTMX Fragments for front-to-back UI state changes.\",\n  \"diagrams\": \"[Data Sources] --(Poll)--> [RawEntry Table] --(LLM/Worker)--> [Review Queue] --(Admin)--> [Curated Table] <--(HTMX)--> [Web Dashboard]\"\n}",
+  "data_model": "{\n  \"entities\": [\n    {\n      \"name\": \"DataSource\",\n      \"description\": \"Configuration for external feeds (NVD, RSS, Custom API).\",\n      \"key_attributes\": [\n        \"id\",\n        \"source_type\",\n        \"url\",\n        \"polling_interval\",\n        \"auth_config_encrypted\",\n        \"is_enabled\"\n      ],\n      \"relationships\": [\n        \"One-to-many with RawEntry\"\n      ]\n    },\n    {\n      \"name\": \"RawEntry\",\n      \"description\": \"Staging table for ingested data before processing. 7-day retention policy after processing.\",\n      \"key_attributes\": [\n        \"id\",\n        \"source_id\",\n        \"raw_payload\",\n        \"ingested_at\",\n        \"processing_status\"\n      ],\n      \"relationships\": [\n        \"Linked to Vulnerability post-extraction\"\n      ]\n    },\n    {\n      \"name\": \"Vulnerability\",\n      \"description\": \"Core structured vulnerability record.\",\n      \"key_attributes\": [\n        \"cve_id (PK)\",\n        \"cvss_score\",\n        \"epss_score\",\n        \"kev_status\",\n        \"confidence_score\",\n        \"needs_review\",\n        \"remediated_at\"\n      ],\n      \"relationships\": [\n        \"Many-to-Many with Product via VulnerabilityProduct\"\n      ]\n    },\n    {\n      \"name\": \"Product\",\n      \"description\": \"Inventory from NVD CPE Dictionary (1M+ items).\",\n      \"key_attributes\": [\n        \"id\",\n        \"cpe_uri\",\n        \"vendor\",\n        \"product_name\",\n        \"is_monitored\"\n      ],\n      \"relationships\": [\n        \"Many-to-Many with Vulnerability\"\n      ]\n    },\n    {\n      \"name\": \"VulnerabilityProduct\",\n      \"description\": \"Association table for M:N mapping.\",\n      \"key_attributes\": [\n        \"vulnerability_id\",\n        \"product_id\"\n      ],\n      \"relationships\": [\n        \"Composite primary key, indexed on both IDs\"\n      ]\n    }\n  ],\n  \"storage_recommendations\": \"SQLite for dev (using FTS5 for product search); PostgreSQL for production. Partition 'Vulnerability' and 'VulnerabilityProduct' tables by 'published_date' (Yearly) once records exceed 100k to maintain query performance.\",\n  \"data_flow\": \"Ingestion -> RawEntry -> LLM Processor -> Confidence Heuristic -> Review Queue (if < 0.8) -> Curated Vulnerabilities Table.\"\n}",
+  "api_contracts": "{\n  \"style\": \"RESTful with HTML Fragment support (HTMX) and JSON for telemetry.\",\n  \"endpoints\": [\n    {\n      \"method\": \"GET\",\n      \"path\": \"/api/vulnerabilities\",\n      \"purpose\": \"Returns filtered vulnerability list.\",\n      \"request_shape\": \"Query: ?vendor=&product=&min_epss=&kev_only=true\",\n      \"response_shape\": \"HTML Table Fragments for HTMX hx-swap.\"\n    },\n    {\n      \"method\": \"GET\",\n      \"path\": \"/api/trends\",\n      \"purpose\": \"Aggregated time-series data for charts.\",\n      \"request_shape\": \"None\",\n      \"response_shape\": \"JSON: { labels: string[], datasets: { data: number[] } }\"\n    },\n    {\n      \"method\": \"GET\",\n      \"path\": \"/admin/llm/models\",\n      \"purpose\": \"Discovers available models on the Ollama instance.\",\n      \"request_shape\": \"None\",\n      \"response_shape\": \"JSON: [ 'llama3', 'mistral', 'phi3' ]\"\n    },\n    {\n      \"method\": \"POST\",\n      \"path\": \"/admin/review-queue/{id}/approve\",\n      \"purpose\": \"Manual override and promotion of extracted data.\",\n      \"request_shape\": \"JSON: { edited_fields: { ... } }\",\n      \"response_shape\": \"JSON: { status: 'success' }\"\n    },\n    {\n      \"method\": \"GET\",\n      \"path\": \"/export\",\n      \"purpose\": \"Dumps current filtered view for reporting.\",\n      \"request_shape\": \"Query params (same as /api/vulnerabilities)\",\n      \"response_shape\": \"CSV or JSON File\"\n    }\n  ],\n  \"authentication\": \"Logical route segregation (/admin/*). Reverse-proxy basic auth recommended for MVP; FastAPI middleware ready for future JWT/Session auth.\"\n}",
+  "user_flows": "[\n  {\n    \"name\": \"Vulnerability Triage\",\n    \"actor\": \"Security Analyst\",\n    \"steps\": [\n      \"Dashboard loads with KPI cards (Total, KEV, High EPSS)\",\n      \"Analyst applies 'KEV-only' filter via HTMX toggle\",\n      \"Analyst selects high-priority CVE to view full extraction details\",\n      \"Analyst marks 'Remediated' to remove from active view\"\n    ],\n    \"happy_path\": \"Relevant vulnerabilities identified and status updated within 60 seconds.\",\n    \"error_cases\": [\n      \"Chart data fails to load (show placeholder)\",\n      \"Empty filtered results\"\n    ]\n  },\n  {\n    \"name\": \"Admin Data Maintenance\",\n    \"actor\": \"Administrator\",\n    \"steps\": [\n      \"Admin enters Review Queue to see low-confidence extractions\",\n      \"Admin compares raw source text vs LLM structured fields\",\n      \"Admin fixes a minor hallucination (e.g., wrong vendor name)\",\n      \"Admin clicks 'Approve', moving record to curated table\"\n    ],\n    \"happy_path\": \"Human correction ensures high-quality data for non-standard RSS feeds.\",\n    \"error_cases\": [\n      \"Ollama connection timeout\",\n      \"Duplicate record detected\"\n    ]\n  }\n]",
+  "security": "{\n  \"authentication\": \"Admin-only routes segregated by path for firewall/proxy rules.\",\n  \"authorization\": \"Path-based (Analyst: /dashboard, /api; Admin: /admin, /sources).\",\n  \"data_protection\": \"Sensitive credentials (API keys) stored using Fernet symmetric encryption. TLS 1.3 enforced for all external traffic.\",\n  \"compliance_notes\": \"No PII stored; ephemeral storage for raw third-party content (7-day purge).\",\n  \"threat_model\": \"Mitigations: URL validation for SSRF, JSON schema validation for LLM outputs to prevent prompt injection payload execution, and server-side aggregation to prevent DB DoS.\"\n}",
+  "deployment": "{\n  \"infrastructure\": \"Docker Compose (Web, Worker, Postgres, Ollama, Nginx).\",\n  \"scaling_strategy\": \"Horizontal scaling for Web pods; vertical scaling for Ollama/Worker based on ingestion volume; Shared PG job store for task coordination.\",\n  \"monitoring\": \"Prometheus metrics for job latency/failure; HTMX error handling via 'hx-on::after-request' toasts.\",\n  \"ci_cd\": \"GitHub Actions for Pytest, Playwright (UI testing), and multi-arch Docker builds.\"\n}"
+}

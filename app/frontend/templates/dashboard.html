@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnDash - Vulnerability Dashboard</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Chart.js for trend visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b4bee",
+                        "primary-glow": "#4d6df8",
+                        "accent-pink": "#ff2a6d",
+                        "accent-cyan": "#05d9e8",
+                        "background-dark": "#050505",
+                        "surface-dark": "#0f111a",
+                        "surface-border": "#1f2335",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "mono": ["Space Grotesk", "monospace"]
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #050505;
+            color: #e0e0e0;
+        }
+
+        .cyber-grid {
+            background-image: linear-gradient(rgba(35, 41, 72, 0.2) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(35, 41, 72, 0.2) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .glass-panel {
+            background: rgba(15, 17, 26, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(43, 75, 238, 0.1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f111a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #323b67;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2b4bee;
+        }
+    </style>
+</head>
+<body class="min-h-screen cyber-grid">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="glass-panel rounded-lg p-8 mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-primary flex items-center gap-3">
+                        <span class="material-symbols-outlined text-5xl">shield</span>
+                        VulnDash
+                    </h1>
+                    <p class="text-slate-400 mt-2">Cybersecurity Vulnerability Dashboard</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/admin/sources-ui" class="px-4 py-2 bg-surface-dark border border-surface-border rounded hover:border-primary transition text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined">settings</span>
+                        Manage Sources
+                    </a>
+                    <a href="/admin/products" class="px-4 py-2 bg-surface-dark border border-surface-border rounded hover:border-primary transition text-white flex items-center gap-2">
+                        <span class="material-symbols-outlined">inventory_2</span>
+                        Products
+                    </a>
+                    <a href="/vulnerabilities-ui" class="px-4 py-2 bg-primary text-white rounded hover:bg-primary-glow transition flex items-center gap-2">
+                        <span class="material-symbols-outlined">bug_report</span>
+                        Vulnerabilities
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filter Panel -->
+        <div id="filterPanelContainer"
+             hx-get="/fragments/filter-panel"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <!-- Loading placeholder -->
+            <div class="glass-panel rounded-lg p-6 text-center mb-8">
+                <div class="animate-pulse">
+                    <div class="h-8 bg-surface-border rounded w-32 mb-4"></div>
+                    <div class="h-12 bg-surface-border rounded"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div id="kpiCards"
+             hx-get="/fragments/kpi-cards?days=30"
+             hx-trigger="load"
+             hx-swap="outerHTML"
+             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Loading placeholder -->
+            <div class="glass-panel rounded-lg p-6">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-surface-border rounded w-32 mb-2"></div>
+                    <div class="h-8 bg-surface-border rounded w-20"></div>
+                </div>
+            </div>
+            <div class="glass-panel rounded-lg p-6">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-surface-border rounded w-32 mb-2"></div>
+                    <div class="h-8 bg-surface-border rounded w-20"></div>
+                </div>
+            </div>
+            <div class="glass-panel rounded-lg p-6">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-surface-border rounded w-32 mb-2"></div>
+                    <div class="h-8 bg-surface-border rounded w-20"></div>
+                </div>
+            </div>
+            <div class="glass-panel rounded-lg p-6">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-surface-border rounded w-32 mb-2"></div>
+                    <div class="h-8 bg-surface-border rounded w-20"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend Chart Section -->
+        <div id="trendChartContainer"
+             hx-get="/fragments/trend-chart?days=30"
+             hx-trigger="load"
+             hx-swap="innerHTML"
+             class="mb-8">
+            <!-- Loading placeholder -->
+            <div class="glass-panel rounded-lg p-6 text-center">
+                <div class="animate-pulse">
+                    <div class="h-8 bg-surface-border rounded w-48 mb-4 mx-auto"></div>
+                    <div class="h-64 bg-surface-border rounded"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="glass-panel rounded-lg p-6 text-center text-slate-400 text-sm">
+            <p>VulnDash v1.0.0 | Powered by FastAPI, HTMX, and Chart.js</p>
+        </div>
+    </div>
+
+    <script>
+        // No additional JavaScript needed - HTMX handles all updates
+    </script>
+</body>
+</html>

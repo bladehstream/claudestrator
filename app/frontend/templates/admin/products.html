@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Inventory - VulnDash Admin</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+
+    <style>
+        /* Cyberpunk theme configuration */
+        :root {
+            --primary: #2b4bee;
+            --primary-glow: #4d6df8;
+            --accent-pink: #ff2a6d;
+            --accent-cyan: #05d9e8;
+            --bg-dark: #050505;
+            --surface-dark: #0f111a;
+            --surface-border: #1f2335;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-dark);
+            color: #e2e8f0;
+        }
+
+        /* Glass panel effect */
+        .glass-panel {
+            background: rgba(15, 17, 26, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--surface-border);
+        }
+
+        /* Neon glow effects */
+        .glow-primary {
+            box-shadow: 0 0 20px rgba(43, 75, 238, 0.3);
+        }
+
+        .glow-primary:hover {
+            box-shadow: 0 0 30px rgba(43, 75, 238, 0.5);
+        }
+
+        /* Cyber grid background */
+        .cyber-grid {
+            background-image:
+                linear-gradient(rgba(43, 75, 238, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(43, 75, 238, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-glow);
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#2b4bee',
+                        'primary-glow': '#4d6df8',
+                        'accent-pink': '#ff2a6d',
+                        'accent-cyan': '#05d9e8',
+                        'bg-dark': '#050505',
+                        'surface-dark': '#0f111a',
+                        'surface-border': '#1f2335',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="cyber-grid">
+    <div class="min-h-screen p-6">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold text-white tracking-tight uppercase">
+                        Product Inventory
+                    </h1>
+                    <p class="text-slate-400 mt-2">Manage monitored products and import from NVD CPE dictionary</p>
+                </div>
+                <a href="/admin" class="px-4 py-2 bg-surface-dark border border-surface-border rounded text-sm hover:border-primary transition">
+                    <span class="material-symbols-outlined inline-block align-middle">arrow_back</span>
+                    Back to Admin
+                </a>
+            </div>
+        </header>
+
+        <!-- Action Bar -->
+        <div class="glass-panel rounded-lg p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <!-- Search -->
+                <div class="flex-1 min-w-[300px]">
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                            search
+                        </span>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search vendor or product..."
+                            class="w-full pl-12 pr-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            hx-get="/api/products/search"
+                            hx-trigger="keyup changed delay:500ms"
+                            hx-target="#productGrid"
+                            hx-include="[name='filter']"
+                        >
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex gap-2">
+                    <label class="inline-flex items-center px-4 py-3 bg-surface-dark border border-surface-border rounded-lg cursor-pointer hover:border-primary transition">
+                        <input
+                            type="checkbox"
+                            name="filter"
+                            value="monitored"
+                            class="w-4 h-4 text-primary bg-surface-dark border-surface-border rounded focus:ring-primary focus:ring-2"
+                            hx-get="/api/products/search"
+                            hx-trigger="change"
+                            hx-target="#productGrid"
+                            hx-include="#searchInput"
+                        >
+                        <span class="ml-2 text-sm text-white uppercase tracking-wide">Monitored Only</span>
+                    </label>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-2">
+                    <button
+                        class="px-4 py-3 bg-primary text-white rounded-lg font-medium uppercase text-sm tracking-wide glow-primary hover:bg-primary-glow transition"
+                        onclick="openAddProductModal()"
+                    >
+                        <span class="material-symbols-outlined inline-block align-middle text-lg">add</span>
+                        Add Custom Product
+                    </button>
+
+                    <button
+                        class="px-4 py-3 bg-accent-cyan text-black rounded-lg font-medium uppercase text-sm tracking-wide hover:opacity-80 transition"
+                        onclick="openImportModal()"
+                    >
+                        <span class="material-symbols-outlined inline-block align-middle text-lg">cloud_download</span>
+                        Import from NVD
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Status -->
+        <div class="glass-panel rounded-lg p-4 mb-6" id="syncStatus">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-accent-cyan">sync</span>
+                    <div>
+                        <p class="text-sm text-slate-400">Last CPE Dictionary Sync</p>
+                        <p class="text-white font-medium" id="lastSyncTime">Loading...</p>
+                    </div>
+                </div>
+                <button
+                    class="px-4 py-2 bg-surface-dark border border-surface-border rounded text-sm hover:border-accent-cyan transition"
+                    hx-post="/api/products/sync/trigger"
+                    hx-swap="none"
+                >
+                    <span class="material-symbols-outlined inline-block align-middle text-lg">refresh</span>
+                    Sync Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="glass-panel rounded-lg p-6">
+            <div id="productGrid" hx-get="/api/products/search" hx-trigger="load" hx-swap="innerHTML">
+                <!-- Products will be loaded here via HTMX -->
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-pulse text-slate-400">Loading products...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-6 flex items-center justify-center" id="pagination">
+            <!-- Pagination controls will be added dynamically -->
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="glass-panel rounded-lg p-8 w-full max-w-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white uppercase tracking-tight">Add Custom Product</h2>
+                <button onclick="closeAddProductModal()" class="text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form hx-post="/api/products/" hx-swap="none" hx-on="htmx:afterRequest: closeAddProductModal(); refreshProductGrid()">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Vendor</label>
+                        <input
+                            type="text"
+                            name="vendor"
+                            required
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="e.g., microsoft"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Product Name</label>
+                        <input
+                            type="text"
+                            name="product_name"
+                            required
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="e.g., windows_10"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Version (Optional)</label>
+                        <input
+                            type="text"
+                            name="version"
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="e.g., 21h2"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 uppercase tracking-wide mb-2">Description (Optional)</label>
+                        <textarea
+                            name="description"
+                            rows="3"
+                            class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                            placeholder="Brief description of the product"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input
+                            type="checkbox"
+                            name="is_monitored"
+                            checked
+                            class="w-4 h-4 text-primary bg-surface-dark border-surface-border rounded focus:ring-primary focus:ring-2"
+                        >
+                        <label class="ml-2 text-sm text-slate-300">Enable monitoring for this product</label>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button
+                        type="submit"
+                        class="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium uppercase text-sm tracking-wide glow-primary hover:bg-primary-glow transition"
+                    >
+                        Add Product
+                    </button>
+                    <button
+                        type="button"
+                        onclick="closeAddProductModal()"
+                        class="px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white hover:border-primary transition"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="glass-panel rounded-lg p-8 w-full max-w-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white uppercase tracking-tight">Import from NVD CPE</h2>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-slate-300">
+                    Search the NVD CPE dictionary to import products into your monitored inventory.
+                    Use the full-text search to find specific vendors or products.
+                </p>
+
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                    <input
+                        type="text"
+                        id="cpeSearchInput"
+                        placeholder="Search NVD CPE dictionary..."
+                        class="w-full pl-12 pr-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white focus:border-primary focus:outline-none"
+                        hx-get="/api/products/search?source=nvd_cpe"
+                        hx-trigger="keyup changed delay:500ms"
+                        hx-target="#cpeSearchResults"
+                    >
+                </div>
+
+                <div id="cpeSearchResults" class="max-h-96 overflow-y-auto">
+                    <!-- Search results will appear here -->
+                    <p class="text-center text-slate-400 py-8">Enter search terms to find products</p>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button
+                    onclick="closeImportModal()"
+                    class="w-full px-4 py-3 bg-surface-dark border border-surface-border rounded-lg text-white hover:border-primary transition"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functions
+        function openAddProductModal() {
+            document.getElementById('addProductModal').classList.remove('hidden');
+        }
+
+        function closeAddProductModal() {
+            document.getElementById('addProductModal').classList.add('hidden');
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.add('hidden');
+        }
+
+        function refreshProductGrid() {
+            htmx.trigger('#productGrid', 'load');
+        }
+
+        // Toggle monitoring
+        function toggleMonitoring(productId, currentState) {
+            fetch(`/api/products/${productId}/monitoring`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ is_monitored: !currentState })
+            })
+            .then(() => refreshProductGrid())
+            .catch(err => console.error('Failed to toggle monitoring:', err));
+        }
+
+        // Load sync status on page load
+        fetch('/api/products/sync/status?limit=1')
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const lastSync = data[0];
+                    const date = new Date(lastSync.completed_at || lastSync.started_at);
+                    document.getElementById('lastSyncTime').textContent =
+                        date.toLocaleString() + ' - ' + lastSync.status.toUpperCase();
+                }
+            })
+            .catch(err => {
+                document.getElementById('lastSyncTime').textContent = 'Never synced';
+            });
+    </script>
+</body>
+</html>

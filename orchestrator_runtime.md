@@ -30,25 +30,28 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 
 ## Argument Parsing
 
-**CRITICAL**: Parse as `<loops> [--research [<count> <category>]...]`
+**CRITICAL**: Parse as `<loops> [--source <type>] [--research [<count> <category>]...]`
 
 1. **First token** → LOOP_COUNT (number of loops)
-2. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
-3. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas)
-4. **If a token following `--research` is NOT a number** → Category with no quota
+2. **Check for `--source` flag** → SOURCE_TYPE (default: "prd", or "external_spec")
+3. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
+4. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas)
+5. **If a token following `--research` is NOT a number** → Category with no quota
 
-| Command | Loops | Research | Quotas (per loop) |
-|---------|-------|----------|-------------------|
-| `/orchestrate` | 0 | No | Initial only |
-| `/orchestrate 3` | 3 | No | Process existing issues only |
-| `/orchestrate 3 --research` | 3 | Yes | General improvements |
-| `/orchestrate 3 --research security` | 3 | Yes | Security focus (no quota) |
-| `/orchestrate 3 --research 2 security` | 3 | Yes | 2 security per loop |
-| `/orchestrate 3 --research 2 security 3 UI` | 3 | Yes | 2 security + 3 UI per loop |
+| Command | Loops | Source | Research | Quotas (per loop) |
+|---------|-------|--------|----------|-------------------|
+| `/orchestrate` | 0 | prd | No | Initial only |
+| `/orchestrate 3` | 3 | prd | No | Process existing issues only |
+| `/orchestrate --source external_spec` | 0 | external_spec | No | Build from projectspec/*.json |
+| `/orchestrate 3 --research` | 3 | prd | Yes | General improvements |
+| `/orchestrate 3 --research security` | 3 | prd | Yes | Security focus (no quota) |
+| `/orchestrate 3 --research 2 security` | 3 | prd | Yes | 2 security per loop |
+| `/orchestrate 3 --research 2 security 3 UI` | 3 | prd | Yes | 2 security + 3 UI per loop |
 
 Store parsed values:
 ```
 LOOP_COUNT: 3
+SOURCE_TYPE: prd | external_spec
 RESEARCH_ENABLED: true
 QUOTAS: [
   { category: "security", count: 2 },
@@ -57,18 +60,21 @@ QUOTAS: [
 ```
 
 If `RESEARCH_ENABLED` is false, QUOTAS will be empty and Research Agent will not be spawned.
+If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD.md.
 
 ---
 
 ## Startup
 
-1. Check PRD.md exists
+1. **Check source files exist:**
+   - If `SOURCE_TYPE = prd`: Check PRD.md exists
+   - If `SOURCE_TYPE = external_spec`: Check projectspec/spec-final.json AND projectspec/test-plan-output.json exist
 2. Check git → init if needed
 3. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories
 4. Get absolute working directory with `pwd`
 5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS`
 6. Initialize LOOP_NUMBER to 1
-7. Parse arguments → set LOOP_COUNT and RESEARCH_ENABLED
+7. Parse arguments → set LOOP_COUNT, SOURCE_TYPE, and RESEARCH_ENABLED
 8. **Run Critical Issue Resolution Loop** (see below)
 
 ---

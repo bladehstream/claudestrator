@@ -1,22 +1,42 @@
 # Task [ID]: [Name]
 
-## Metadata
+## Metadata (TABLE format - REQUIRED)
 
 | Field | Value |
 |-------|-------|
+| Priority | [must_have / nice_to_have / critical / high / medium / low] |
 | Status | pending |
+| Category | [frontend / backend / testing / fullstack / devops / etc.] |
+| Depends On | [task IDs or []] |
+
+---
+
+## Prose Section (BOLD format - REQUIRED)
+
+**Description:** [REQUIRED - Clear description of what needs to be accomplished]
+
+### For TEST tasks only:
+
+**Steps:**
+1. [REQUIRED - First test step]
+2. [Second test step]
+3. [Additional steps as needed]
+
+**Expected Result:** [REQUIRED - Expected outcome of the test]
+
+---
+
+## Extended Fields (optional, for detailed tracking)
+
+| Field | Value |
+|-------|-------|
 | Model | - |
 | Complexity | [easy / normal / complex] |
 | Skills | - |
 | Created | [YYYY-MM-DD HH:MM] |
 | Started | - |
 | Completed | - |
-| Depends On | [task IDs or "none"] |
 | Blocks | [task IDs or "none"] |
-
-## Objective
-
-[Clear, single-sentence statement of what needs to be accomplished.]
 
 ## Acceptance Criteria
 

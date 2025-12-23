@@ -307,7 +307,64 @@ CATEGORY_DEPENDENCIES = {
 }
 ```
 
-### D.5 Test Task Format
+### D.5 CRITICAL FORMAT REQUIREMENT
+
+**Each task MUST have exactly two sections separated by `---`:**
+
+**SECTION 1: METADATA (TABLE format - REQUIRED)**
+```
+| Field | Value |
+|-------|-------|
+| Priority | [value] |
+| Status | pending |
+| Category | [value] |
+| Depends On | [value] |
+```
+- MUST use pipe-delimited table format
+- MUST include header row `| Field | Value |`
+- MUST include separator row `|-------|-------|`
+- Do NOT use `**Bold:** value` format for metadata
+
+**SECTION 2: PROSE (BOLD format - REQUIRED)**
+
+For BUILD tasks:
+```
+---
+
+**Description:** [REQUIRED - prose describing the feature/task]
+```
+
+For TEST tasks:
+```
+---
+
+**Description:** [REQUIRED - prose describing what is being tested]
+
+**Steps:**
+1. [REQUIRED - first test step]
+2. [REQUIRED - second test step]
+3. [additional steps as needed]
+
+**Expected Result:** [REQUIRED - prose describing expected outcome]
+```
+
+**Field Requirements:**
+
+| Field | BUILD Tasks | TEST Tasks |
+|-------|-------------|------------|
+| **Description:** | REQUIRED | REQUIRED |
+| **Steps:** | NOT USED | REQUIRED (numbered list) |
+| **Expected Result:** | NOT USED | REQUIRED |
+
+**Format Rules:**
+- MUST start with `---` separator after metadata table
+- MUST use `**FieldName:** value` format exactly as shown
+- Multi-line content is allowed for all prose fields
+- Steps MUST be a numbered list (1. 2. 3.)
+
+---
+
+### D.6 Test Task Format
 
 Each test batch task should include:
 

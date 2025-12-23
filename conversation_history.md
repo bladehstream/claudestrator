@@ -482,6 +482,70 @@ New routing row:
 
 ---
 
+## Documentation Clarification: Two Runtime Files
+
+### Discovery Date: 2025-12-23 ~01:00
+
+**Problem:** Two files described orchestration logic, causing confusion about which to edit.
+
+| File | Actual Purpose | Used By |
+|------|----------------|---------|
+| `commands/orchestrate.md` | **Authoritative** - actual command implementation | `/orchestrate` skill |
+| `orchestrator_runtime.md` | Reference documentation only | Nothing (not read) |
+
+**Resolution:** Marked `orchestrator_runtime.md` as deprecated reference documentation:
+- Added deprecation header to file
+- Updated README.md file structure
+- Updated templates/CLAUDE.md resources section
+- Updated docs/auto_retry_mechanism.md integration points
+
+**Commit:** `2fd7263`
+
+**Future Action:** Consider removing `orchestrator_runtime.md` entirely and consolidating into `commands/orchestrate.md` or a dedicated architecture doc.
+
+---
+
+## IMPORTANT: task_queue.md Format Reference
+
+### Updated: 2025-12-23 (Session 2)
+
+**Current format:** Hybrid TABLE+BOLD format
+
+**Metadata section (TABLE format):**
+```markdown
+### BUILD-001: Vulnerability Dashboard
+
+| Field | Value |
+|-------|-------|
+| Priority | must_have |
+| Status | completed |
+| Category | dashboard-ui |
+| Depends On | [] |
+```
+
+**Prose section (BOLD format, after `---` separator):**
+```markdown
+---
+
+**Description:** Main view displaying KPI cards...
+```
+
+**Correct grep patterns:**
+```bash
+# CORRECT - matches TABLE format (101 pending, 17 completed)
+grep -c "| Status | pending |" .orchestrator/task_queue.md
+grep -c "| Status | completed |" .orchestrator/task_queue.md
+```
+
+**Verified 2025-12-23 Session 2:**
+- Table pattern `| Status | pending |` → 101 matches
+- Table pattern `| Status | completed |` → 17 matches
+
+**Files that use task_queue.md grep patterns:**
+- `commands/orchestrate.md` - PENDING_TASKS (lines 307, 352)
+
+---
+
 ## Fixes Tracker
 
 ### Applied Fixes
@@ -490,18 +554,58 @@ New routing row:
 |-----|------|--------|---------|
 | **Option A: TEST task categories** | 2025-12-23 | ✅ Applied | Changed 101 TEST tasks from test-plan categories to `Category: testing` in task_queue.md |
 | **Option B: Pending tasks routing** | 2025-12-23 | ✅ Applied | Added `PENDING_TASKS` check to `commands/orchestrate.md` - commits `a777362`, `a278147` |
+| **Grep pattern fix** | 2025-12-23 | ✅ Applied | Fixed pattern from `| Status | pending |` to `\*\*Status:\*\* pending` (bold format) - commit `9292839` |
+| **Deprecate orchestrator_runtime.md** | 2025-12-23 | ✅ Applied | Marked as reference only, updated README/docs - commit `2fd7263` |
+| **Format standardization** | 2025-12-23 | ✅ Applied | Converted task_queue.md to hybrid TABLE+BOLD format, updated grep patterns to TABLE format, added format enforcement to decomposition_agent.md |
 
 ### Pending Fixes
 
 | Fix | Priority | File(s) | Description |
 |-----|----------|---------|-------------|
 | **Option C: BRANCH D category enforcement** | High | `prompts/decomposition_agent.md` | Ensure TEST tasks always get `Category: testing` |
+| **Test sequencing with sequential retry** | High | `testing_agent.md`, `.orchestrator/` | Resource-based grouping + sequential retry for failed tests (language-agnostic) |
 | **Category fallback with warning** | Medium | `orchestrator_runtime.md` | Add fallback for unrecognized categories → testing_agent with warning log |
 | **Explicit Depends On in issues** | Low | `prompts/implementation/testing_agent.md` | Add `Affected Build Tasks` field to issue template |
 | **Mandatory verification in impl agents** | Medium | `prompts/implementation/*.md` | Make Phase 6 verification required, not advisory |
 | **Artifact-based validation** | Medium | `orchestrator_runtime.md` | Check for `.pytest_cache/`, `.coverage` before accepting completion |
 | **Consolidate requirements.txt** | Low | Root `requirements.txt` | Add missing `aiosqlite`, `asyncpg` from `app/requirements.txt` |
 | **Dashboard/App architecture** | Low | `dashboard/`, `app/` | Decide: integrate or remove standalone dashboard |
+
+### Future Feature: Test Sequencing with Sequential Retry
+
+**Status:** Designed, not implemented
+
+**Approach:** Hybrid of Resource-Based Grouping + Sequential Retry
+
+**Concept:**
+1. **Phase 1:** Run tests in resource groups (parallel within safe groups, serial for conflicting resources)
+2. **Phase 2:** Collect failed tests
+3. **Phase 3:** Re-run failed tests sequentially in isolation
+4. **Phase 4:** Classify results:
+   - Tests that pass on retry → FLAKY (resource conflict)
+   - Tests that fail on retry → REAL FAILURE (bug)
+
+**Resource Domains Identified:**
+- DOMAIN A: Database-write tests (serialize)
+- DOMAIN B: Ollama/LLM service tests (strict serialize)
+- DOMAIN C: External API tests (throttled)
+- DOMAIN D: Scheduler tests (serialize)
+- DOMAIN E: Read-only/mocked tests (full parallel)
+
+**Language-Agnostic Implementation:**
+- Uses JUnit XML output (universal standard)
+- Shell scripts for retry logic (no Python dependency)
+- YAML config file per project for test runner commands
+- Supports: Python, JavaScript, Go, Rust, Java, C#, Ruby
+
+**Files to Create:**
+- `.orchestrator/test_config.yaml` - Test runner configuration
+- `.orchestrator/sequential_retry.sh` - Universal retry script
+- `.orchestrator/run_tests_with_retry.sh` - Main test wrapper
+
+**Estimated Implementation Time:** 3-5 hours
+
+---
 
 ### Fix Implementation Order
 
@@ -512,6 +616,91 @@ New routing row:
 5. 🔲 **Explicit Depends On** - Improve issue traceability
 6. 🔲 **Mandatory verification** - Prevent fabricated quality metrics
 7. 🔲 **Artifact validation** - External verification of test execution
+
+---
+
+## Session 2: 2025-12-23 - Format Standardization
+
+### Format Consistency Issue Discovered
+
+**Problem:** task_queue.md was using BOLD format for metadata, but:
+- `templates/task_entry.md` documented TABLE format
+- `prompts/decomposition_agent.md` documented TABLE format
+- `templates/issue_queue.md` uses TABLE format
+
+This was a deviation from the documented templates.
+
+### Solution: Hybrid TABLE+BOLD Format
+
+Standardized on a **hybrid format with clear sections**:
+
+1. **SECTION 1: METADATA** - TABLE format (parsed by grep)
+```markdown
+| Field | Value |
+|-------|-------|
+| Priority | must_have |
+| Status | pending |
+| Category | testing |
+| Depends On | [BUILD-001] |
+```
+
+2. **SECTION 2: PROSE** - BOLD format (human-readable, after `---` separator)
+```markdown
+---
+
+**Description:** [prose content]
+
+**Steps:** (TEST tasks only)
+1. Step one
+2. Step two
+
+**Expected Result:** [prose content] (TEST tasks only)
+```
+
+### Changes Applied
+
+| File | Change |
+|------|--------|
+| `.orchestrator/task_queue.md` | Converted from BOLD to hybrid TABLE+BOLD format |
+| `.orchestrator/convert_task_format.py` | Created conversion script |
+| `commands/orchestrate.md` (lines 307, 352) | Updated grep patterns to `\| Status \| pending \|` |
+| `prompts/decomposition_agent.md` | Added D.5 CRITICAL FORMAT REQUIREMENT section |
+| `templates/task_entry.md` | Updated to show hybrid format |
+
+### Conversion Results
+
+```
+Table '| Status | pending |': 101
+Table '| Status | completed |': 17
+Bold '**Status:**': 0
+
+SUCCESS: All Status fields converted to TABLE format
+```
+
+### Grep Pattern Update
+
+```bash
+# Updated from (BOLD format):
+PENDING_TASKS=$(grep -c "\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+
+# To (TABLE format):
+PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+```
+
+### Format Enforcement Added
+
+Added explicit format requirements to `prompts/decomposition_agent.md` section D.5:
+
+| Field | BUILD Tasks | TEST Tasks |
+|-------|-------------|------------|
+| **Description:** | REQUIRED | REQUIRED |
+| **Steps:** | NOT USED | REQUIRED (numbered list) |
+| **Expected Result:** | NOT USED | REQUIRED |
+
+### Files Created
+
+- `.orchestrator/task_queue.md.bak` - backup of original file
+- `.orchestrator/convert_task_format.py` - conversion script (can be deleted)
 
 ---
 

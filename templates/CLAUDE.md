@@ -48,8 +48,8 @@ Run `/claudestrator-help` for full documentation.
 
 ## Resources
 
-- **Runtime:** `.claudestrator/orchestrator_runtime.md`
-- **Commands:** `.claudestrator/commands/orchestrate.md`
+- **Orchestration Logic:** `.claudestrator/commands/orchestrate.md` (authoritative)
+- **Reference Docs:** `.claudestrator/orchestrator_runtime.md` (deprecated)
 - **Skills:** `.claude/skills/`
-- **State:** `.claude/` (task_queue.md, session_state.md)
+- **State:** `.orchestrator/` (task_queue.md, session_state.md)
 - **Docs:** https://github.com/bladehstream/claudestrator

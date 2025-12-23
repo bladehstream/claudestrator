@@ -116,9 +116,10 @@ project/
 │   └── analytics.html                  #   Human-readable dashboard
 │
 └── .claudestrator/                     # Framework source (git clone)
-    ├── orchestrator_runtime.md         #   Runtime protocol
-    ├── commands/                       #   Command source files
-    └── prompts/                        #   Prompt source files
+    ├── commands/                       #   Command implementations (authoritative)
+    │   └── orchestrate.md              #   Main orchestration logic
+    ├── prompts/                        #   Agent prompt files
+    └── orchestrator_runtime.md         #   Reference docs only (deprecated)
 ```
 
 **To upgrade Claudestrator** without losing state:

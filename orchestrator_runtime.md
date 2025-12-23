@@ -1,5 +1,13 @@
 # Orchestrator Runtime (MVP)
 
+> **⚠️ REFERENCE DOCUMENTATION ONLY**
+>
+> This file is **not used directly** by the `/orchestrate` command. The authoritative source is:
+> **`commands/orchestrate.md`**
+>
+> This file is preserved as reference documentation for the orchestration architecture.
+> It may be deprecated in a future version - updates should be made to `commands/orchestrate.md`.
+
 > **Version**: MVP 3.7 - Research requires explicit --research flag.
 
 ## Key Principle: Read Prompt Files

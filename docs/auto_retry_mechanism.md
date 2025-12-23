@@ -226,11 +226,12 @@ Manual intervention required. Review:
 
 | Component | Change Required |
 |-----------|-----------------|
-| `orchestrator_runtime.md` | Add auto-retry check at end of loop |
-| `commands/orchestrate.md` | Add auto-retry check at end of loop |
+| `commands/orchestrate.md` | Add auto-retry check at end of loop (authoritative) |
 | `prompts/implementation/testing_agent.md` | Add logic to flag critical issues |
 | `.orchestrator/issue_queue.md` | Add auto-retry fields to format |
 | `.orchestrator/session_state.md` | Track retry counts |
+
+> **Note:** `orchestrator_runtime.md` is deprecated reference documentation. All changes should be made to `commands/orchestrate.md`.
 
 ---
 

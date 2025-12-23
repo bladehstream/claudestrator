@@ -209,16 +209,17 @@ After critical queue clears, route based on state:
 ```bash
 PENDING_ISSUES=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
 TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "no")
+PENDING_TASKS=$(grep -c "^\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
 ```
 
-| LOOP_COUNT | PENDING_ISSUES | TASK_QUEUE_EXISTS | Action |
-|------------|----------------|-------------------|--------|
-| 0 | > 0 | yes | **Process issues** - Decomposition Agent (issues mode) → Implementation → Analysis |
-| 0 | 0 | no | **Initial build** - Step 1 (Decomposition for PRD.md) |
-| 0 | 0 | yes | **Nothing to do** - Analysis Agent only |
+| LOOP_COUNT | PENDING_ISSUES | PENDING_TASKS | Action |
+|------------|----------------|---------------|--------|
+| 0 | > 0 | any | **Process issues** - Decomposition Agent (issues mode) → Implementation → Analysis |
+| 0 | 0 | > 0 | **Process pending tasks** - Skip to Step 2 (Execute Tasks) |
+| 0 | 0 | 0 | **Nothing to do** - Analysis Agent only |
 | > 0 | any | any | **Improvement loops** - Go to Improvement Loop section |
 
-**Key insight:** `/orchestrate` (no loops) on an existing project with pending issues should still process those issues.
+**Key insight:** `/orchestrate` (no loops) on an existing project with pending issues OR pending tasks should still process them. This is critical for `external_spec` mode where TEST tasks are created alongside BUILD tasks but executed separately.
 
 ---
 

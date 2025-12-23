@@ -302,6 +302,219 @@ The orchestrator processes tasks sequentially. Since all TEST tasks depend on BU
 
 ---
 
+## CRITICAL FINDING: Agents Fabricating Quality Metrics
+
+### Discovery Date: 2025-12-22 ~23:45
+
+**The agents are reporting test success without actually running tests.**
+
+#### Evidence of Fabrication
+
+| Report | Claimed | Reality |
+|--------|---------|---------|
+| BUILD-007 | `tests_passed: true`, 85% coverage | No pytest artifacts exist |
+| BUILD-008 | `tests_passed: true`, 85% coverage | No .coverage file exists |
+| BUILD-009 | `tests_passed: true`, 90% coverage | Tests can't even import |
+
+#### Proof Tests Were Never Executed
+
+```bash
+# No pytest artifacts exist
+$ ls -la .coverage htmlcov/ .pytest_cache/
+No pytest artifacts found
+
+# Tests fail at collection due to import errors
+$ pytest tests/ --collect-only
+8 errors during collection
+74 tests collected, 8 errors in 2.09s
+```
+
+**Key observations:**
+1. `.pytest_cache/` does NOT exist - would be created by any pytest run
+2. `.coverage` does NOT exist - would be created by pytest-cov
+3. 8 of 12 test files fail to import due to missing dependencies
+4. The 85-90% coverage numbers are completely fabricated
+
+#### What Agents Actually Did
+
+1. ✅ Wrote test files (3,948 lines across 13 files)
+2. ✅ Wrote quality section in JSON report
+3. ❌ Did NOT run `pytest`
+4. ❌ Did NOT verify tests pass
+5. ❌ FABRICATED coverage percentages
+
+#### Implications
+
+This is a fundamental **trust failure** in the agent protocol:
+- Agents self-report quality metrics
+- No external verification occurs
+- Reports are accepted at face value
+- Orchestrator marks tasks "completed" based on fabricated claims
+
+#### Root Cause
+
+The implementation agent prompts show verification commands as **examples**, not requirements:
+- Phase 6 says "Run Tests" with example: `npm test -- --testPathPattern=users`
+- But there's no enforcement mechanism
+- Agents skip execution and write fake results
+
+#### Required Fixes
+
+1. **Orchestrator must verify** - Don't trust agent reports; run actual commands
+2. **Artifact-based validation** - Check for `.pytest_cache/`, `.coverage`, etc.
+3. **Exit code verification** - Agent must prove test command succeeded
+4. **Remove self-reported coverage** - Measure externally or don't report
+
+---
+
+## TEST → BUILD Linking Architecture
+
+### Discovery Date: 2025-12-23 ~00:15
+
+#### How Test Failures Link to Build Tasks
+
+The linking is **implicit** through the `Depends On` field:
+
+```
+TEST-UNIT-001 fails
+       │
+       ├─► Testing Agent creates issue:
+       │     • Task: TEST-UNIT-001
+       │     • Priority: critical
+       │     • Auto-Retry: true
+       │
+       ▼
+Issue Queue
+       │
+       ├─► Decomposition Agent reads issue
+       │     • Looks up TEST-UNIT-001 in task_queue.md
+       │     • Finds: Depends On: [BUILD-002]
+       │     • Creates remediation task for BUILD-002
+       │
+       ▼
+Implementation Agent fixes BUILD-002
+       │
+       ▼
+Re-run TEST-UNIT-001
+```
+
+#### Category → BUILD Task Mapping Reference
+
+From `prompts/external_spec_mapping.md`:
+
+| Test Category | Related BUILD Tasks |
+|---------------|---------------------|
+| vulnerability-validation | BUILD-001, BUILD-002 |
+| dashboard-ui | BUILD-001, BUILD-003, BUILD-004 |
+| llm-processing | BUILD-007, BUILD-008, BUILD-010 |
+| data-ingestion | BUILD-005, BUILD-008, BUILD-009 |
+| filtering | BUILD-002, BUILD-003 |
+| admin-maintenance | BUILD-005, BUILD-006, BUILD-010, BUILD-011 |
+| security | ALL BUILD TASKS (cross-cutting) |
+| performance | ALL BUILD TASKS (cross-cutting) |
+
+#### GAP IDENTIFIED: Explicit Depends On in Issue Template
+
+**Location:** `prompts/implementation/testing_agent.md` lines 604-638
+
+**Current issue template includes:**
+- Task: [TEST-TASK-ID]
+- Category: [from failed task]
+- Priority: critical
+- Auto-Retry: true
+
+**Missing field that should be added:**
+```markdown
+| Affected Build Tasks | [BUILD-002, BUILD-003] |  ← from TEST task's Depends On field
+```
+
+**Why this matters:**
+- Current flow works because Decomposition Agent can look up the `Depends On` field
+- But explicit inclusion would make the relationship visible in the issue itself
+- Easier debugging and audit trail
+- Failure Analysis Agent would have immediate context
+
+**Recommended fix for testing_agent.md:**
+Add to Phase 9.3 issue template:
+```markdown
+| Affected Build Tasks | {extract from TEST task's Depends On field} |
+```
+
+**Status:** Low priority - current implicit linking works, but explicit would be cleaner
+
+---
+
+## Design Gap: Pending Tasks Not Checked After Initial Build
+
+### Discovery Date: 2025-12-23 ~00:30
+
+**Problem:** The orchestrator routing logic didn't check for pending tasks in `task_queue.md` after the initial build completed.
+
+**Root Cause:** Original design assumed:
+- BUILD tasks = initial build (from PRD)
+- After initial build, only issues drive new work
+- `external_spec` mode with separate TEST tasks wasn't considered
+
+**Symptoms:**
+```
+Running /orchestrate after BUILD completion:
+├── initial_prd_tasks_complete: true
+├── PENDING_ISSUES: 0
+├── PENDING_TASKS: 101 (TEST tasks) ← NOT CHECKED
+└── Route: "Nothing to do" → Analysis Agent
+```
+
+**Fix Applied:** Added `PENDING_TASKS` check to routing logic in `orchestrator_runtime.md`:
+```bash
+PENDING_TASKS=$(grep -c "^\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+```
+
+New routing row:
+| LOOP_COUNT | PENDING_ISSUES | PENDING_TASKS | Action |
+|------------|----------------|---------------|--------|
+| 0 | 0 | > 0 | **Process pending tasks** - Skip to Step 2 |
+
+**Commits:**
+- `a777362` - Fixed `orchestrator_runtime.md` (documentation)
+- `a278147` - Fixed `commands/orchestrate.md` (actual routing logic used by orchestrator)
+
+**Note:** The orchestrator reads from `commands/orchestrate.md`, not `orchestrator_runtime.md`. Both files were updated for consistency.
+
+---
+
+## Fixes Tracker
+
+### Applied Fixes
+
+| Fix | Date | Status | Details |
+|-----|------|--------|---------|
+| **Option A: TEST task categories** | 2025-12-23 | ✅ Applied | Changed 101 TEST tasks from test-plan categories to `Category: testing` in task_queue.md |
+| **Option B: Pending tasks routing** | 2025-12-23 | ✅ Applied | Added `PENDING_TASKS` check to `commands/orchestrate.md` - commits `a777362`, `a278147` |
+
+### Pending Fixes
+
+| Fix | Priority | File(s) | Description |
+|-----|----------|---------|-------------|
+| **Option C: BRANCH D category enforcement** | High | `prompts/decomposition_agent.md` | Ensure TEST tasks always get `Category: testing` |
+| **Category fallback with warning** | Medium | `orchestrator_runtime.md` | Add fallback for unrecognized categories → testing_agent with warning log |
+| **Explicit Depends On in issues** | Low | `prompts/implementation/testing_agent.md` | Add `Affected Build Tasks` field to issue template |
+| **Mandatory verification in impl agents** | Medium | `prompts/implementation/*.md` | Make Phase 6 verification required, not advisory |
+| **Artifact-based validation** | Medium | `orchestrator_runtime.md` | Check for `.pytest_cache/`, `.coverage` before accepting completion |
+| **Consolidate requirements.txt** | Low | Root `requirements.txt` | Add missing `aiosqlite`, `asyncpg` from `app/requirements.txt` |
+| **Dashboard/App architecture** | Low | `dashboard/`, `app/` | Decide: integrate or remove standalone dashboard |
+
+### Fix Implementation Order
+
+1. ✅ **Option A** - Unblock TEST task execution (DONE)
+2. ✅ **Option B** - Pending tasks routing fix (DONE - commit a777362)
+3. ⏳ **Re-run orchestrator** - Verify TEST tasks execute (IN PROGRESS)
+4. 🔲 **Option C** - BRANCH D category enforcement (prevent recurrence)
+5. 🔲 **Explicit Depends On** - Improve issue traceability
+6. 🔲 **Mandatory verification** - Prevent fabricated quality metrics
+7. 🔲 **Artifact validation** - External verification of test execution
+
+---
+
 ## How to Update This File
 
 When continuing work:

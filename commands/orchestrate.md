@@ -349,7 +349,7 @@ TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "n
 **3. Check for pending tasks in task queue:**
 
 ```bash
-PENDING_TASKS=$(grep -c "^\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
 ```
 
 **4. Route based on state:**

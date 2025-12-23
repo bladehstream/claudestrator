@@ -79,6 +79,132 @@ Claudestrator is designed for a **dual terminal workflow**:
 - If not, you'll be prompted: "Initialize git?"
 - Each completed task creates a commit with task details
 
+---
+
+## Using External Spec Files
+
+Instead of generating a PRD with `/prdgen`, you can use pre-existing JSON specification files. This is useful when:
+
+- You have specs from an external tool (council-spec, design tools, etc.)
+- You want structured JSON input rather than prose PRD
+- Your team uses a standardized spec format
+
+### External Spec Workflow
+
+**Step 1: Prepare your spec files**
+
+Place your JSON files in the `projectspec/` directory:
+
+```
+your-project/
+├── projectspec/
+│   ├── spec-final.json        # Feature definitions
+│   └── test-plan-output.json  # Test case definitions
+└── ...
+```
+
+**Step 2: Start orchestration with external_spec source**
+
+```
+/orchestrate --source external_spec
+```
+
+The orchestrator will:
+1. Prompt for the spec file path (defaults to `projectspec/spec-final.json`)
+2. Prompt for the test plan path (defaults to `projectspec/test-plan-output.json`)
+3. Parse features → create BUILD tasks
+4. Parse test cases → create TEST tasks with proper dependencies
+
+### JSON File Formats
+
+**spec-final.json** - Feature definitions:
+
+```json
+{
+  "features": [
+    {
+      "id": "dashboard-main",
+      "name": "Vulnerability Dashboard",
+      "description": "Main view with KPI cards and filterable table",
+      "priority": "must_have",
+      "category": "frontend"
+    },
+    {
+      "id": "api-vulns",
+      "name": "Vulnerability API",
+      "description": "REST endpoints for CRUD operations",
+      "priority": "must_have",
+      "category": "backend"
+    }
+  ]
+}
+```
+
+**test-plan-output.json** - Test case definitions:
+
+```json
+{
+  "test_categories": [
+    {
+      "category": "unit",
+      "tests": [
+        {
+          "id": "unit-001",
+          "name": "CVE ID Format Validation",
+          "steps": [
+            "Pass valid CVE IDs: CVE-2024-1234",
+            "Pass invalid formats: 2024-1234"
+          ],
+          "expected_result": "Valid formats pass, invalid rejected"
+        }
+      ]
+    },
+    {
+      "category": "integration",
+      "tests": [
+        {
+          "id": "int-001",
+          "name": "API to Database Flow",
+          "steps": ["Create vulnerability via API", "Verify in database"],
+          "expected_result": "Data persists correctly"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Task Generation
+
+The Decomposition Agent (using BRANCH D) processes external specs:
+
+| JSON Source | Task Type | ID Pattern | Dependencies |
+|-------------|-----------|------------|--------------|
+| `features[]` | BUILD | `BUILD-001`, `BUILD-002` | Based on feature relationships |
+| `test_categories[].tests[]` | TEST | `TEST-UNIT-001`, `TEST-INT-001` | Depends on related BUILD tasks |
+
+### Category Mapping
+
+Test categories map to feature categories for dependency tracking:
+
+| Test Category | Maps To Feature Category |
+|---------------|--------------------------|
+| `unit` | Core functionality tests |
+| `integration` | Cross-component tests |
+| `e2e` | Full system tests |
+| `security` | Security feature tests |
+| `performance` | Performance tests |
+
+### Combining with Loop Mode
+
+You can combine external specs with improvement loops:
+
+```
+/orchestrate --source external_spec    # Initial task generation
+# ... tasks execute ...
+/orchestrate 3 security                # Follow-up improvement loops
+```
+
 ### Resuming Work
 
 If you start a new conversation on an existing project:

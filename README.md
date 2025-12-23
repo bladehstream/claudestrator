@@ -43,12 +43,22 @@ See [Command Reference](docs/command_reference.md) for detailed descriptions.
 curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/install.sh | bash
 ```
 
-**Run:**
+**Run (Standard - PRD-based):**
 ```
 Terminal 2: /prdgen          # Create PRD first
 Terminal 2: /clear           # Clear context
 Terminal 1: /orchestrate     # Start orchestration
 Terminal 2: /issue           # Report bugs while running
+```
+
+**Run (Alternative - External Spec Files):**
+```
+# Place your spec files in projectspec/
+#   - spec-final.json        (feature definitions)
+#   - test-plan-output.json  (test cases)
+
+Terminal 1: /orchestrate --source external_spec
+# Orchestrator prompts for file paths and generates tasks from JSON specs
 ```
 
 See [User Guide](docs/user_guide.md) for detailed setup and usage.

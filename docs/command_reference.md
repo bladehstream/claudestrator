@@ -27,6 +27,7 @@ Main orchestration commands:
 | `/orchestrate N` | (main) + dynamic | Run N improvement loops. Each loop: Research Agent → Decomposition Agent → Implementation Agents. |
 | `/orchestrate N <focus>` | (main) + dynamic | Run N loops focused on specific area: `security`, `performance`, `UI`, `bugs`, `testing`, `documentation`. |
 | `/orchestrate --dry-run` | (main) | Preview task decomposition, estimates, and dependency graph without executing. |
+| `/orchestrate --source external_spec` | (main) + dynamic | Use external JSON specs (`projectspec/spec-final.json`, `projectspec/test-plan-output.json`) instead of PRD.md. Prompts for file paths. |
 | `/progress` | (main) | Show project overview: current loop, tasks completed, active agents. |
 | `/progress tasks` | (main) | Show task list with status and dependency information. |
 | `/progress agents` | (main) | List running and recently completed agents. |
@@ -79,9 +80,65 @@ Commands that spawn agents use dynamic model selection:
 
 | Agent | Spawned By | Reads | Writes |
 |-------|------------|-------|--------|
-| Decomposition | `/orchestrate` | PRD.md or issue_queue.md | task_queue.md |
+| Decomposition | `/orchestrate` | PRD.md, issue_queue.md, or external JSON specs | task_queue.md |
 | Research | `/orchestrate N` | Codebase, web | issue_queue.md |
 | Implementation | Orchestrator | Task from queue | Source code |
+
+---
+
+## Source Options (`--source`)
+
+The `--source` flag controls where the Decomposition Agent gets its requirements:
+
+| Source | Description | Required Files |
+|--------|-------------|----------------|
+| `prd` (default) | Parse requirements from PRD.md | `PRD.md` (generated via `/prdgen`) |
+| `external_spec` | Parse from external JSON specs | `projectspec/spec-final.json`, `projectspec/test-plan-output.json` |
+
+### External Spec Mode
+
+When using `--source external_spec`, the orchestrator:
+
+1. **Prompts for file paths** (defaults to `projectspec/` directory)
+2. **Parses spec-final.json** for feature definitions (creates BUILD tasks)
+3. **Parses test-plan-output.json** for test cases (creates TEST tasks)
+4. **Maps test categories to features** for dependency tracking
+
+**JSON Schema Requirements:**
+
+`spec-final.json`:
+```json
+{
+  "features": [
+    {
+      "id": "feature-id",
+      "name": "Feature Name",
+      "description": "...",
+      "priority": "must_have|nice_to_have",
+      "category": "frontend|backend|testing|..."
+    }
+  ]
+}
+```
+
+`test-plan-output.json`:
+```json
+{
+  "test_categories": [
+    {
+      "category": "unit|integration|e2e|...",
+      "tests": [
+        {
+          "id": "test-id",
+          "name": "Test Name",
+          "steps": ["Step 1", "Step 2"],
+          "expected_result": "..."
+        }
+      ]
+    }
+  ]
+}
+```
 
 ---
 

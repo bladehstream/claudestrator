@@ -304,7 +304,7 @@ Proceeding with normal orchestration flow.
 **After Decomposition Agent completes, verify tasks were created:**
 
 ```bash
-PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+PENDING_TASKS=$(grep -c "\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
 ```
 
 **If PENDING_TASKS == 0 but CRITICAL_COUNT was > 0:**

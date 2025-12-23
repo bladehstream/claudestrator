@@ -548,6 +548,40 @@ Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchest
 
 Output is `SUCCESS` or `FAILED`. Markers are cleaned immediately (task_queue.md status is source of truth).
 
+### 2c-1. Post-Completion Agent Cleanup (CRITICAL - Prevents Resource Exhaustion)
+
+**After the Bash wait returns**, the agent SHOULD have terminated. However, agents can get stuck in verification loops after writing the completion marker, consuming tokens indefinitely.
+
+**MANDATORY**: After each task completes, check if the agent is still running and attempt cleanup:
+
+```python
+# Store agent_id when spawning (from Task() return value)
+agent_id = <from Task() call>
+
+# After Bash wait returns (marker detected):
+# 1. Wait 30 seconds for agent to terminate gracefully
+Bash("sleep 30")
+
+# 2. Check if agent is still running (non-blocking)
+TaskOutput(agent_id, block: false)
+
+# 3. If output shows "Task is still running":
+#    - Output warning: "⚠️ Agent {agent_id} still running after completion. Attempting cleanup..."
+#    - Write kill signal file for agent to detect:
+Bash("echo 'kill' > '.orchestrator/complete/[TASK-ID].kill'")
+
+#    - Wait 15 more seconds for cooperative termination
+Bash("sleep 15")
+
+#    - Clean up kill signal
+Bash("rm -f '.orchestrator/complete/[TASK-ID].kill'")
+
+#    - If STILL running, log it but proceed (agent will eventually exhaust context)
+#    - Output: "⚠️ Runaway agent {agent_id} detected. Task complete, proceeding. Agent will timeout."
+```
+
+**Why this matters:** A runaway agent can consume 100k+ tokens after completion, wasting resources. The orchestrator must actively detect and attempt to stop these agents.
+
 ### 2d. Handle Result
 
 **If output was SUCCESS:**
@@ -880,6 +914,7 @@ Historical Data: .orchestrator/history.csv
 8. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
 9. **NEVER improvise the flow** - follow the documented steps exactly
 10. **Research Agent requires `--research` flag** - only spawned when enabled and queue is clear
+11. **ALWAYS check for runaway agents** - after .done marker detected, verify agent terminated (see Step 2c-1)
 
 ### Orchestrator is a COORDINATOR
 

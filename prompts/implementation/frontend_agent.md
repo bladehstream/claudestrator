@@ -428,6 +428,35 @@ The orchestrator is BLOCKED waiting for this file.
 
 ---
 
+## MANDATORY: Self-Termination Protocol
+
+**⚠️ CRITICAL - PREVENTS RESOURCE EXHAUSTION ⚠️**
+
+After writing the `.done` marker, you **MUST terminate immediately**:
+
+1. **DO NOT** run any further commands after the marker is written
+2. **DO NOT** enter any loops (polling, retry, or verification loops)
+3. **DO NOT** run build, test, or verification commands after the marker exists
+4. **DO NOT** wait for or check any external processes
+5. **OUTPUT**: "TASK COMPLETE - TERMINATING" as your final message
+6. **STOP** - do not generate any further tool calls or responses
+
+### Kill Signal Check (For Long-Running Operations)
+
+If you are in a loop or long-running operation, check for the kill signal:
+
+```bash
+# Check before each iteration of any loop
+if [ -f ".orchestrator/complete/{task_id}.kill" ]; then
+  echo "Kill signal received - terminating immediately"
+  # Exit the loop/operation
+fi
+```
+
+**After `.done` is written, your job is COMPLETE. Terminate NOW.**
+
+---
+
 ## Common Mistakes
 
 | Mistake | Impact | Fix |

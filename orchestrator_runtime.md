@@ -186,7 +186,7 @@ WHILE true:
     Wait for decomposition.done
 
     # Verify tasks created
-    PENDING_TASKS = grep -c "| Status | pending |" .orchestrator/task_queue.md
+    PENDING_TASKS = grep -c "\*\*Status:\*\* pending" .orchestrator/task_queue.md
     IF PENDING_TASKS == 0:
         HALT "ERROR: Critical issues exist but no tasks created"
 
@@ -217,7 +217,7 @@ After critical queue clears, route based on state:
 ```bash
 PENDING_ISSUES=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
 TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "no")
-PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+PENDING_TASKS=$(grep -c "\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
 ```
 
 | LOOP_COUNT | PENDING_ISSUES | PENDING_TASKS | Action |

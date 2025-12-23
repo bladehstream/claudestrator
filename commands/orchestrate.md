@@ -346,16 +346,23 @@ PENDING_ISSUES=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_que
 TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "no")
 ```
 
-**3. Route based on state:**
+**3. Check for pending tasks in task queue:**
 
-| LOOP_COUNT | PENDING_ISSUES | TASK_QUEUE_EXISTS | Action |
-|------------|----------------|-------------------|--------|
-| 0 | > 0 | yes | **Process issues** - Go to Step 4.3 (Decomposition for issues) |
-| 0 | 0 | no | **Initial build** - Go to Step 1 (Decomposition for PRD.md) |
-| 0 | 0 | yes | **Nothing to do** - Go to Step 5 (Analysis Agent) |
-| > 0 | any | any | **Improvement loops** - Go to Step 4 |
+```bash
+PENDING_TASKS=$(grep -c "^\*\*Status:\*\* pending" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+```
 
-**Key insight:** `/orchestrate` (no loops) on an existing project with pending issues should still process those issues. The "no loops" setting means no Research Agent loops, NOT "ignore pending issues."
+**4. Route based on state:**
+
+| LOOP_COUNT | PENDING_ISSUES | PENDING_TASKS | TASK_QUEUE_EXISTS | Action |
+|------------|----------------|---------------|-------------------|--------|
+| 0 | > 0 | any | yes | **Process issues** - Go to Step 4.3 (Decomposition for issues) |
+| 0 | 0 | > 0 | yes | **Execute pending tasks** - Go to Step 2 (skip decomposition) |
+| 0 | 0 | 0 | no | **Initial build** - Go to Step 1 (Decomposition for PRD.md) |
+| 0 | 0 | 0 | yes | **Nothing to do** - Go to Step 5 (Analysis Agent) |
+| > 0 | any | any | any | **Improvement loops** - Go to Step 4 |
+
+**Key insight:** `/orchestrate` (no loops) on an existing project with pending issues OR pending tasks should still process them. This is critical for `external_spec` mode where TEST tasks are created alongside BUILD tasks but executed in a separate pass. The "no loops" setting means no Research Agent loops, NOT "ignore pending work."
 
 **Note:** The critical scan is the ONLY permitted read of issue_queue.md by the orchestrator. Full issue processing is handled by the Decomposition Agent.
 

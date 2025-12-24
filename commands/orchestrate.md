@@ -90,24 +90,6 @@ If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD
 2. Check git → init if needed
 3. **Pre-flight checks for directory structure:**
    ```bash
-   # Verify .claudestrator is a directory, not symlinks
-   if [ -L ".claudestrator" ]; then
-     echo "ERROR: .claudestrator is a symlink, should be a directory"
-     exit 1
-   fi
-
-   # Check for symlinks inside .claudestrator that point to framework
-   for item in .claudestrator/*; do
-     if [ -L "$item" ]; then
-       target=$(readlink "$item")
-       if [[ "$target" == *"claudestrator/"* ]]; then
-         echo "ERROR: $item is a symlink to framework: $target"
-         echo "Project files must be actual files, not symlinks"
-         exit 1
-       fi
-     fi
-   done
-
    # Verify no project files in framework repo
    for dir in tests app dashboard; do
      if [ -d "claudestrator/$dir" ]; then
@@ -116,21 +98,28 @@ If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD
        exit 1
      fi
    done
+
+   # Verify no project files in .claudestrator/ (runtime only)
+   for dir in tests app; do
+     if [ -d ".claudestrator/$dir" ]; then
+       echo "ERROR: Project directory '$dir' found in .claudestrator/"
+       echo ".claudestrator/ is for runtime config only"
+       echo "Project files should be in .orchestrator/"
+       exit 1
+     fi
+   done
    ```
-4. **Initialize project output directory (.claudestrator/):**
+4. **Initialize project output directory (.orchestrator/):**
    ```bash
-   # Create project output directory (NOT symlinks to framework)
-   if [ ! -d ".claudestrator" ]; then
-     mkdir -p .claudestrator/{app,tests,docs}
-     cd .claudestrator
-     git init
-     echo "# Project Output" > README.md
-     git add README.md
-     git commit -m "Initial project setup"
-     cd ..
-   fi
+   # Create project output directory structure
+   mkdir -p .orchestrator/{app,tests,docs,complete,reports,pids,process-logs}
    ```
-   **CRITICAL:** Project files must be actual files in `.claudestrator/`, NOT symlinks to `claudestrator/`.
+   **CRITICAL:** All project files (app/, tests/, docs/) go in `.orchestrator/`, NOT `.claudestrator/`.
+
+   **Architecture:**
+   - `claudestrator/` = Framework repo (commands, prompts, skills)
+   - `.claudestrator/` = Runtime config (symlinks to framework)
+   - `.orchestrator/` = Project OUTPUT (app/, tests/, docs/, task_queue.md, reports/)
 5. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
 6. Get absolute working directory with `pwd` (store for agent prompts)
 7. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)

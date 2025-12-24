@@ -23,3 +23,33 @@ node_modules/
 # Environment files
 .env
 .env.local
+.env.example
+
+# Project output - should NEVER be in framework repo
+# These directories belong in the project's .claudestrator/ directory
+tests/
+app/
+dashboard/
+projectspec/
+.orchestrator/
+
+# Build artifacts from project runs
+BUILD-*.md
+BUILD_*.py
+BUILD_*.md
+backend_implementation.md
+BACKEND_ROUTES.md
+conversation_history.md
+
+# Python runtime
+*.pyc
+__pycache__/
+*.db
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Test artifacts
+test_*.db
+seed_*.py
+*.test.js

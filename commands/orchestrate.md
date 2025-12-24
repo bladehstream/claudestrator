@@ -88,13 +88,56 @@ If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD
    - If `SOURCE_TYPE = prd`: Check PRD.md exists → if not, tell user to run `/prdgen` first
    - If `SOURCE_TYPE = external_spec`: Check projectspec/spec-final.json AND projectspec/test-plan-output.json exist → if not, tell user to provide spec files
 2. Check git → init if needed
-3. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
-4. Get absolute working directory with `pwd` (store for agent prompts)
-5. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
-6. Initialize LOOP_NUMBER to 1
-7. **Scan for critical blocking issues** (see below)
+3. **Pre-flight checks for directory structure:**
+   ```bash
+   # Verify .claudestrator is a directory, not symlinks
+   if [ -L ".claudestrator" ]; then
+     echo "ERROR: .claudestrator is a symlink, should be a directory"
+     exit 1
+   fi
 
-### Critical Issue Loop (Step 7)
+   # Check for symlinks inside .claudestrator that point to framework
+   for item in .claudestrator/*; do
+     if [ -L "$item" ]; then
+       target=$(readlink "$item")
+       if [[ "$target" == *"claudestrator/"* ]]; then
+         echo "ERROR: $item is a symlink to framework: $target"
+         echo "Project files must be actual files, not symlinks"
+         exit 1
+       fi
+     fi
+   done
+
+   # Verify no project files in framework repo
+   for dir in tests app dashboard; do
+     if [ -d "claudestrator/$dir" ]; then
+       echo "ERROR: Project directory '$dir' found in framework repo"
+       echo "Remove with: rm -rf claudestrator/$dir"
+       exit 1
+     fi
+   done
+   ```
+4. **Initialize project output directory (.claudestrator/):**
+   ```bash
+   # Create project output directory (NOT symlinks to framework)
+   if [ ! -d ".claudestrator" ]; then
+     mkdir -p .claudestrator/{app,tests,docs}
+     cd .claudestrator
+     git init
+     echo "# Project Output" > README.md
+     git add README.md
+     git commit -m "Initial project setup"
+     cd ..
+   fi
+   ```
+   **CRITICAL:** Project files must be actual files in `.claudestrator/`, NOT symlinks to `claudestrator/`.
+5. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
+6. Get absolute working directory with `pwd` (store for agent prompts)
+7. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
+8. Initialize LOOP_NUMBER to 1
+9. **Scan for critical blocking issues** (see below)
+
+### Critical Issue Loop (Step 9)
 
 **IMPORTANT:** Before ANY other work, you must resolve ALL critical issues.
 
@@ -133,7 +176,7 @@ This is a LOOP that continues until the critical queue is empty:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 7a: Scan for Critical Issues
+### Step 9a: Scan for Critical Issues
 
 Critical issues need processing if they are in ANY of these states:
 
@@ -144,7 +187,7 @@ Critical issues need processing if they are in ANY of these states:
 | `in_progress` | Task has `.failed` marker | Implementation failed, needs Failure Analysis |
 | `in_progress` | Task has `.done` marker but issue not `completed` | False completion, needs re-work |
 
-**Step 7a.1: Count pending/accepted critical issues**
+**Step 9a.1: Count pending/accepted critical issues**
 
 Run this command to count actionable critical issues:
 
@@ -154,7 +197,7 @@ Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/nul
 
 Store the output as `PENDING_CRITICAL`.
 
-**Step 7a.2: Check for stalled in_progress critical issues**
+**Step 9a.2: Check for stalled in_progress critical issues**
 
 Run this command to find critical in_progress issues with Task Refs:
 
@@ -171,13 +214,13 @@ For each result that shows BOTH `Priority | critical` AND `Status | in_progress`
 
 Count how many stalled tasks you find as `STALLED_COUNT`.
 
-**Step 7a.3: Calculate total**
+**Step 9a.3: Calculate total**
 
 ```
 CRITICAL_COUNT = PENDING_CRITICAL + STALLED_COUNT
 ```
 
-**Step 7a.4: Handle stalled issues**
+**Step 9a.4: Handle stalled issues**
 
 For each stalled task found:
 
@@ -202,7 +245,7 @@ For each stalled task found:
   ```
 - Output: `⚠️ False completion detected: TASK-XXX marked done but issue unresolved. Resetting for re-work.`
 
-**Step 7a.5: Re-count after resets**
+**Step 9a.5: Re-count after resets**
 
 After handling stalled issues, re-run the pending/accepted count:
 
@@ -212,7 +255,7 @@ Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/nul
 
 Update `CRITICAL_COUNT` with the new value.
 
-### Step 7b: Critical Loop Logic
+### Step 9b: Critical Loop Logic
 
 ```python
 CRITICAL_ITERATION = 0
@@ -275,7 +318,7 @@ WHILE CRITICAL_COUNT > 0:
     # 2. Wait for completion (and clean up marker)
     Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
 
-    # 3. VERIFY tasks were created (Step 7c)
+    # 3. VERIFY tasks were created (Step 9c)
     # 4. Run Implementation Agents on critical tasks (markers cleaned inline per Step 2c)
     # 5. Wait for all critical tasks to complete (including TASK-99999)
     # 6. Commit changes
@@ -299,7 +342,7 @@ Proceeding with normal orchestration flow.
 """
 ```
 
-### Step 7c: Verify Tasks Created (within loop)
+### Step 9c: Verify Tasks Created (within loop)
 
 **After Decomposition Agent completes, verify tasks were created:**
 
@@ -330,7 +373,7 @@ Action: HALT orchestration. Manual intervention required.
 
 **HALT immediately.** Do NOT continue the loop or proceed to normal orchestration.
 
-### Step 7d: After Critical Loop Completes
+### Step 9d: After Critical Loop Completes
 
 Only after CRITICAL_COUNT == 0 should you proceed. The next step depends on:
 

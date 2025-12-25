@@ -7,7 +7,7 @@ domain: [creative, animation, slack]
 task_types: [implementation, creative, asset]
 keywords: [gif, slack, animation, emoji, animated, pillow, imageio, custom, reaction]
 complexity: [normal]
-pairs_with: [algorithmic_art, svg_asset_gen]
+pairs_with: [algorithmic_art, svg_asset_generator]
 source: https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator
 ---
 

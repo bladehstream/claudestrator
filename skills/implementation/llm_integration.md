@@ -8,6 +8,7 @@ task_types: [implementation, integration]
 keywords: [ollama, llm, ai, claude, gemini, openai, prompts, extraction, inference, structured_output, json_mode]
 complexity: [normal]
 pairs_with: [api_development, beautifulsoup_scraper]
+source: original
 external_dependencies:
   - type: service
     name: Ollama

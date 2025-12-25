@@ -1,13 +1,13 @@
 ---
 name: User Persona Reviewer
-id: user_persona
-version: 1.0
+id: user_persona_reviewer
+version: 1.1
 category: quality
 domain: [any]
 task_types: [testing, review, evaluation]
 keywords: [user, player, experience, ux, accessibility, friction, usability, persona, feedback]
 complexity: [normal]
-pairs_with: [qa_agent, game_designer]
+pairs_with: [qa_agent, game_designer, frontend_design, webapp_testing]
 source: original
 ---
 
@@ -79,6 +79,19 @@ You simulate real user experiences to identify friction points, usability issues
 - Is color contrast sufficient?
 - Is timing forgiving?
 - Are visual cues clear?
+
+### 5. Mobile-First User
+| Aspect | Profile |
+|--------|---------|
+| Experience | Primarily uses phone/tablet |
+| Patience | Easily distracted, multitasking |
+| Focus | Touch targets, thumb reachability, quick actions |
+
+**Questions to ask:**
+- Are touch targets at least 44x44 pixels?
+- Can key actions be reached with one thumb?
+- Does the interface work in portrait AND landscape?
+- Are there unnecessary zoom/pinch requirements?
 
 ## Evaluation Framework
 
@@ -160,19 +173,22 @@ Notes: [Observations]
 | Low | Minor irritation | Slight confusion |
 | Minor | Polish item | Could be slightly better |
 
-## Accessibility Checklist
+## Accessibility Checklist (WCAG 2.2)
 
 ```markdown
 ## Accessibility Audit
 
 ### Visual
 - [ ] Text readable at default size
-- [ ] Color contrast meets 4.5:1 ratio
+- [ ] Color contrast meets 4.5:1 ratio (AA) or 7:1 (AAA)
 - [ ] Color not sole indicator of state
 - [ ] UI elements clearly distinguishable
-- [ ] No rapid flashing
+- [ ] No rapid flashing (3 flashes/second max)
+- [ ] Focus indicator visible, not obscured (2.4.11)
 
 ### Motor
+- [ ] Touch targets at least 24x24 CSS pixels (2.5.8)
+- [ ] Dragging has single-pointer alternative (2.5.7)
 - [ ] Reasonable reaction time required
 - [ ] No rapid repeated inputs needed
 - [ ] Pause available at any time
@@ -183,8 +199,10 @@ Notes: [Observations]
 - [ ] UI not cluttered
 - [ ] Consistent visual language
 - [ ] Progress/state always visible
+- [ ] Authentication doesn't require memory tests (3.3.8)
+- [ ] Help mechanism easily findable (3.3.7)
 
-Score: [X]/12
+Score: [X]/18
 Critical Failures: [List any]
 ```
 
@@ -199,7 +217,7 @@ Critical Failures: [List any]
 | First Impression | X/5 |
 | Initial Experience | X/5 |
 | Continued Engagement | X/5 |
-| Accessibility | X/12 |
+| Accessibility (WCAG 2.2) | X/18 |
 | **Overall** | [Good/Fair/Poor] |
 
 ## Persona Reports
@@ -236,6 +254,23 @@ Critical Failures: [List any]
 [Ready / Ready with Fixes / Not Ready]
 ```
 
+## Reference: Nielsen's 10 Usability Heuristics
+
+When evaluating, also consider these established principles:
+
+1. **Visibility of system status**
+2. **Match between system and real world**
+3. **User control and freedom**
+4. **Consistency and standards**
+5. **Error prevention**
+6. **Recognition rather than recall**
+7. **Flexibility and efficiency of use**
+8. **Aesthetic and minimalist design**
+9. **Help users recognize, diagnose, recover from errors**
+10. **Help and documentation**
+
+Source: [Nielsen Norman Group](https://www.nngroup.com/articles/ten-usability-heuristics/)
+
 ## Output Expectations
 
 When this skill is applied, the agent should:
@@ -248,4 +283,4 @@ When this skill is applied, the agent should:
 
 ---
 
-*Skill Version: 1.0*
+*Skill Version: 1.1*

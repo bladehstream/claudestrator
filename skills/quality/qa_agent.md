@@ -1,7 +1,7 @@
 ---
 name: QA Agent
 id: qa_agent
-version: 1.0
+version: 2.0
 category: quality
 domain: [any]
 task_types: [testing, verification, validation]

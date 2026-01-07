@@ -580,30 +580,43 @@ Options:
 
 ## Phase 3: Task Decomposition
 
-Once requirements are confirmed:
+Once requirements are confirmed, tasks are generated following **TDD (Test-Driven Development)** workflow:
+
+- **TEST tasks (TASK-T##)** are created first and write tests
+- **BUILD tasks (TASK-###)** depend on TEST tasks and implement code to pass those tests
 
 ```
 ORCHESTRATOR:
 ─────────────────────────────────────────────────────
-🔨 Decomposing into Tasks
+🔨 Decomposing into Tasks (TDD Workflow)
 
 Analyzing requirements and creating task breakdown...
+Tests will be written BEFORE implementation.
 
 TASKS IDENTIFIED:
 ─────────────────────────────────────────────────────
-ID   | Name                      | Complexity | Deps
------|---------------------------|------------|------
-001  | Set up project structure  | easy       | -
-002  | Design data models        | normal     | -
-003  | Implement user model      | normal     | 001
-004  | Implement auth middleware | normal     | 003
-005  | Implement core API        | normal     | 003,004
-006  | Add validation            | normal     | 005
-007  | Write tests               | normal     | 005
-008  | QA verification           | normal     | all
+ID      | Name                      | Complexity | Deps
+--------|---------------------------|------------|------
+SETUP   | Project Structure         |            |
+001     | Set up project structure  | easy       | -
+002     | Design data models        | normal     | -
+--------|---------------------------|------------|------
+TESTS   | Write Tests First         |            |
+T01     | Tests: User model         | normal     | 002
+T02     | Tests: Auth middleware    | normal     | 002
+T03     | Tests: Core API           | normal     | 002
+--------|---------------------------|------------|------
+BUILD   | Implement to Pass Tests   |            |
+003     | Implement user model      | normal     | 001, T01
+004     | Implement auth middleware | normal     | 003, T02
+005     | Implement core API        | normal     | 003, 004, T03
+006     | Add validation            | normal     | 005
+--------|---------------------------|------------|------
+QA      | Quality Verification      |            |
+99999   | Final verification        | normal     | all
 
-Total: 8 tasks
-Estimated complexity: Normal (mostly Sonnet agents)
+Total: 10 tasks (3 test + 6 build + 1 verification)
+TDD Flow: Tests written by Testing Agent, implementation passes tests
 
 ─────────────────────────────────────────────────────
 
@@ -887,12 +900,14 @@ Ready to begin extension?
 
 4. **Confirmation**
    - Summarizes understanding
-   - Shows task breakdown
+   - Shows task breakdown (TDD: TEST tasks before BUILD tasks)
    - Gets user approval before starting
 
 5. **Execution**
    - Creates journal
-   - Begins first task
+   - Runs TEST tasks first (Testing Agent writes tests)
+   - Runs BUILD tasks (Implementation agents implement to pass tests)
+   - QA Agent spot checks completed work
    - Reports progress throughout
    - Auto-commits after each task
 
@@ -915,6 +930,6 @@ Ready to begin extension?
 
 ---
 
-*Flow Version: 2.1*
-*Updated: December 2025*
-*Added: Phase 6 Iteration/Extension flows, Enhanced state detection, Autonomy selection*
+*Flow Version: 2.2*
+*Updated: January 2026*
+*Added: TDD workflow (TEST tasks before BUILD tasks), Phase 6 Iteration/Extension flows, Enhanced state detection, Autonomy selection*

@@ -94,6 +94,51 @@ See [Architecture Guide](docs/architecture.md) for full details.
 
 ---
 
+## TDD Workflow
+
+Claudestrator enforces **Test-Driven Development**: tests are written BEFORE implementation.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              TDD WORKFLOW                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   Decomposition Agent                                                        │
+│       └── Creates TEST tasks (TASK-T##) before BUILD tasks (TASK-###)       │
+│                                                                              │
+│   Testing Agent                                                              │
+│       └── Writes test files with expected behavior                           │
+│       └── Specifies integration level and mock policy                        │
+│                                                                              │
+│   Implementation Agent (backend, frontend, fullstack, devops)                │
+│       └── Reads existing tests                                               │
+│       └── Implements code to pass those tests                                │
+│       └── Does NOT modify tests - they define the contract                   │
+│                                                                              │
+│   QA Agent                                                                   │
+│       └── Spot checks random sample of completed work                        │
+│       └── Validates test coverage meets requirements                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Task Naming Convention
+
+| Task Type | ID Pattern | Example | Purpose |
+|-----------|------------|---------|---------|
+| Test tasks | TASK-T## | TASK-T01 | Write tests first |
+| Build tasks | TASK-### | TASK-001 | Implement to pass tests |
+| Final verification | TASK-99999 | TASK-99999 | End-to-end validation |
+
+### Key Principles
+
+1. **Tests define the contract** - Implementation agents read tests and implement code to pass them
+2. **No test modification** - If tests need changes, that's a decomposition issue
+3. **Explicit dependencies** - BUILD tasks depend on their related TEST tasks
+4. **Coverage validation** - 100% of test plan IDs must map to tasks
+
+---
+
 ## File Structure
 
 **IMPORTANT**: The `.claude/` and `.orchestrator/` folders have distinct purposes:

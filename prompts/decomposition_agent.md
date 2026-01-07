@@ -94,8 +94,28 @@ Grep("Status \\| accepted", ".orchestrator/issue_queue.md", output_mode: "conten
 For each pending/accepted issue:
 - Create one task per issue
 - **Include `Source Issue` field** (e.g., `| Source Issue | ISSUE-20241215-001 |`)
+- **Preserve retry fields from issue** (see B.2.1 below)
 - Follow standard task format (Phase 4)
 - Include Build Command and Test Command fields
+
+### B.2.1 Preserve Retry Fields (CRITICAL)
+
+When converting issues that have retry tracking fields, **you MUST preserve them** on the task:
+
+```markdown
+| Source Issue | ISSUE-20260107-032 |
+| Retry-Count | {from issue, or 0} |
+| Max-Retries | {from issue, or 10} |
+| Failure-Signature | {from issue, or empty} |
+| Previous-Signatures | {from issue, or []} |
+```
+
+**Why preserve retry fields?**
+- Tracks total attempts across decomposition cycles
+- Prevents infinite loops where same failure keeps creating new tasks
+- Enables signature-based duplicate detection
+
+**If issue has `Halted | true`**: Do NOT create a task - the issue requires manual intervention.
 
 ### B.3 Mark Issues as In-Progress (CRITICAL)
 
@@ -149,6 +169,8 @@ From the grep results, identify issues that have BOTH:
 - Use next available TASK-XXX ID (check existing task_queue.md)
 - Follow standard task format (Phase 4)
 - **Include `Source Issue` field with the issue ID** (e.g., `| Source Issue | ISSUE-20241215-001 |`)
+- **Preserve retry fields from issue** (Retry-Count, Max-Retries, Failure-Signature, Previous-Signatures)
+- **Skip issues where `Halted | true`** - these require manual intervention
 - Include Build Command and Test Command fields
 - Then mark issues as in_progress (C.4)
 - Then write completion marker
@@ -621,7 +643,143 @@ For each feature, requirement, or issue in the source document:
 | `fullstack` | Features requiring both frontend AND backend changes |
 | `devops` | Docker, CI/CD, deployment, infrastructure |
 | `testing` | Unit tests, integration tests, E2E tests |
+| `testing:write` | Writing test files (TDD - before implementation) |
+| `testing:verify` | Running tests to verify implementation |
 | `docs` | Documentation, README, API docs |
+
+===============================================================================
+PHASE 2B: TDD TASK ORDERING (CRITICAL)
+===============================================================================
+
+**Tests MUST be written BEFORE implementation. This is non-negotiable.**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         TDD TASK EXECUTION ORDER                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   1. TEST tasks (Category: testing, Mode: write)                            │
+│      └── Creates test files from specifications                              │
+│      └── Tests exist but FAIL (no implementation yet)                        │
+│      └── Dependencies: None                                                  │
+│                                                                              │
+│   2. BUILD tasks (Category: backend/frontend/etc)                            │
+│      └── Implements code to pass existing tests                              │
+│      └── Dependencies: Related TEST tasks                                    │
+│                                                                              │
+│   3. QA verification                                                         │
+│      └── Spot checks + interactive testing                                   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### TDD Task Naming Convention
+
+| Task Type | ID Pattern | Example | Dependencies |
+|-----------|------------|---------|--------------|
+| Test tasks | TASK-T## | TASK-T01, TASK-T02 | None |
+| Build tasks | TASK-### | TASK-001, TASK-002 | Related TASK-T## |
+| Final verification | TASK-99999 | TASK-99999 | All tasks |
+
+### Example TDD Task Ordering
+
+```
+TASK-T01: Write LLM Gateway tests          (Dependencies: None)
+TASK-T02: Write Evidence Analyzer tests    (Dependencies: None)
+TASK-001: Implement LLM Gateway            (Dependencies: TASK-T01)
+TASK-002: Implement Evidence Analyzer      (Dependencies: TASK-T02, TASK-001)
+TASK-99999: Final verification             (Dependencies: All)
+```
+
+===============================================================================
+PHASE 2C: TEST TASK FORMAT (CRITICAL)
+===============================================================================
+
+Test tasks require additional fields for integration requirements:
+
+```markdown
+### TASK-T01
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | testing |
+| Complexity | normal |
+| Mode | write |
+| Test IDs | UNIT-001, UNIT-002, UNIT-003 |
+| Integration Level | real / mocked / unit |
+| External Dependencies | ollama, clamav, database |
+| Mock Policy | database-seeding-only |
+| Skip If Unavailable | ollama |
+| Build Command | {PROJECT_BUILD_COMMAND} |
+| Test Command | pytest tests/unit/test_llm_gateway.py -v |
+
+**Objective:** Write tests for LLM Gateway provider handling
+
+**Test Specifications:**
+(Copy from test-plan-output.json for each Test ID)
+
+**Dependencies:** None
+
+---
+```
+
+### Integration Level Definitions
+
+| Level | Description | What's Mocked | What's Real |
+|-------|-------------|---------------|-------------|
+| **unit** | Isolated logic testing | Everything external | Only the function under test |
+| **mocked** | Component integration with test doubles | External services | Internal component interactions |
+| **real** | Actual integration with external systems | Nothing (or DB seeding only) | All services, APIs, connections |
+
+### Mock Policy Values
+
+| Policy | Allowed Mocks |
+|--------|---------------|
+| **none** | No mocking allowed - all calls must be real |
+| **database-seeding-only** | May seed test data, but queries must hit real DB |
+| **external-services-only** | May mock 3rd party APIs if skip-if-unavailable |
+| **internal-only** | May mock internal services, external must be real |
+
+===============================================================================
+PHASE 2D: TEST COVERAGE VALIDATION (MANDATORY)
+===============================================================================
+
+Before writing task_queue.md, you MUST verify 100% test coverage:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    TEST COVERAGE VALIDATION                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   1. Extract all test IDs from source (test-plan-output.json or PRD)        │
+│   2. Ensure EVERY test ID appears in exactly one test task's "Test IDs"     │
+│   3. If any test ID is missing, create additional test tasks                │
+│   4. Edge cases are NOT optional - they must ALL be mapped                  │
+│                                                                              │
+│   COVERAGE REQUIREMENT: 100% of test plan IDs must be assigned to tasks     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+Add a coverage matrix at the bottom of task_queue.md:
+
+```markdown
+## Test Coverage Matrix
+
+| Category | Plan Count | Mapped Count | Missing IDs |
+|----------|------------|--------------|-------------|
+| unit | 21 | 21 | - |
+| integration | 10 | 10 | - |
+| e2e | 5 | 5 | - |
+| security | 14 | 14 | - |
+| performance | 9 | 9 | - |
+| edge_cases | 17 | 17 | - |
+
+**Coverage: 100% (76/76)**
+```
+
+If coverage is less than 100%, you MUST create additional tasks until all IDs are mapped.
 
 ===============================================================================
 PHASE 3: CREATE TASKS
@@ -1038,8 +1196,11 @@ Before finishing, verify:
 - [ ] Analyzed each requirement/issue
 - [ ] **Determined PROJECT_BUILD_COMMAND and PROJECT_TEST_COMMAND**
 - [ ] Examined existing test patterns in the project
-- [ ] Created 3-15 appropriately-sized tasks
+- [ ] Created appropriately-sized tasks
 - [ ] **ALL task IDs use TASK-XXX format (not UI-001, BE-002, etc.)**
+- [ ] **TEST tasks (TASK-T##) created with Mode: write**
+- [ ] **BUILD tasks depend on related TEST tasks (TDD ordering)**
+- [ ] **TEST tasks have Integration Level and Mock Policy specified**
 - [ ] Each task has Status, Category, Complexity, Test File
 - [ ] **Each task has Build Command and Test Command fields**
 - [ ] Each task has clear Objective
@@ -1048,7 +1209,11 @@ Before finishing, verify:
 - [ ] Test code uses project's actual test framework and patterns
 - [ ] Dependencies noted where applicable
 - [ ] **Tasks from issues have `Source Issue` field** (BRANCH B/C only)
+- [ ] **Retry fields preserved from source issues** (BRANCH B/C only)
+- [ ] **Halted issues skipped** (BRANCH B/C only)
 - [ ] **Source issues marked as `in_progress`** (BRANCH B/C only)
+- [ ] **Test Coverage Matrix included at bottom of task_queue.md**
+- [ ] **100% of test IDs from source are mapped to tasks**
 - [ ] **FINAL TASK (TASK-99999) is Category: testing**
 - [ ] Wrote task_queue.md using Write tool (with Project Commands header)
 - [ ] **WROTE THE COMPLETION MARKER FILE**
@@ -1069,6 +1234,11 @@ COMMON MISTAKES
 | **Not marking issues in_progress** | **Same issues processed twice** | **Edit issue_queue.md after creating tasks** |
 | Forgetting completion marker | System hangs forever | Always write .done file |
 | Just describing actions | Nothing happens | Actually USE the tools |
+| **BUILD tasks without TEST dependencies** | **Violates TDD - tests written after impl** | **TEST tasks must run first** |
+| **Dropping test IDs from plan** | **Tests never written** | **100% coverage required** |
+| **Missing Integration Level** | **Unclear what to mock** | **Specify unit/mocked/real** |
+| **Not preserving retry fields** | **Infinite retry loops** | **Copy Retry-Count, Failure-Signature, etc.** |
+| **Creating task for Halted issue** | **Wasted effort** | **Skip Halted issues** |
 
 ===============================================================================
 START NOW

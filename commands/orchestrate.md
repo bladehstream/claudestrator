@@ -82,6 +82,43 @@ If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD
 
 ---
 
+## TDD Workflow Overview
+
+The orchestrator enforces **Test-Driven Development**: tests are written BEFORE implementation.
+
+### Task Execution Order
+
+```
+1. TEST tasks (TASK-T##) execute first → Testing Agent writes tests
+2. BUILD tasks (TASK-###) execute after → Implementation Agents code to pass tests
+3. QA Agent spot-checks completed work
+```
+
+### Key Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| Tests first | TASK-T## tasks run before related TASK-### tasks |
+| Dependencies enforced | BUILD tasks depend on their TEST tasks |
+| No test modification | Implementation agents read tests, don't modify them |
+| Coverage validation | 100% of test plan IDs must map to tasks |
+
+### Task Routing by Category
+
+| Task ID Pattern | Category | Agent Type |
+|-----------------|----------|------------|
+| TASK-T## | testing | Testing Agent |
+| TASK-### | backend | Backend Implementation Agent |
+| TASK-### | frontend | Frontend Implementation Agent |
+| TASK-### | fullstack | Fullstack Implementation Agent |
+| TASK-### | devops | DevOps Implementation Agent |
+| TASK-### | docs | Documentation Agent |
+| TASK-99999 | qa | QA Agent (final verification) |
+
+The Decomposition Agent creates both TEST and BUILD tasks with proper dependencies. See `prompts/decomposition_agent.md` for task generation rules.
+
+---
+
 ## Startup Checklist
 
 1. **Check source files exist:**

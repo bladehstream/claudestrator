@@ -173,8 +173,7 @@ project/
 └── .claudestrator/                     # Framework source (git clone)
     ├── commands/                       #   Command implementations (authoritative)
     │   └── orchestrate.md              #   Main orchestration logic
-    ├── prompts/                        #   Agent prompt files
-    └── orchestrator_runtime.md         #   Reference docs only (deprecated)
+    └── prompts/                        #   Agent prompt files
 ```
 
 **To upgrade Claudestrator** without losing state:
@@ -193,6 +192,12 @@ rm -rf .claude           # Remove old code
 | [User Guide](docs/user_guide.md) | Detailed setup, workflows, troubleshooting |
 | [Architecture Guide](docs/architecture.md) | Agent pipeline, context management |
 | [Skill Library](skills/) | Available skills by category |
+
+### RFCs
+
+| RFC | Status | Description |
+|-----|--------|-------------|
+| [RFC-001](docs/RFC-001-TDD-WORKFLOW-IMPROVEMENTS.md) | Implemented | TDD workflow improvements |
 
 ---
 

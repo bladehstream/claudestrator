@@ -102,7 +102,7 @@ FAILURE_SIGNATURE = SHA256(SIGNATURE_INPUT)[0:16]
 ```
 Task(
     model: "opus",
-    prompt: "Read('prompts/failure_analysis_agent.md') and follow those instructions.
+    prompt: "Read('.claude/prompts/failure_analysis_agent.md') and follow those instructions.
 
     FAILED_TASK: TASK-001
     FAILURE_REPORT: .orchestrator/reports/TASK-001-loop-1.json

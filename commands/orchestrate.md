@@ -477,7 +477,7 @@ Select model based on task complexity:
 | SOURCE_TYPE | MODE | SOURCE | START Action |
 |-------------|------|--------|--------------|
 | `prd` | `initial` | PRD.md | `Read('PRD.md')` |
-| `external_spec` | `external_spec` | projectspec/*.json | `Read('prompts/external_spec_mapping.md')` |
+| `external_spec` | `external_spec` | projectspec/*.json | `Read('.claude/prompts/external_spec_mapping.md')` |
 
 ### Step 1b: Spawn Agent
 
@@ -533,7 +533,7 @@ Task(
 
   The orchestrator is BLOCKED waiting for this file. Create it NOW when done.
 
-  START: Read('prompts/external_spec_mapping.md')"
+  START: Read('.claude/prompts/external_spec_mapping.md')"
 )
 ```
 

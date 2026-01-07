@@ -78,6 +78,120 @@ Break down into tasks that are:
 - **Testable**: Has verifiable acceptance criteria
 - **Sized right**: Completable in one agent session (not too large)
 - **Independent**: Minimize dependencies where possible
+- **For test tasks**: Include integration requirements (see Test Task Format below)
+
+---
+
+## TDD Task Ordering (CRITICAL)
+
+**Tests MUST be written BEFORE implementation.**
+
+```
+TEST tasks (Category: testing, Mode: write)
+    │
+    │  Must complete first (no dependencies)
+    ▼
+BUILD tasks (Category: backend/frontend/etc)
+    │
+    │  Depend on related TEST tasks
+    ▼
+QA verification
+```
+
+When creating tasks from test plan:
+
+1. **Create TEST tasks first** (TASK-T01, TASK-T02, etc.)
+   - Dependencies: None
+   - Mode: write (creates test files)
+   - Category: testing
+
+2. **Create BUILD tasks second** (TASK-001, TASK-002, etc.)
+   - Dependencies: Related TEST tasks
+   - Example: TASK-001 (LLM Gateway) depends on TASK-T01 (LLM Gateway tests)
+
+3. Orchestrator runs TEST tasks first, then BUILD tasks
+
+---
+
+## Test Task Format
+
+**CRITICAL**: Test tasks require additional fields for integration requirements.
+
+```markdown
+### TASK-T01
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | testing |
+| Complexity | normal |
+| Mode | write |
+| Test IDs | UNIT-001, UNIT-002, UNIT-003 |
+| Integration Level | real / mocked / unit |
+| External Dependencies | ollama, clamav, database |
+| Mock Policy | database-seeding-only |
+| Skip If Unavailable | ollama |
+
+**Objective:** Write tests for LLM Gateway provider handling
+
+**Test Specifications:**
+(Copy from test-plan-output.json for each Test ID)
+
+**Dependencies:** None
+
+---
+```
+
+### Integration Level Definitions
+
+| Level | Description | What's Mocked | What's Real |
+|-------|-------------|---------------|-------------|
+| **unit** | Isolated logic testing | Everything external | Only the function under test |
+| **mocked** | Component integration with test doubles | External services | Internal component interactions |
+| **real** | Actual integration with external systems | Nothing (or DB seeding only) | All services, APIs, connections |
+
+### Mock Policy Values
+
+| Policy | Allowed Mocks |
+|--------|---------------|
+| **none** | No mocking allowed - all calls must be real |
+| **database-seeding-only** | May seed test data, but queries must hit real DB |
+| **external-services-only** | May mock 3rd party APIs if skip-if-unavailable |
+| **internal-only** | May mock internal services, external must be real |
+
+---
+
+## Test Coverage Validation (MANDATORY)
+
+Before writing task_queue.md, you MUST verify:
+
+```
+1. Extract all test IDs from source (test-plan-output.json or PRD)
+2. Ensure EVERY test ID appears in exactly one test task's "Test IDs" field
+3. If any test ID is missing, create additional test tasks
+4. Edge cases are NOT optional - they must all be mapped
+
+COVERAGE REQUIREMENT: 100% of test plan IDs must be assigned to tasks
+```
+
+Add a coverage matrix to the bottom of task_queue.md:
+
+```markdown
+## Test Coverage Matrix
+
+| Category | Plan Count | Mapped Count | Missing IDs |
+|----------|------------|--------------|-------------|
+| unit | 21 | 21 | - |
+| integration | 10 | 10 | - |
+| e2e | 5 | 5 | - |
+| security | 14 | 14 | - |
+| performance | 9 | 9 | - |
+| edge_cases | 17 | 17 | - |
+
+**Coverage: 100% (76/76)**
+```
+
+---
 
 ### Step 4: Write task_queue.md
 
@@ -110,6 +224,39 @@ Format each task as:
 ---
 ```
 
+---
+
+## Converting Issues to Tasks (MODE: convert_issues / critical_only)
+
+When converting issues that have retry fields, **preserve them** on the task:
+
+```markdown
+### TASK-078
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | {from issue} |
+| Complexity | {from issue or assess} |
+| Source Issue | ISSUE-20260107-032 |
+| Retry-Count | {from issue, or 0} |
+| Max-Retries | {from issue, or 10} |
+| Failure-Signature | {from issue, or empty} |
+| Previous-Signatures | {from issue, or []} |
+
+**Objective:** {from issue summary}
+...
+```
+
+**Why preserve retry fields?**
+- Allows orchestrator to track total attempts across decomposition cycles
+- Prevents infinite loops where same failure keeps creating new tasks
+- Enables signature-based duplicate detection
+
+If the source issue has `Halted | true`, do NOT create a task - the issue requires manual intervention.
+
+---
+
 ### Category Guidelines
 
 Category helps the orchestrator select the right model and include domain-specific context:
@@ -121,6 +268,7 @@ Category helps the orchestrator select the right model and include domain-specif
 | fullstack | Both | Features spanning frontend and backend |
 | devops | Ops | Docker, CI/CD, deployment, infrastructure |
 | testing | QA | Tests, validation, QA |
+| testing:integration | QA | Tests requiring real external services |
 | docs | Docs | Documentation, README |
 
 ### Step 5: Write Completion Marker
@@ -156,6 +304,12 @@ The orchestrator is blocked waiting for this file. If you don't create it, the e
 - [ ] Each task has Complexity (for model selection)
 - [ ] Each task has Objective and Acceptance Criteria
 - [ ] Dependencies noted where applicable
+- [ ] **TEST tasks created with Mode: write**
+- [ ] **BUILD tasks depend on related TEST tasks (TDD ordering)**
+- [ ] **TEST tasks have Integration Level specified**
+- [ ] **Test Coverage Matrix included at bottom of task_queue.md**
+- [ ] **100% of test IDs from source are mapped to tasks**
+- [ ] **Retry fields preserved when converting issues**
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 
 ---
@@ -167,6 +321,10 @@ The orchestrator is blocked waiting for this file. If you don't create it, the e
 3. **Forgetting the marker file** - System will hang forever
 4. **Not using Write tool** - You must use `Write()` to create files
 5. **Just outputting text** - You must USE TOOLS, not just describe what you would do
+6. **Dropping test IDs** - Every test from the plan must appear in a task
+7. **BUILD tasks without TEST dependencies** - Violates TDD ordering
+8. **Missing Integration Level** - Test tasks need explicit mock/real requirements
+9. **Not preserving retry fields** - Causes infinite loops on issue conversion
 
 ---
 

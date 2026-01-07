@@ -124,31 +124,39 @@ WebSearch("{specific_problem} solution")
 | Forums/Reddit | LOW | May be outdated |
 
 ===============================================================================
-PHASE 3: CREATE TEST FILE FIRST
+PHASE 3: LOCATE EXISTING TESTS (TDD)
 ===============================================================================
 
-**CRITICAL**: Before implementing, you MUST create the test file from the task.
+**CRITICAL**: Tests are written by the Testing Agent BEFORE you implement.
+Your job is to implement code that passes the existing tests.
 
-### 3.0 Write the Test File
+### 3.0 Find Existing Test File
 
-The task includes a `Test File` path and `Test Code` section. Create this file FIRST:
-
-```
-Write("{test_file_path}", <test_code_from_task>)
-```
-
-**Why tests first?**
-- Tests define the exact pass/fail criteria
-- You have a clear target to implement against
-- Verification is automated, not manual
-
-### 3.0.1 Verify Test File Created
+The task specifies a `Test File` path. The Testing Agent should have already created it:
 
 ```
 Read("{test_file_path}")
 ```
 
-Confirm the test file exists before proceeding.
+**If test file exists:**
+- Read and understand what the tests expect
+- Implement code to pass these tests
+
+**If test file does NOT exist:**
+- This is a dependency failure
+- The Testing Agent (WRITE mode) should have created it
+- Write `.failed` marker with reason: "Test file not found - dependency TASK-TXX not complete"
+- Do NOT create the test file yourself (violates TDD)
+
+### 3.0.1 Understand Test Expectations
+
+Before implementing, understand what the tests expect:
+- Read each test case
+- Note the expected inputs and outputs
+- Identify edge cases being tested
+- Plan implementation to satisfy all tests
+
+**You are implementing to pass tests you did not write.**
 
 ===============================================================================
 PHASE 3A: IMPLEMENT (3 ATTEMPTS MAX)
@@ -378,6 +386,7 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
   "run_id": "{run_id}",
   "status": "failed",
   "attempts": 3,
+  "failure_signature": "{SHA256(root_cause + primary_error + test_name + file)[0:16]}",
   "build_command": "{build_command}",
   "test_file": "{test_file_path}",
   "test_command": "{test_command}",
@@ -385,6 +394,7 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
     {
       "attempt": 1,
       "approach": "Description of what you tried",
+      "approach_signature": "{SHA256(approach)[0:8]}",
       "build_passed": true,
       "build_output": "Build output if failed, null if passed",
       "test_output": "Actual error message from test run",
@@ -393,6 +403,7 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
     {
       "attempt": 2,
       "approach": "Description of different approach",
+      "approach_signature": "{SHA256(approach)[0:8]}",
       "build_passed": true,
       "build_output": "Build output if failed",
       "test_output": "Actual error message",
@@ -401,6 +412,7 @@ Create `.orchestrator/reports/{task_id}-loop-{loop_number}.json` with:
     {
       "attempt": 3,
       "approach": "Description of final approach",
+      "approach_signature": "{SHA256(approach)[0:8]}",
       "build_passed": false,
       "build_output": "Build error output",
       "test_output": "Not run - build failed",
@@ -588,7 +600,8 @@ EXECUTION CHECKLIST
 
 - [ ] Read and understood the task requirements
 - [ ] Explored relevant codebase sections
-- [ ] **Created test file from task's Test Code section**
+- [ ] **Located existing test file (written by Testing Agent)**
+- [ ] **Read and understood test expectations**
 - [ ] Followed existing code conventions
 - [ ] Implemented code (up to 3 attempts)
 - [ ] **Ran BUILD after each attempt**
@@ -608,8 +621,10 @@ COMMON MISTAKES
 | Mistake | Impact | Fix |
 |---------|--------|-----|
 | **Skipping build verification** | Missing imports, broken code deployed | Run build BEFORE tests |
-| **Skipping test file creation** | No verification criteria | Create test file FIRST |
+| **Creating test file yourself** | Violates TDD, fox guards henhouse | Tests written by Testing Agent |
+| **Test file not found** | Dependency failure | Check TASK-TXX completed first |
 | **More than 3 attempts** | Wasted effort, no analysis | Stop at 3, use failure protocol |
+| **Missing failure_signature** | Can't detect repeated failures | Always include in failure report |
 | **Same approach each attempt** | Repeating failure | Try different approach |
 | **Writing .done when build/tests fail** | False completion | Only .done when build AND tests pass |
 | **Importing non-existent files** | Build failure | Verify imports exist before using |
@@ -626,17 +641,18 @@ START NOW
 ===============================================================================
 
 1. Explore the codebase to understand context
-2. **Create the test file from the task's Test Code section**
-3. Plan your approach
-4. Implement (Attempt 1)
-5. **Run BUILD first**
-6. If build fails: fix and count as attempt
-7. **Run TESTS (only if build passed)**
-8. If build or tests fail and attempt < 3: analyze and retry (Attempts 2, 3)
-9. If build AND tests pass: Write success report and .done marker
-10. If 3 attempts exhausted: Follow FAILURE PROTOCOL (report + .failed marker)
+2. **Locate existing test file (written by Testing Agent)**
+3. **Read and understand what the tests expect**
+4. Plan your approach to pass those tests
+5. Implement (Attempt 1)
+6. **Run BUILD first**
+7. If build fails: fix and count as attempt
+8. **Run TESTS (only if build passed)**
+9. If build or tests fail and attempt < 3: analyze and retry (Attempts 2, 3)
+10. If build AND tests pass: Write success report and .done marker
+11. If 3 attempts exhausted: Follow FAILURE PROTOCOL (report + .failed marker)
 
-Begin by reading the project structure, then CREATE THE TEST FILE.
+Begin by reading the project structure, then FIND AND READ THE EXISTING TEST FILE.
 ```
 
 ---

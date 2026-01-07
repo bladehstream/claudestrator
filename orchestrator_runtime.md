@@ -531,21 +531,72 @@ Bash("while [ ! -f '.orchestrator/complete/analysis.done' ]; do sleep 10; done &
 
 **After Analysis Agent completes**, check for critical issues flagged for auto-retry:
 
+### Retry Eligibility Check
+
 ```
 READ .orchestrator/issue_queue.md
 
 auto_retry_issues = issues WHERE:
   - Auto-Retry == true
   - Status == pending
-  - Retry-Count < Max-Retries
+  - Retry-Count < Max-Retries (default: 10)
+  - Signature-Repeat-Count < Max-Signature-Repeats (default: 3)
+
+# Filter out halted issues
+FOR each issue IN auto_retry_issues:
+    IF issue.Halted == true:
+        REMOVE from auto_retry_issues
+        CONTINUE
 
 IF auto_retry_issues is empty:
     GOTO Final Output
+```
 
+### Repeated Failure Detection
+
+Before retrying, check if the same fix was already attempted:
+
+```
+FOR each issue IN auto_retry_issues:
+    current_signature = issue.Failure-Signature
+    previous_signatures = issue.Previous-Signatures OR []
+
+    # Count how many times this exact failure occurred
+    signature_count = COUNT(current_signature IN previous_signatures) + 1
+
+    IF signature_count >= 3:
+        OUTPUT "⚠️ HALTING {issue.id}: Same failure repeated {signature_count} times"
+        OUTPUT "   Signature: {current_signature}"
+        OUTPUT "   Manual intervention required - fix approach isn't working"
+
+        # Mark issue as halted (not auto-retryable)
+        Edit issue:
+            | Halted | true |
+            | Halt-Reason | Repeated identical failure ({signature_count}x) |
+            | Auto-Retry | false |
+
+        REMOVE from auto_retry_issues
+        CONTINUE
+
+    # Track this signature for future detection
+    APPEND current_signature to issue.Previous-Signatures
+```
+
+### Global Cap Check
+
+```
 # Check global cap
 READ .orchestrator/session_state.md
-IF total_auto_retries >= 5:
-    OUTPUT "⚠️ Auto-retry limit (5) reached. Manual intervention required."
+IF total_auto_retries >= 15:
+    OUTPUT "⚠️ Auto-retry limit (15) reached. Manual intervention required."
+    OUTPUT ""
+    OUTPUT "Unresolved issues:"
+    FOR each pending_issue IN issue_queue WHERE Auto-Retry == true AND Status == pending:
+        OUTPUT "  - {pending_issue.id}: {pending_issue.summary}"
+        OUTPUT "    Attempts: {pending_issue.Retry-Count}/10"
+        IF pending_issue.Halted:
+            OUTPUT "    STATUS: HALTED (repeated failure - same fix tried 3x)"
+        OUTPUT ""
     GOTO Final Output
 
 # Trigger retry
@@ -580,7 +631,11 @@ Issues flagged for auto-retry include these fields:
 ```markdown
 | Auto-Retry | true |
 | Retry-Count | 0 |
-| Max-Retries | 3 |
+| Max-Retries | 10 |              ← Total attempts allowed (different approaches)
+| Failure-Signature | |           ← Hash of error output (set by Failure Analysis)
+| Previous-Signatures | [] |      ← History of past failure signatures
+| Signature-Repeat-Count | 0 |    ← Times same signature seen (max 3)
+| Halted | false |                ← Set true when repeated failure detected
 | Blocking | true |
 ```
 
@@ -588,8 +643,9 @@ Issues flagged for auto-retry include these fields:
 
 | Safeguard | Limit |
 |-----------|-------|
-| Per-issue retries | 3 (configurable via Max-Retries) |
-| Global retry cap | 5 per orchestration run |
+| Per-issue retries (different approaches) | 10 (Max-Retries) |
+| Per-issue retries (same approach) | 3 (Signature-Repeat-Count) |
+| Global retry cap | 15 per orchestration run |
 | Disable flag | `.orchestrator/no_auto_retry` file |
 
 ---

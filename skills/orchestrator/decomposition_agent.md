@@ -85,7 +85,7 @@ QA verification (TASK-99999)
 ```
 Task(
     model: "opus",
-    prompt: "Read('prompts/decomposition_agent.md') and follow those instructions.
+    prompt: "Read('.claude/prompts/decomposition_agent.md') and follow those instructions.
 
     WORKING_DIR: /path/to/project
     SOURCE: PRD.md

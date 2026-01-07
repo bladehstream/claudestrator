@@ -230,7 +230,7 @@ This mode processes externally-generated specification files that contain:
 First, read the category mapping to understand how tests relate to features:
 
 ```
-Read("prompts/external_spec_mapping.md")
+Read(".claude/prompts/external_spec_mapping.md")
 ```
 
 ### D.2 Read and Parse Spec Files

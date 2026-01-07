@@ -297,6 +297,92 @@ Gaps are warnings, not blockers. The orchestrator will attempt all tasks regardl
 
 ---
 
+## Test-Driven Development (TDD)
+
+Claudestrator enforces a **Test-Driven Development workflow**: tests are written BEFORE implementation code.
+
+### How TDD Works in Claudestrator
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              TDD WORKFLOW                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   1. Decomposition Agent creates tasks                                       │
+│      └── TEST tasks (TASK-T##) are created FIRST                            │
+│      └── BUILD tasks (TASK-###) depend on their TEST tasks                  │
+│                                                                              │
+│   2. Testing Agent runs TASK-T## tasks                                       │
+│      └── Writes test files with expected behavior                           │
+│      └── Tests define the contract for implementation                        │
+│                                                                              │
+│   3. Implementation Agent runs BUILD tasks                                   │
+│      └── Reads existing tests written by Testing Agent                      │
+│      └── Implements code to pass those tests                                │
+│      └── Does NOT modify tests - they define the contract                   │
+│                                                                              │
+│   4. QA Agent spot-checks completed work                                     │
+│      └── Randomly samples tasks to verify quality                           │
+│      └── Validates test coverage meets requirements                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Task Naming Convention
+
+| Task Type | ID Pattern | Example | Description |
+|-----------|------------|---------|-------------|
+| **Test tasks** | TASK-T## | TASK-T01, TASK-T02 | Write tests before implementation |
+| **Build tasks** | TASK-### | TASK-001, TASK-002 | Implement code to pass tests |
+| **Verification** | TASK-99999 | TASK-99999 | Final end-to-end validation |
+
+### Example Task Queue (TDD)
+
+When the Decomposition Agent creates tasks, you'll see:
+
+```markdown
+## TASK-T01 (TEST)
+Objective: Write tests for user authentication
+Dependencies: none
+Category: testing
+
+## TASK-T02 (TEST)
+Objective: Write tests for API endpoints
+Dependencies: none
+Category: testing
+
+## TASK-001 (BUILD)
+Objective: Implement user authentication
+Dependencies: TASK-T01    ← Must wait for tests to be written
+Category: backend
+
+## TASK-002 (BUILD)
+Objective: Implement API endpoints
+Dependencies: TASK-001, TASK-T02    ← Depends on both auth AND tests
+Category: backend
+```
+
+### Why TDD?
+
+1. **Clear contracts** - Tests define exactly what implementation should do
+2. **No guessing** - Implementation agents know the expected behavior upfront
+3. **Faster feedback** - Tests catch issues immediately during implementation
+4. **Better quality** - Code is written to pass specific requirements, not assumptions
+
+### Implementation Agent Behavior
+
+When an Implementation Agent receives a BUILD task:
+
+1. **Reads the test file** specified in the task
+2. **Understands expected behavior** from test assertions
+3. **Implements code** to make tests pass
+4. **Runs tests** to verify (up to 3 attempts)
+5. **Does NOT modify tests** - if tests seem wrong, that's a decomposition issue
+
+If tests don't exist (dependency failure), the agent writes a `.failed` marker and explains the issue.
+
+---
+
 ## Autonomy Levels
 
 When you run `/orchestrate`, you'll be asked to choose an autonomy level:
@@ -489,22 +575,30 @@ When you start orchestration, Claude will:
 
 This keeps the orchestration context clean and focused on execution rather than requirements gathering.
 
-### Phase 2: Planning
+### Phase 2: Planning (TDD)
 
-Claude decomposes your requirements into tasks:
+Claude decomposes your requirements into tasks following the **TDD workflow** - TEST tasks before BUILD tasks:
 
 ```markdown
 | ID | Name | Complexity | Dependencies |
-|----|------|------------|--------------|
-| 001 | Set up project structure | easy | none |
-| 002 | Design API endpoints | normal | none |
-| 003 | Implement user model | normal | 001 |
-| 004 | Implement auth middleware | normal | 003 |
-| 005 | Implement task CRUD | normal | 003, 004 |
-| 006 | Add validation | normal | 005 |
-| 007 | Write tests | normal | 005 |
-| 008 | QA verification | normal | all |
+|--------|------|------------|--------------|
+| SETUP  | --- Project Setup --- | | |
+| 001    | Set up project structure | easy | none |
+| 002    | Design API endpoints | normal | none |
+| TESTS  | --- Write Tests First --- | | |
+| T01    | Tests: User model | normal | 002 |
+| T02    | Tests: Auth middleware | normal | 002 |
+| T03    | Tests: Task CRUD | normal | 002 |
+| BUILD  | --- Implement to Pass Tests --- | | |
+| 003    | Implement user model | normal | 001, T01 |
+| 004    | Implement auth middleware | normal | 003, T02 |
+| 005    | Implement task CRUD | normal | 003, 004, T03 |
+| 006    | Add validation | normal | 005 |
+| QA     | --- Quality Verification --- | | |
+| 99999  | Final verification | normal | all |
 ```
+
+Notice how BUILD tasks (003-006) depend on their related TEST tasks (T01-T03). This ensures tests exist before implementation begins.
 
 ### Phase 3: Execution
 

@@ -53,7 +53,11 @@ When the QA/Testing agent discovers a critical blocking issue (e.g., server won'
 | Created | [ISO timestamp] |
 | Auto-Retry | true |
 | Retry-Count | 0 |
-| Max-Retries | 3 |
+| Max-Retries | 10 |
+| Failure-Signature | |
+| Previous-Signatures | [] |
+| Signature-Repeat-Count | 0 |
+| Halted | false |
 | Blocking | true |
 
 ### Summary
@@ -77,7 +81,11 @@ When the QA/Testing agent discovers a critical blocking issue (e.g., server won'
 |-------|------|-------------|
 | `Auto-Retry` | boolean | If `true`, orchestrator will automatically attempt to fix |
 | `Retry-Count` | integer | Number of times this issue has been retried (starts at 0) |
-| `Max-Retries` | integer | Maximum retry attempts before escalating to user (default: 3) |
+| `Max-Retries` | integer | Maximum retry attempts with different approaches (default: 10) |
+| `Failure-Signature` | string | SHA256 hash of error output for detecting repeated failures |
+| `Previous-Signatures` | array | History of past failure signatures |
+| `Signature-Repeat-Count` | integer | Count of consecutive identical failures (halt at 3) |
+| `Halted` | boolean | If `true`, issue halted due to repeated identical failures |
 | `Blocking` | boolean | If `true`, this issue prevents the build from being usable |
 
 ---
@@ -117,8 +125,8 @@ FUNCTION checkAutoRetry():
 
     # Check global retry cap
     READ .orchestrator/session_state.md
-    IF session.total_auto_retries >= 5:
-        LOG "Max auto-retries (5) reached for this run"
+    IF session.total_auto_retries >= 15:
+        LOG "Max auto-retries (15) reached for this run"
         OUTPUT "⚠️ Auto-retry limit reached. Manual intervention required."
         RETURN false
 
@@ -140,22 +148,29 @@ FUNCTION checkAutoRetry():
 
 ## Safeguards
 
-### 1. Per-Issue Retry Limit
-Each issue has `Max-Retries` (default 3). After 3 failed attempts to fix the same issue, stop and escalate.
+### 1. Per-Issue Retry Limit (Different Approaches)
+Each issue has `Max-Retries` (default 10). After 10 failed attempts with different approaches, stop and escalate.
 
-### 2. Global Retry Cap
-Maximum 5 auto-retry loops per orchestration run, regardless of how many issues. Prevents runaway loops.
+### 2. Per-Issue Signature Limit (Same Approach)
+If the same `Failure-Signature` appears 3 times consecutively, halt that issue. This prevents wasting attempts on the same broken approach.
 
-### 3. Same Error Detection
-If the exact same error occurs on consecutive retries, increment a `consecutive_failures` counter. After 2 consecutive identical failures, stop retrying that issue.
+### 3. Global Retry Cap
+Maximum 15 auto-retry loops per orchestration run, regardless of how many issues. Prevents runaway loops.
 
-### 4. User Override
+### 4. Same Error Detection (Failure Signatures)
+When an issue fails, generate a SHA256 hash of the error output:
+- If signature matches `Failure-Signature`, increment `Signature-Repeat-Count`
+- If different signature, reset `Signature-Repeat-Count` to 1 and update `Failure-Signature`
+- Add old signature to `Previous-Signatures` array
+- If `Signature-Repeat-Count >= 3`, set `Halted: true` and stop retrying
+
+### 5. User Override
 Create `.orchestrator/no_auto_retry` to disable auto-retry entirely:
 ```bash
 touch .orchestrator/no_auto_retry
 ```
 
-### 5. Timeout
+### 6. Timeout
 Auto-retry loops have the same timeout as regular loops. If an agent hangs, the loop fails.
 
 ---
@@ -186,7 +201,7 @@ Add to `.orchestrator/session_state.md`:
 
 Critical issue detected: Server fails to start (TypeError in src/index.ts:42)
 
-Attempt: 1 of 3
+Attempt: 1 of 10
 Action: Running improvement loop to fix issue
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -210,7 +225,7 @@ Original issue: Server fails to start (TypeError in src/index.ts:42)
 ⚠️ AUTO-RETRY EXHAUSTED
 ═══════════════════════════════════════════════════════════════════════════════
 
-Failed to fix after 3 attempts:
+Failed to fix after 10 attempts:
   - ISSUE-20241213-001: Server fails to start
 
 Manual intervention required. Review:
@@ -235,4 +250,6 @@ Manual intervention required. Review:
 
 ---
 
-*Auto-Retry Mechanism v1.0*
+*Auto-Retry Mechanism v2.0*
+*Updated: January 2026*
+*Changes: Max-Retries 3→10, Global cap 5→15, Added failure signature tracking*

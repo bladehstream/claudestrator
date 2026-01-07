@@ -1,6 +1,6 @@
-# Architecture Guide (MVP 2.2)
+# Architecture Guide (MVP 3.7)
 
-This document describes the Claudestrator MVP 2.2 architecture with background agents and inline prompts.
+This document describes the Claudestrator MVP 3.7 architecture with background agents, inline prompts, and **Test-Driven Development (TDD) workflow**.
 
 ---
 
@@ -9,6 +9,61 @@ This document describes the Claudestrator MVP 2.2 architecture with background a
 1. **Orchestrator stays minimal** - only reads `task_queue.md`, never PRD or codebase
 2. **Background agents with inline prompts** - each agent gets role-specific instructions in the prompt
 3. **File-based coordination** - agents write `.done` markers, orchestrator waits via blocking Bash
+4. **Test-Driven Development** - Tests are written BEFORE implementation code
+
+---
+
+## TDD Workflow
+
+Claudestrator enforces **Test-Driven Development**: tests are written BEFORE implementation.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              TDD WORKFLOW                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   Decomposition Agent                                                        │
+│       └── Creates TEST tasks (TASK-T##) before BUILD tasks (TASK-###)       │
+│       └── BUILD tasks depend on their related TEST tasks                     │
+│                                                                              │
+│   Testing Agent (runs TASK-T## tasks)                                        │
+│       └── Writes test files with expected behavior                           │
+│       └── Specifies integration level and mock policy                        │
+│       └── Tests define the contract for implementation                       │
+│                                                                              │
+│   Implementation Agent (backend, frontend, fullstack, devops)                │
+│       └── Reads existing tests written by Testing Agent                      │
+│       └── Implements code to pass those tests                                │
+│       └── Does NOT modify tests - they define the contract                   │
+│       └── Has 3 attempts to pass tests before failure                        │
+│                                                                              │
+│   QA Agent                                                                   │
+│       └── Spot checks random sample of completed work                        │
+│       └── Validates test coverage meets requirements                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Task Naming Convention
+
+| Task Type | ID Pattern | Example | Purpose |
+|-----------|------------|---------|---------|
+| Test tasks | TASK-T## | TASK-T01, TASK-T02 | Write tests first |
+| Build tasks | TASK-### | TASK-001, TASK-002 | Implement to pass tests |
+| Final verification | TASK-99999 | TASK-99999 | End-to-end validation |
+
+### Task Dependencies
+
+BUILD tasks explicitly depend on their related TEST tasks:
+
+```
+Dependencies: TASK-001, TASK-T01   ← Implementation depends on test being written
+```
+
+This ensures:
+1. Tests exist before implementation begins
+2. Implementation agents know exactly what to build
+3. The contract is defined before code is written
 
 ---
 
@@ -447,5 +502,6 @@ The POST /api/users endpoint lacks input validation.
 
 ---
 
-*Architecture Version: 2.2*
-*Last Updated: December 2025*
+*Architecture Version: 3.7*
+*Last Updated: January 2026*
+*Added: TDD Workflow (TEST tasks before BUILD tasks)*

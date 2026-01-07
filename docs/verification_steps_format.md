@@ -6,7 +6,44 @@
 
 ## Overview
 
-Each implementation agent appends verification steps to `.orchestrator/verification_steps.md`. The Testing Agent executes all accumulated steps and raises issues for failures.
+Each implementation agent appends verification steps to `.orchestrator/verification_steps.md`. The QA Agent executes all accumulated steps and raises issues for failures.
+
+---
+
+## TDD Context
+
+Claudestrator enforces **Test-Driven Development (TDD)**. Verification steps serve a different purpose than the tests written by the Testing Agent:
+
+| Artifact | Written By | Purpose | When Executed |
+|----------|------------|---------|---------------|
+| **Unit/Integration Tests** | Testing Agent (TEST tasks) | Define expected behavior, create test contract | Before BUILD tasks |
+| **Verification Steps** | Implementation Agents (BUILD tasks) | Verify runtime behavior, deployment readiness | After BUILD tasks |
+
+### Workflow Position
+
+```
+TEST tasks (TASK-T##)          BUILD tasks (TASK-###)           QA Verification
+     │                              │                                │
+     ▼                              ▼                                ▼
+┌──────────────┐            ┌──────────────────┐            ┌──────────────┐
+│   Testing    │────────────▶│ Implementation   │────────────▶│  QA Agent   │
+│    Agent     │   creates   │     Agent        │   creates   │   executes  │
+│              │   tests     │                  │   verif.    │   steps     │
+│              │             │   reads tests    │   steps     │             │
+└──────────────┘             │   implements     │             │   raises    │
+                             │   code to pass   │             │   issues    │
+                             └──────────────────┘             └──────────────┘
+```
+
+### What Goes Where
+
+| Verification Type | Where It Belongs | Example |
+|-------------------|------------------|---------|
+| Unit test for function behavior | TEST task (Testing Agent writes tests) | "createUser returns user with id" |
+| Integration test for API contract | TEST task (Testing Agent writes tests) | "POST /api/users returns 201" |
+| Build compiles successfully | Verification steps (Implementation Agent) | `npm run build` exits 0 |
+| Server starts without crash | Verification steps (Implementation Agent) | Server PID alive after 5s |
+| Database migrations apply | Verification steps (Implementation Agent) | Migrations run without error |
 
 ---
 
@@ -230,34 +267,66 @@ kill $SERVER_PID 2>/dev/null
 
 ---
 
-## Testing Agent Execution
+## QA Agent Execution
 
-The Testing Agent:
+The QA Agent executes verification steps as part of its spot-check process:
 
 1. **Reads** `.orchestrator/verification_steps.md`
-2. **Parses** each task's verification section
+2. **Parses** each BUILD task's verification section
 3. **Executes** build verification first (fail fast)
 4. **Executes** runtime verifications
 5. **Records** pass/fail for each task
-6. **Raises issues** for any failures:
+6. **Checks** that unit/integration tests pass (tests written by Testing Agent)
+7. **Raises issues** for any failures:
    ```
    /issue [generated] Title: TASK-XXX verification failed
    Description: [failure details]
    Category: bug
-   Priority: high
+   Priority: critical
+   Auto-Retry: true (for blocking failures)
    ```
+
+### Relationship to TDD Tests
+
+The QA Agent also runs the test suite created by the Testing Agent:
+
+```bash
+# Run tests written in TEST tasks (TASK-T##)
+npm test        # or project-specific test command
+
+# Then execute verification steps from BUILD tasks (TASK-###)
+# (build verification, runtime checks, etc.)
+```
+
+If tests fail, the QA Agent raises an auto-retry issue to fix the implementation (not the tests - tests define the contract).
 
 ---
 
 ## Failure Handling
 
-| Failure Type | Action |
-|--------------|--------|
-| Build fails | Raise HIGH priority issue, block completion |
-| Server won't start | Raise HIGH priority issue, block completion |
-| Endpoint returns error | Raise MEDIUM priority issue, continue other checks |
-| Missing expected content | Raise MEDIUM priority issue, continue other checks |
+| Failure Type | Priority | Auto-Retry | Action |
+|--------------|----------|------------|--------|
+| Build fails | critical | **Yes** | Raise issue, triggers automatic fix loop |
+| Server won't start | critical | **Yes** | Raise issue, triggers automatic fix loop |
+| Tests fail (TDD tests) | critical | **Yes** | Raise issue, implementation must be fixed |
+| Endpoint returns error | high | No | Raise issue, continue other checks |
+| Missing expected content | medium | No | Raise issue, continue other checks |
+
+### Auto-Retry Integration
+
+When a blocking failure occurs, the QA Agent flags it for automatic retry:
+
+```markdown
+| Auto-Retry | true |
+| Retry-Count | 0 |
+| Max-Retries | 10 |
+| Blocking | true |
+```
+
+The orchestrator will run additional improvement loops to fix these issues without user intervention. See [Auto-Retry Mechanism](./auto_retry_mechanism.md) for details.
 
 ---
 
-*Verification Steps Format v1.0*
+*Verification Steps Format v2.0*
+*Updated: January 2026*
+*Changes: Added TDD context, QA Agent execution details, auto-retry integration*

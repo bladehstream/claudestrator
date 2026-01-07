@@ -147,6 +147,42 @@ Grep("beforeEach|afterEach", "**/*.test.*")       # Setup/teardown
 | Utilities | 70%+ | Reused often |
 | UI components | 60%+ | Focus on interactions |
 
+### 2.4 Integration Level
+
+When writing tests (WRITE mode), specify the integration level in test file headers:
+
+| Level | Description | When to Use |
+|-------|-------------|-------------|
+| `unit` | Isolated tests, all dependencies mocked | Pure functions, business logic |
+| `mocked` | Integration with mocked external services | API handlers, service layers |
+| `real` | Integration with real services (DB, APIs) | Critical paths, E2E flows |
+
+```typescript
+/**
+ * @integration-level mocked
+ * @mock-policy external-services-only
+ */
+describe('PaymentService', () => {
+  // Tests here use real database but mock payment gateway
+});
+```
+
+### 2.5 Mock Policy
+
+Specify what should be mocked in the test file:
+
+| Policy | Description | Mocked | Real |
+|--------|-------------|--------|------|
+| `none` | No mocking, everything real | Nothing | All deps |
+| `database-seeding-only` | Real DB with test data | Nothing | DB (seeded) |
+| `external-services-only` | Mock external APIs only | 3rd party APIs | DB, internal |
+| `internal-only` | Mock internal services | Internal deps | External APIs |
+
+**Default policy** for each test type:
+- Unit tests: Mock everything except the unit under test
+- Integration tests: `external-services-only`
+- E2E tests: `none` or `external-services-only` for payments/email
+
 ---
 
 ## Phase 3: Unit Testing

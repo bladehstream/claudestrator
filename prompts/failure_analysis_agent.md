@@ -156,9 +156,28 @@ Classify the failure:
 PHASE 3: CREATE REMEDIATION ISSUES
 ===============================================================================
 
+### 3.0 Generate Failure Signature (CRITICAL)
+
+**Before creating the issue**, generate a signature to detect repeated identical failures:
+
+```
+SIGNATURE_INPUT = CONCAT(
+    root_cause_type,           # e.g., "implementation_bug"
+    primary_error_message,     # e.g., "TypeError: Cannot read property 'x' of undefined"
+    failing_test_name,         # e.g., "test_user_creation"
+    affected_file              # e.g., "src/services/user.ts"
+)
+
+FAILURE_SIGNATURE = SHA256(SIGNATURE_INPUT)[0:16]  # First 16 chars of hash
+```
+
+This signature allows the orchestrator to detect when the same failure keeps occurring,
+indicating the fix approach isn't working.
+
 ### 3.1 Issue Format
 
 **CRITICAL: All failure remediation issues MUST have Priority: critical**
+**CRITICAL: Generate and include a Failure-Signature for retry loop detection**
 
 ```markdown
 ---
@@ -174,8 +193,14 @@ PHASE 3: CREATE REMEDIATION ISSUES
 | Type | failure-remediation |
 | Source Task | {task_id} |
 | Root Cause | {root_cause_type} |
+| Failure-Signature | {generated signature} |
+| Previous-Signatures | [] |
+| Signature-Repeat-Count | 0 |
 | Blocking | true |
-| Auto-Retry | false |
+| Auto-Retry | true |
+| Retry-Count | 0 |
+| Max-Retries | 10 |
+| Halted | false |
 
 **Summary:** {one-line description of what needs to be fixed}
 
@@ -199,6 +224,9 @@ PHASE 3: CREATE REMEDIATION ISSUES
 **Verification:**
 After fix, run: `{test command}`
 Expected: All tests pass
+
+**Failure Signature:**
+`{FAILURE_SIGNATURE}` - Used to detect repeated identical failures
 
 **Related Files:**
 - `{file1}`
@@ -337,8 +365,10 @@ EXECUTION CHECKLIST
 - [ ] Read the implementation code
 - [ ] Diagnosed root cause (not just symptoms)
 - [ ] Determined if tests or implementation is wrong
+- [ ] **Generated Failure-Signature from error details**
 - [ ] Created remediation issue(s) with Priority: critical
 - [ ] Issue includes specific, actionable fix steps
+- [ ] **Set Max-Retries to 10, Signature-Repeat-Count to 0**
 - [ ] Updated original task with remediation reference
 - [ ] **WROTE THE COMPLETION MARKER FILE**
 
@@ -353,6 +383,8 @@ COMMON MISTAKES
 | Not setting Priority: critical | Issue not prioritized | Always use critical priority |
 | Forgetting completion marker | System hangs | Always write .done file |
 | Not reading all 3 attempts | Missing context | Each attempt may reveal different info |
+| **Missing Failure-Signature** | Can't detect repeated failures | Always generate signature from error |
+| **Using Max-Retries: 3** | Not enough attempts for complex issues | Use Max-Retries: 10 |
 
 ===============================================================================
 START NOW

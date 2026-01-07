@@ -320,6 +320,195 @@ godot --path . --scene res://main.tscn
 
 ### Phase 0: Determine Testing Approach (MANDATORY FIRST STEP)
 
+### Phase 0.5: Spot Check Automated Tests
+
+The Implementation Agent already ran automated tests. Your job is to:
+
+1. **Trust but verify** - Don't re-run the full suite
+2. **Spot check** - Run a sample of tests as sanity check
+3. **Focus on interactive** - Your main value is manual testing
+
+---
+
+## Spot Check Specification
+
+### Test Selection Rules
+
+| Category | % | Min | Max | Notes |
+|----------|---|-----|-----|-------|
+| Smoke/Critical | 100% | - | - | Run all smoke tests |
+| Feature (task's Test IDs) | 100% | - | - | Run all feature tests |
+| Unit (non-feature) | 10% | 2 | 10 | Sample |
+| Integration (non-feature) | 20% | 2 | 5 | Sample |
+| E2E (non-feature) | 25% | 1 | 3 | Sample |
+| Security | 30% | 2 | 5 | Sample |
+| Performance | 10% | 1 | 2 | Sample |
+
+**Note:** Minimum only applies when percentage < 100%
+
+### Calculation Formula
+
+```
+FOR each category:
+    IF percentage == 100%:
+        selected = available
+    ELSE:
+        available = tests in category (excluding feature tests already counted)
+        calculated = CEIL(available × percentage)
+        selected = CLAMP(calculated, minimum, maximum)
+        IF selected > available: selected = available
+```
+
+### Test Selection Method (Deterministic)
+
+Use task ID for deterministic selection (reproducible, not random):
+
+```
+seed = HASH(task_id + category_name) mod 2^32
+step = available_count / selected_count
+
+FOR i in 0..selected_count:
+    index = (seed + i × step) mod available_count
+    select test at index
+```
+
+This ensures:
+- Deterministic (same task = same sample = reproducible)
+- Varied (different tasks = different samples = coverage over time)
+
+### Success Criteria (Measurable)
+
+| Category | Required Pass Rate | On Failure |
+|----------|-------------------|------------|
+| Smoke | 100% | CRITICAL - system broken |
+| Feature | 100% | FAIL - implementation incomplete |
+| Non-feature combined | ≥90% | WARN if 80-90%, FAIL if <80% |
+| Overall | ≥95% | FAIL if <95% |
+
+### Spot Check Decision Matrix
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SPOT CHECK DECISION MATRIX                   │
+├─────────────┬─────────────┬─────────────┬──────────────────────┤
+│ Smoke       │ Feature     │ Non-Feature │ Action               │
+├─────────────┼─────────────┼─────────────┼──────────────────────┤
+│ 100% pass   │ 100% pass   │ ≥95% pass   │ ✓ PASS - proceed     │
+│ 100% pass   │ 100% pass   │ 90-94%      │ ⚠ WARN - investigate │
+│ 100% pass   │ 100% pass   │ <90%        │ ✗ FAIL - regression  │
+│ 100% pass   │ <100%       │ any         │ ✗ FAIL - incomplete  │
+│ <100%       │ any         │ any         │ ✗ CRITICAL - broken  │
+└─────────────┴─────────────┴─────────────┴──────────────────────┘
+```
+
+### Spot Check Output Format
+
+```markdown
+## Spot Check Results
+
+| Category | Selected | Passed | Failed | Rate |
+|----------|----------|--------|--------|------|
+| Smoke | 5 | 5 | 0 | 100% ✓ |
+| Feature | 6 | 6 | 0 | 100% ✓ |
+| Unit | 2 | 2 | 0 | 100% ✓ |
+| Integration | 2 | 2 | 0 | 100% ✓ |
+| E2E | 1 | 1 | 0 | 100% ✓ |
+| Security | 5 | 5 | 0 | 100% ✓ |
+| Performance | 1 | 1 | 0 | 100% ✓ |
+| **TOTAL** | **22** | **22** | **0** | **100%** |
+
+**SPOT CHECK: PASS** ✓
+```
+
+### Mismatch Detection
+
+If Implementation Agent claimed "all X tests passed" but spot check finds failures:
+
+```
+MISMATCH DETECTED:
+  Implementation claimed: 76 tests passed
+  Spot check found: 2 failures in 22 tests sampled
+
+  Failed tests:
+    - UNIT-015: Expected 200, got 500
+    - SEC-003: Auth bypass detected
+
+  Action: Create issue with | Source | qa_mismatch |
+```
+
+---
+
+## Failure Issue Creation
+
+**When QA recommendation is FAIL**, you MUST create an issue for the orchestrator:
+
+### Generate Failure Signature
+
+```
+SIGNATURE_INPUT = CONCAT(
+    "qa_failure",
+    task_id,
+    first_failed_criterion,
+    primary_bug_location
+)
+FAILURE_SIGNATURE = SHA256(SIGNATURE_INPUT)[0:16]
+```
+
+### Write Issue to Queue
+
+If your recommendation is **FAIL**, write to `.orchestrator/issue_queue.md`:
+
+```markdown
+---
+
+## ISSUE-{date}-{seq}
+
+| Field | Value |
+|-------|-------|
+| Type | bug |
+| Priority | high |
+| Status | pending |
+| Source | qa |
+| Category | {from task} |
+| Created | {ISO timestamp} |
+| Failure-Signature | {FAILURE_SIGNATURE} |
+| Previous-Signatures | [] |
+| Signature-Repeat-Count | 0 |
+| Auto-Retry | true |
+| Retry-Count | 0 |
+| Max-Retries | 10 |
+| Halted | false |
+| Blocking | true |
+| Source Task | {TASK-ID that failed QA} |
+
+### Summary
+QA Failed: {primary failure reason}
+
+### Failure Details
+**Task:** {task_id}
+**Criteria Failed:** {count} of {total}
+
+{For each failed criterion:}
+- **{Criterion}**: {Why it failed}
+
+### Bugs Found
+{Copy bug details from QA report}
+
+### Suggested Fix
+{Based on QA findings}
+
+### Failure Signature
+`{FAILURE_SIGNATURE}` - Detects if same QA failure recurs
+```
+
+### When NOT to Create Issues
+
+- If recommendation is **PASS** or **PASS WITH NOTES** - no issue needed
+- If failures are all **Low** severity - document in report only
+- If already exists in issue queue (check with Grep first)
+
+---
+
 ```
 STEP 1: Identify application type (see detection table above)
 

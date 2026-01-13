@@ -7,7 +7,7 @@ domain: [any]
 task_types: [testing, review, evaluation]
 keywords: [user, player, experience, ux, accessibility, friction, usability, persona, feedback]
 complexity: [normal]
-pairs_with: [qa_agent, game_designer, frontend_design, browser_playwright_runner]
+pairs_with: [qa_agent, game_designer, frontend_design, browser_automation]
 source: original
 ---
 

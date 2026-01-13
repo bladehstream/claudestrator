@@ -1,0 +1,1 @@
+../../.claudestrator/commands/prdgen.md

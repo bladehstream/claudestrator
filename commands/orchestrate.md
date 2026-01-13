@@ -161,9 +161,64 @@ The Decomposition Agent creates both TEST and BUILD tasks with proper dependenci
 6. Get absolute working directory with `pwd` (store for agent prompts)
 7. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
 8. Initialize LOOP_NUMBER to 1
-9. **Scan for critical blocking issues** (see below)
+9. **Scan for failed tasks** (see Step 9 below)
+10. **Scan for critical blocking issues** (see Step 10 below)
 
-### Critical Issue Loop (Step 9)
+### Step 9: Failed Task Detection (BEFORE Critical Issues)
+
+**IMPORTANT:** Failed tasks must be processed FIRST because they generate critical issues.
+
+```bash
+# Count tasks with failed status
+FAILED_COUNT=$(grep -c "| Status | failed |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+```
+
+**If FAILED_COUNT > 0:**
+
+For each failed task, spawn Failure Analysis Agent:
+
+```bash
+# Get list of failed task IDs
+FAILED_TASKS=$(grep -B5 "| Status | failed |" .orchestrator/task_queue.md | grep "^### TASK-" | sed 's/### //')
+```
+
+For each TASK_ID in FAILED_TASKS:
+
+1. **Check if analysis already done:**
+   ```bash
+   ls .orchestrator/complete/analysis-${TASK_ID}.done 2>/dev/null && echo "SKIP" || echo "ANALYZE"
+   ```
+
+2. **If not analyzed, spawn Failure Analysis Agent:**
+   ```
+   Task(
+     model: "opus",
+     run_in_background: true,
+     prompt: "Read('.claude/prompts/failure_analysis_agent.md') and follow those instructions.
+
+     ---
+
+     FAILED_TASK_ID: ${TASK_ID}
+     WORKING_DIR: ${WORKING_DIR}
+
+     Analyze why this task failed and create critical issue(s) in issue_queue.md.
+     Write marker when done: .orchestrator/complete/analysis-${TASK_ID}.done"
+   )
+   ```
+
+3. **Wait for all analysis to complete:**
+   ```bash
+   for TASK_ID in $FAILED_TASKS; do
+     while [ ! -f ".orchestrator/complete/analysis-${TASK_ID}.done" ]; do sleep 5; done
+   done
+   echo "All failure analysis complete"
+   ```
+
+**Result:** Critical issues now exist in issue_queue.md. Proceed to Step 10.
+
+---
+
+### Critical Issue Loop (Step 10)
 
 **IMPORTANT:** Before ANY other work, you must resolve ALL critical issues.
 
@@ -202,7 +257,7 @@ This is a LOOP that continues until the critical queue is empty:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 9a: Scan for Critical Issues
+### Step 10a: Scan for Critical Issues
 
 Critical issues need processing if they are in ANY of these states:
 
@@ -213,7 +268,7 @@ Critical issues need processing if they are in ANY of these states:
 | `in_progress` | Task has `.failed` marker | Implementation failed, needs Failure Analysis |
 | `in_progress` | Task has `.done` marker but issue not `completed` | False completion, needs re-work |
 
-**Step 9a.1: Count pending/accepted critical issues**
+**Step 10a.1: Count pending/accepted critical issues**
 
 Run this command to count actionable critical issues:
 
@@ -223,7 +278,7 @@ Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/nul
 
 Store the output as `PENDING_CRITICAL`.
 
-**Step 9a.2: Check for stalled in_progress critical issues**
+**Step 10a.2: Check for stalled in_progress critical issues**
 
 Run this command to find critical in_progress issues with Task Refs:
 
@@ -240,13 +295,13 @@ For each result that shows BOTH `Priority | critical` AND `Status | in_progress`
 
 Count how many stalled tasks you find as `STALLED_COUNT`.
 
-**Step 9a.3: Calculate total**
+**Step 10a.3: Calculate total**
 
 ```
 CRITICAL_COUNT = PENDING_CRITICAL + STALLED_COUNT
 ```
 
-**Step 9a.4: Handle stalled issues**
+**Step 10a.4: Handle stalled issues**
 
 For each stalled task found:
 
@@ -271,7 +326,7 @@ For each stalled task found:
   ```
 - Output: `⚠️ False completion detected: TASK-XXX marked done but issue unresolved. Resetting for re-work.`
 
-**Step 9a.5: Re-count after resets**
+**Step 10a.5: Re-count after resets**
 
 After handling stalled issues, re-run the pending/accepted count:
 
@@ -281,7 +336,7 @@ Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/nul
 
 Update `CRITICAL_COUNT` with the new value.
 
-### Step 9b: Critical Loop Logic
+### Step 10b: Critical Loop Logic
 
 ```python
 CRITICAL_ITERATION = 0
@@ -344,7 +399,7 @@ WHILE CRITICAL_COUNT > 0:
     # 2. Wait for completion (and clean up marker)
     Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
 
-    # 3. VERIFY tasks were created (Step 9c)
+    # 3. VERIFY tasks were created (Step 10c)
     # 4. Run Implementation Agents on critical tasks (markers cleaned inline per Step 2c)
     # 5. Wait for all critical tasks to complete (including TASK-99999)
     # 6. Commit changes
@@ -368,7 +423,7 @@ Proceeding with normal orchestration flow.
 """
 ```
 
-### Step 9c: Verify Tasks Created (within loop)
+### Step 10c: Verify Tasks Created (within loop)
 
 **After Decomposition Agent completes, verify tasks were created:**
 
@@ -399,7 +454,7 @@ Action: HALT orchestration. Manual intervention required.
 
 **HALT immediately.** Do NOT continue the loop or proceed to normal orchestration.
 
-### Step 9d: After Critical Loop Completes
+### Step 10d: After Critical Loop Completes
 
 Only after CRITICAL_COUNT == 0 should you proceed. The next step depends on:
 
@@ -549,6 +604,101 @@ Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; d
 Read `.orchestrator/task_queue.md` to get pending tasks.
 
 For each task with `Status | pending`:
+
+### 2a-0. Check Dependencies (MANDATORY)
+
+**Before spawning any agent, verify all dependencies are satisfied.**
+
+```bash
+# For a task with "Depends On | TASK-001, TASK-002, TASK-003":
+# Check each dependency's status
+
+for DEP in TASK-001 TASK-002 TASK-003; do
+  STATUS=$(grep -A5 "### $DEP" .orchestrator/task_queue.md | grep "Status" | head -1 | sed 's/.*| //' | tr -d ' ')
+  if [ "$STATUS" != "completed" ]; then
+    echo "BLOCKED: $DEP is $STATUS (not completed)"
+    BLOCKED=true
+  fi
+done
+```
+
+**Dependency States:**
+
+| Dependency Status | Action |
+|-------------------|--------|
+| `completed` | ✓ Satisfied - can proceed |
+| `pending` | ⏸ Not ready - skip this task, run dependency first |
+| `in_progress` | ⏸ Not ready - wait for dependency to finish |
+| `failed` | ⛔ BLOCKED - cannot proceed until dependency is fixed |
+| `blocked` | ⛔ BLOCKED - transitive block |
+
+**If ANY dependency is not `completed`:**
+- Skip this task
+- Output: `⏸ Skipping [TASK-ID]: dependency [DEP-ID] is [STATUS]`
+- Continue to next pending task
+
+**If ALL dependencies are `completed` (or task has no dependencies):**
+- Proceed to spawn agent
+
+**Special Case: TASK-99999 (Final Verification)**
+
+TASK-99999 depends on ALL other tasks. Before running it:
+```bash
+# Count non-completed tasks (excluding TASK-99999 itself)
+INCOMPLETE=$(grep -E "^### TASK-" .orchestrator/task_queue.md | grep -v "TASK-99999" | while read task; do
+  grep -A5 "$task" .orchestrator/task_queue.md | grep -q "Status | completed" || echo "incomplete"
+done | wc -l)
+
+if [ "$INCOMPLETE" -gt 0 ]; then
+  echo "⛔ TASK-99999 blocked: $INCOMPLETE task(s) not completed"
+  # Do not run TASK-99999
+fi
+```
+
+### 2a-1. TDD Validation (For BUILD Tasks Only)
+
+**Before running any BUILD task (frontend/backend/fullstack/devops), verify tests exist.**
+
+```bash
+# For BUILD tasks, check that related TEST tasks are complete
+TASK_CATEGORY=$(grep -A10 "### $TASK_ID" .orchestrator/task_queue.md | grep "Category" | head -1 | sed 's/.*| //' | tr -d ' ')
+
+if [[ "$TASK_CATEGORY" =~ ^(frontend|backend|fullstack|devops)$ ]]; then
+  # This is a BUILD task - verify TEST dependencies exist
+  TEST_DEPS=$(grep -A10 "### $TASK_ID" .orchestrator/task_queue.md | grep "Depends On" | grep -oE "TASK-T[0-9]+" | head -5)
+
+  if [ -z "$TEST_DEPS" ]; then
+    echo "⚠️ WARNING: BUILD task $TASK_ID has no TEST task dependencies"
+    echo "   TDD requires tests to be written before implementation"
+  else
+    for TEST_TASK in $TEST_DEPS; do
+      TEST_STATUS=$(grep -A5 "### $TEST_TASK" .orchestrator/task_queue.md | grep "Status" | head -1 | sed 's/.*| //' | tr -d ' ')
+      if [ "$TEST_STATUS" != "completed" ]; then
+        echo "⛔ TDD VIOLATION: $TASK_ID cannot run - $TEST_TASK (tests) is $TEST_STATUS"
+        BLOCKED=true
+      fi
+    done
+  fi
+
+  # Also verify test files actually exist in the project
+  PROJECT_TESTS=$(find .orchestrator/app/src -name "*.test.ts" 2>/dev/null | wc -l)
+  if [ "$PROJECT_TESTS" -eq 0 ]; then
+    echo "⚠️ WARNING: No test files found in project - TDD may not be enforced"
+  fi
+fi
+```
+
+**TDD Enforcement Rules:**
+
+| Task Type | Can Run If |
+|-----------|------------|
+| TEST task (TASK-Txx) | No special requirements (runs first) |
+| BUILD task | All TASK-Txx dependencies are `completed` |
+
+**If TDD validation fails:**
+- Do NOT run the BUILD task
+- Output violation message
+- Skip to next pending task
 
 ### 2a. Select Model and Prompt by Category
 

@@ -1,0 +1,59 @@
+{
+  "companyAnnouncements": [
+    "🎭 CLAUDESTRATOR - Multi-agent orchestration framework. Start with /prdgen, then /orchestrate.",
+    "🎭 CLAUDESTRATOR - Quick Start: /prdgen → /orchestrate → /issue (to report bugs)",
+    "🎭 CLAUDESTRATOR - Use /orchestrate --dry-run to preview tasks and cost estimates.",
+    "🎭 CLAUDESTRATOR - Run /claudestrator-help for full command reference.",
+    "🎭 CLAUDESTRATOR - Tip: Use two terminals - one for /orchestrate, one for /prdgen and /issue."
+  ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat << 'CLAUDESTRATOR_BANNER'\n\n╔═══════════════════════════════════════════════════════════════════╗\n║  🎭 CLAUDESTRATOR - Multi-Agent Orchestration Framework           ║\n╠═══════════════════════════════════════════════════════════════════╣\n║                                                                   ║\n║  QUICK START:                                                     ║\n║    1. /prdgen      - Create your PRD (do this first!)            ║\n║    2. /orchestrate - Start multi-agent task execution            ║\n║    3. /issue       - Report bugs as you find them                ║\n║                                                                   ║\n║  Run /claudestrator-help for full command reference              ║\n║                                                                   ║\n╚═══════════════════════════════════════════════════════════════════╝\n\nCLAUDESTRATOR_BANNER"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/check-completion-marker.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Task"
+    ],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(su:*)",
+      "Bash(rm -rf /:*)",
+      "Bash(dd:*)",
+      "Bash(mkfs:*)",
+      "Read(~/.ssh/*)",
+      "Read(~/.aws/*)",
+      "Read(~/.gnupg/*)",
+      "Edit(/etc/*)",
+      "Edit(/usr/*)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.profile)"
+    ]
+  }
+}

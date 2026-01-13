@@ -470,6 +470,118 @@ MISMATCH DETECTED:
 
 ---
 
+## Test Quality Gate (MANDATORY)
+
+**Before marking verification complete, validate test quality - not just pass rate.**
+
+### 1. Test Distribution Validation
+
+```bash
+# Count test types in project source (exclude node_modules)
+PROJECT_TESTS=$(find .orchestrator/app/src -name "*.test.ts" -type f 2>/dev/null)
+UNIT_COUNT=$(echo "$PROJECT_TESTS" | wc -l)
+INTEGRATION_COUNT=$(find .orchestrator/app/src -path "*integration*" -name "*.test.ts" 2>/dev/null | wc -l)
+E2E_COUNT=$(find .orchestrator/app/src -path "*e2e*" -name "*.test.ts" 2>/dev/null | wc -l)
+
+echo "Test Distribution:"
+echo "  Unit tests: $UNIT_COUNT"
+echo "  Integration tests: $INTEGRATION_COUNT"
+echo "  E2E tests: $E2E_COUNT"
+
+# Validation
+if [ "$INTEGRATION_COUNT" -eq 0 ]; then
+  echo "⛔ FAIL: No integration tests found"
+  echo "   Tests must include real integration tests (not mocked)"
+fi
+if [ "$E2E_COUNT" -eq 0 ]; then
+  echo "⛔ FAIL: No E2E tests found"
+  echo "   Tests must include end-to-end tests with real dependencies"
+fi
+```
+
+### 2. Mock Percentage Validation (Project Tests Only)
+
+```bash
+# Only check project tests, not library tests in node_modules
+MOCK_COUNT=0
+TEST_COUNT=0
+
+for f in $(find .orchestrator/app/src -name "*.test.ts" -type f 2>/dev/null); do
+  MOCK_COUNT=$((MOCK_COUNT + $(grep -c "vi\.mock\|jest\.mock\|\.mockReturnValue\|\.mockImplementation\|\.mockResolvedValue" "$f" 2>/dev/null || echo 0)))
+  TEST_COUNT=$((TEST_COUNT + $(grep -c "it(\|test(" "$f" 2>/dev/null || echo 0)))
+done
+
+if [ "$TEST_COUNT" -gt 0 ]; then
+  MOCK_RATIO=$((MOCK_COUNT * 100 / TEST_COUNT))
+  echo "Mock ratio: ${MOCK_RATIO}% ($MOCK_COUNT mocks / $TEST_COUNT tests)"
+
+  if [ "$MOCK_RATIO" -gt 70 ]; then
+    echo "⛔ FAIL: ${MOCK_RATIO}% mock usage exceeds maximum (70%)"
+    echo "   Too many tests rely on mocks - add real integration tests"
+  fi
+fi
+```
+
+### 3. External Service Test Coverage
+
+**Discover external services from project configuration:**
+
+```bash
+# Find external service URLs/endpoints in config
+EXTERNAL_SERVICES=$(grep -rhE "baseUrl|endpoint|API_URL|_HOST|_PORT" \
+  .orchestrator/app/src \
+  .orchestrator/app/.env* \
+  .orchestrator/app/config* 2>/dev/null | \
+  grep -oE "(https?://[^\"' ]+|localhost:[0-9]+)" | \
+  sort -u)
+
+if [ -n "$EXTERNAL_SERVICES" ]; then
+  echo "Discovered external services:"
+  echo "$EXTERNAL_SERVICES"
+
+  # For each discovered service, verify tests exist
+  for SERVICE in $EXTERNAL_SERVICES; do
+    # Check if tests exist that reference this service WITHOUT mocking
+    REAL_TESTS=$(grep -rl "$SERVICE" .orchestrator/app/src/**/*.test.ts 2>/dev/null | \
+      xargs grep -L "mock\|Mock" 2>/dev/null | wc -l)
+
+    if [ "$REAL_TESTS" -eq 0 ]; then
+      echo "⚠️ WARNING: No real integration tests for $SERVICE"
+    else
+      echo "✓ Found $REAL_TESTS real test(s) for $SERVICE"
+    fi
+  done
+fi
+```
+
+### 4. Pre-flight Service Availability
+
+**Before running integration/E2E tests, verify external services are available:**
+
+```bash
+for SERVICE in $EXTERNAL_SERVICES; do
+  if curl -s --max-time 5 "$SERVICE" > /dev/null 2>&1; then
+    echo "✓ $SERVICE is available"
+  else
+    echo "⚠️ $SERVICE is NOT available"
+    echo "   Integration tests for this service may be skipped"
+  fi
+done
+```
+
+**Quality Gate Summary:**
+
+| Check | Threshold | Action if Failed |
+|-------|-----------|------------------|
+| Integration tests exist | > 0 | FAIL verification |
+| E2E tests exist | > 0 | FAIL verification |
+| Mock percentage | ≤ 70% | FAIL verification |
+| External service coverage | 1+ real test per service | WARNING |
+
+**If ANY quality gate fails, verification CANNOT pass regardless of test pass rate.**
+
+---
+
 ## Failure Issue Creation
 
 **When QA recommendation is FAIL**, you MUST create an issue for the orchestrator:

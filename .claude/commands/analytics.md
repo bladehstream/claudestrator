@@ -1,0 +1,1 @@
+../../.claudestrator/commands/analytics.md

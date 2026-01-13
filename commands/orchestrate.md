@@ -100,9 +100,10 @@ The orchestrator enforces **Test-Driven Development**: tests are written BEFORE 
 ### Task Execution Order
 
 ```
-1. TEST tasks (TASK-T##) execute first → Testing Agent writes tests
+1. TEST tasks (TASK-T##) execute first → Test Creation Agent writes tests
 2. BUILD tasks (TASK-###) execute after → Implementation Agents code to pass tests
-3. QA Agent spot-checks completed work
+3. VERIFY tasks (TASK-V##) execute after BUILD → Test Verification Agent validates
+4. QA Agent spot-checks completed work
 ```
 
 ### Key Principles
@@ -118,7 +119,8 @@ The orchestrator enforces **Test-Driven Development**: tests are written BEFORE 
 
 | Task ID Pattern | Category | Agent Type |
 |-----------------|----------|------------|
-| TASK-T## | testing | Testing Agent |
+| TASK-T## | test_creation | Test Creation Agent |
+| TASK-V## | test_verification | Test Verification Agent |
 | TASK-### | backend | Backend Implementation Agent |
 | TASK-### | frontend | Frontend Implementation Agent |
 | TASK-### | fullstack | Fullstack Implementation Agent |
@@ -517,7 +519,8 @@ Agents read detailed instructions from prompt files:
 | Backend | `.claude/prompts/backend_agent.md` |
 | Fullstack | `.claude/prompts/fullstack_agent.md` |
 | DevOps | `.claude/prompts/devops_agent.md` |
-| Testing | `.claude/prompts/testing_agent.md` |
+| Test Creation | `.claude/prompts/test_creation_agent.md` |
+| Test Verification | `.claude/prompts/test_verification_agent.md` |
 | Docs | `.claude/prompts/docs_agent.md` |
 
 ---
@@ -1037,7 +1040,8 @@ fi
 | backend | `prompts/backend_agent.md` | sonnet |
 | fullstack | `prompts/fullstack_agent.md` | sonnet |
 | devops | `prompts/devops_agent.md` | sonnet |
-| testing | `prompts/testing_agent.md` | sonnet |
+| test_creation | `prompts/test_creation_agent.md` | sonnet |
+| test_verification | `prompts/test_verification_agent.md` | sonnet |
 | docs | `prompts/docs_agent.md` | haiku |
 
 **Override model based on Complexity:**
@@ -1498,7 +1502,8 @@ The orchestrator NEVER:
 | Backend | Backend tasks | `prompts/backend_agent.md` |
 | Fullstack | Fullstack tasks | `prompts/fullstack_agent.md` |
 | DevOps | DevOps tasks | `prompts/devops_agent.md` |
-| Testing | Testing tasks | `prompts/testing_agent.md` |
+| Test Creation | Test writing (MODE: write) | `prompts/test_creation_agent.md` |
+| Test Verification | Test execution & validation (MODE: verify) | `prompts/test_verification_agent.md` |
 | Docs | Documentation tasks | `prompts/docs_agent.md` |
 | Analysis | End of all loops | `prompts/analysis_agent.md` |
 

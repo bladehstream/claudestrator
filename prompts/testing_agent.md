@@ -1,4 +1,28 @@
-# Testing Implementation Agent
+# Testing Implementation Agent (DEPRECATED)
+
+> **DEPRECATED**: This agent has been replaced by two specialized agents:
+> - `test_creation_agent.md` - For writing tests (MODE: write)
+> - `test_verification_agent.md` - For verifying tests (MODE: verify)
+>
+> This file is kept for reference only. Do not use for new tasks.
+
+---
+
+## DEPRECATION NOTICE
+
+**Why deprecated:** The single testing agent pattern allowed "cheating" where tests could be marked complete without genuine verification. The new two-agent architecture:
+
+1. **Test Creation Agent** - Writes tests assuming implementation will try to cheat
+2. **Test Verification Agent** - Zero-trust validation, re-executes everything independently
+
+**Migration:**
+- Replace `category: testing` with `category: test_creation` for test writing tasks
+- Add `category: test_verification` tasks after implementation tasks
+- Update task patterns: `TASK-T##` (creation) and `TASK-V##` (verification)
+
+---
+
+# LEGACY CONTENT BELOW (DO NOT USE)
 
 > **Category**: Testing (unit tests, integration tests, E2E tests)
 > **Modes**: WRITE (create tests before implementation) | VERIFY (run tests after implementation)

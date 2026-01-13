@@ -100,20 +100,28 @@ Claudestrator enforces **Test-Driven Development**: tests are written BEFORE imp
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              TDD WORKFLOW                                    │
+│                         TDD WORKFLOW (v2.0)                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │   Decomposition Agent                                                        │
 │       └── Creates TEST tasks (TASK-T##) before BUILD tasks (TASK-###)       │
+│       └── Creates VERIFY tasks (TASK-V##) after BUILD tasks                 │
 │                                                                              │
-│   Testing Agent                                                              │
-│       └── Writes test files with expected behavior                           │
-│       └── Specifies integration level and mock policy                        │
+│   Test Creation Agent (ADVERSARIAL)                                          │
+│       └── Writes test files assuming implementation will try to cheat        │
+│       └── Requires real HTTP, real DB, real browser (MCP/Playwright)         │
+│       └── Evidence-carrying with hash validation                             │
 │                                                                              │
 │   Implementation Agent (backend, frontend, fullstack, devops)                │
 │       └── Reads existing tests                                               │
 │       └── Implements code to pass those tests                                │
 │       └── Does NOT modify tests - they define the contract                   │
+│                                                                              │
+│   Test Verification Agent (ZERO-TRUST)                                       │
+│       └── Treats all other agents as potentially adversarial                 │
+│       └── Re-executes tests independently (doesn't trust producer evidence)  │
+│       └── Validates evidence hashes, detects cheating patterns               │
+│       └── E2E boundary verification (real HTTP, not app.request())           │
 │                                                                              │
 │   QA Agent                                                                   │
 │       └── Spot checks random sample of completed work                        │
@@ -126,9 +134,10 @@ Claudestrator enforces **Test-Driven Development**: tests are written BEFORE imp
 
 | Task Type | ID Pattern | Example | Purpose |
 |-----------|------------|---------|---------|
-| Test tasks | TASK-T## | TASK-T01 | Write tests first |
+| Test creation | TASK-T## | TASK-T01 | Write tests first (adversarial) |
 | Build tasks | TASK-### | TASK-001 | Implement to pass tests |
-| Final verification | TASK-99999 | TASK-99999 | End-to-end validation |
+| Verification | TASK-V## | TASK-V01 | Zero-trust test validation |
+| Final QA | TASK-99999 | TASK-99999 | End-to-end validation |
 
 ### Key Principles
 

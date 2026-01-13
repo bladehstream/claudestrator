@@ -1,4 +1,28 @@
-# Testing Implementation Agent
+# Testing Implementation Agent (DEPRECATED)
+
+> **DEPRECATED**: This agent has been replaced by two specialized agents:
+> - `test_creation_agent.md` - For writing tests (MODE: write)
+> - `test_verification_agent.md` - For verifying tests (MODE: verify)
+>
+> This file is kept for reference only. Do not use for new tasks.
+
+---
+
+## DEPRECATION NOTICE
+
+**Why deprecated:** The single testing agent pattern allowed "cheating" where tests could be marked complete without genuine verification. The new two-agent architecture:
+
+1. **Test Creation Agent** - Writes tests assuming implementation will try to cheat
+2. **Test Verification Agent** - Zero-trust validation, re-executes everything independently
+
+**Migration:**
+- Replace `category: testing` with `category: test_creation` for test writing tasks
+- Add `category: test_verification` tasks after implementation tasks
+- Update task patterns: `TASK-T##` (creation) and `TASK-V##` (verification)
+
+---
+
+# LEGACY CONTENT BELOW (DO NOT USE)
 
 > **Category**: Testing (unit tests, integration tests, E2E tests)
 > **Modes**: WRITE (create tests before implementation) | VERIFY (run tests after implementation)
@@ -110,63 +134,6 @@ Grep("beforeEach|afterEach", "**/*.test.*")       # Setup/teardown
 
 ## Phase 2: Test Strategy
 
-### 2.0 CRITICAL: Test Categories and Mock Requirements
-
-**Tests MUST include real integration tests, not just mocked unit tests.**
-
-#### Unit Tests (Mocking Allowed)
-- MAY mock external dependencies (APIs, databases, services)
-- MUST test actual business logic
-- MUST NOT mock the code under test itself
-
-#### Integration Tests (REQUIRED - Real Dependencies)
-- MUST NOT mock the database (use real database file/connection)
-- MUST NOT mock HTTP (use real requests to real server)
-- MUST start actual server for API tests
-- MUST test real component interactions
-
-#### E2E Tests (REQUIRED - Full Stack)
-- MUST start real server
-- MUST use real database
-- MUST call real external services as configured in project
-- MUST capture evidence (request/response logs, server output)
-
-#### Test Distribution Requirements
-
-| Type | Minimum % | Max Mock % | Required |
-|------|-----------|------------|----------|
-| Unit | 50% | 100% | Yes |
-| Integration | 30% | 0% (no mocks) | Yes |
-| E2E | 20% | 0% (no mocks) | Yes |
-
-**⛔ If a test suite is 100% mocked, it FAILS the test quality gate.**
-
-#### External Dependency Testing
-
-For each external service configured in the project:
-
-1. **Discover external endpoints** from project configuration:
-   ```
-   Grep("process.env\\.|config\\.|baseUrl|endpoint|API_URL|_HOST|_PORT", "src/**/*.ts")
-   ```
-
-2. **Create at least one real integration test** per external service
-
-3. **Do NOT mock the external service** in integration/E2E tests
-
-4. **Verify service availability** before running tests:
-   ```
-   # Pre-flight check for each discovered service
-   curl -s --max-time 5 "$SERVICE_URL/health" || echo "Service unavailable"
-   ```
-
-**If external service is unavailable:**
-- Integration tests MUST be skipped (not faked with mocks)
-- Test report must note which services were unavailable
-- Pass rate should reflect skipped tests honestly
-
----
-
 ### 2.1 Testing Pyramid
 
 ```
@@ -181,9 +148,9 @@ For each external service configured in the project:
 
 | Type | Quantity | Speed | Scope |
 |------|----------|-------|-------|
-| Unit | Many (50%) | Fast | Single function/class |
-| Integration | Some (30%) | Medium | Multiple components |
-| E2E | Few (20%) | Slow | Full user flow |
+| Unit | Many (70%) | Fast | Single function/class |
+| Integration | Some (20%) | Medium | Multiple components |
+| E2E | Few (10%) | Slow | Full user flow |
 
 ### 2.2 What to Test
 

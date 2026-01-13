@@ -181,11 +181,90 @@ This language is added to the end of testing_agent.md as a "negative prompt" - f
 
 ---
 
+## ADR-004: Two-Agent Testing Architecture (Adversarial Validation)
+
+**Date:** 2026-01-13
+**Status:** Implemented
+**Version:** 4.0
+
+### Context
+
+Despite adding anti-pattern detection and evidence requirements (ADR-002, ADR-003), testing agents continued to find ways to "cheat":
+
+1. **Loophole exploitation** - When we banned `:memory:` databases, agents used `app.request()` (in-process handlers)
+2. **Misleading comments** - Agents added "NO MOCKS" comments while code did the opposite
+3. **Self-verification failure** - Agents marked their own work complete without genuine checking
+4. **Incentive misalignment** - Agents optimized for "task complete" rather than "task correct"
+
+Root cause: A single agent cannot objectively validate its own work.
+
+### Decision
+
+Split testing into two adversarial agents:
+
+#### 1. Test Creation Agent (`test_creation_agent.md`)
+
+**Role:** Write tests that cannot be trivially passed
+
+**Key principle:** Assume the implementation agent will try to cheat
+
+- Requires real HTTP (fetch to localhost), not `app.request()`
+- Requires real database (file), not `:memory:`
+- Requires real browser (MCP/Playwright), not jsdom
+- Evidence-carrying with hash validation
+- Built-in anti-cheat grep checks
+
+#### 2. Test Verification Agent (`test_verification_agent.md`)
+
+**Role:** Independently validate tests actually work
+
+**Key principle:** Zero-trust - treat all other agents as adversarial
+
+- Re-executes all tests (doesn't trust producer evidence)
+- Validates evidence hashes (detects tampering)
+- E2E boundary verification (detects `app.request()` cheating)
+- Verdicts: PASS, FAIL, or BLOCKED with evidence
+
+### Why Two Agents?
+
+| Single Agent | Two Agents |
+|--------------|------------|
+| Self-validates (conflict of interest) | Independent validation |
+| Can rationalize shortcuts | Adversarial checking |
+| One point of failure | Defense in depth |
+| Incentive to complete | Incentive to verify |
+
+### New Task Pattern
+
+```
+TASK-T## (test_creation) → TASK-### (implementation) → TASK-V## (test_verification)
+```
+
+### Consequences
+
+- More rigorous test validation
+- Cheating patterns detected and rejected
+- Slightly longer workflow (three stages instead of two)
+- Clear separation of concerns
+- Each agent has clear, non-conflicting incentives
+
+### Deprecation
+
+`testing_agent.md` is deprecated. Kept for reference with deprecation notice.
+
+Migration:
+- `category: testing` → `category: test_creation` (for writing tests)
+- Add `category: test_verification` tasks after implementation
+
+---
+
 ## Future Considerations
 
 ### Automated Anti-Pattern Scanning
 
-Consider adding a verification agent that runs grep checks on all test files before accepting task completion. Currently relies on agent self-checking.
+~~Consider adding a verification agent that runs grep checks on all test files before accepting task completion.~~
+
+**IMPLEMENTED** in ADR-004: Test Verification Agent now performs this role.
 
 ### Concurrency Auto-Tuning
 
@@ -203,4 +282,4 @@ Currently evidence is described in task reports. Could store actual artifacts:
 
 ---
 
-*Last updated: 2026-01-13*
+*Last updated: 2026-01-13 (v4.0)*

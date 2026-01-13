@@ -9,8 +9,6 @@
 #   claudestrator/install.sh
 #
 
-set -e
-
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,6 +18,45 @@ NC='\033[0m'
 # Get script directory (where claudestrator repo was cloned)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TARGET_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Copy directory contents, skipping symlinks at destination
+# Usage: copy_dir <source_dir> <dest_dir>
+copy_dir() {
+    local src="$1"
+    local dst="$2"
+    local copied=0
+    local skipped=0
+
+    # Create destination if it doesn't exist
+    mkdir -p "$dst"
+
+    # Process each item in source directory
+    for item in "$src"/*; do
+        [ -e "$item" ] || continue  # Skip if glob didn't match
+
+        local name=$(basename "$item")
+        local dest_path="$dst/$name"
+
+        # Skip if destination is a symlink
+        if [ -L "$dest_path" ]; then
+            skipped=$((skipped + 1))
+            continue
+        fi
+
+        if [ -d "$item" ]; then
+            # Recursively copy directory
+            copy_dir "$item" "$dest_path"
+        else
+            # Copy file (overwrite if exists)
+            cp "$item" "$dest_path"
+            copied=$((copied + 1))
+        fi
+    done
+
+    if [ $skipped -gt 0 ]; then
+        echo "  (skipped $skipped symlinks in $(basename "$dst"))"
+    fi
+}
 
 echo ""
 echo "Claudestrator Installer"
@@ -43,39 +80,45 @@ mkdir -p "$TARGET_DIR/.claude"
 mkdir -p "$TARGET_DIR/.orchestrator/complete"
 mkdir -p "$TARGET_DIR/.orchestrator/reports"
 
-# Copy commands
+# Copy commands (skip symlinks)
 echo "Installing commands..."
-cp -r "$SCRIPT_DIR/commands" "$TARGET_DIR/.claude/"
+copy_dir "$SCRIPT_DIR/commands" "$TARGET_DIR/.claude/commands"
 
-# Copy prompts
+# Copy prompts (skip symlinks)
 echo "Installing prompts..."
-cp -r "$SCRIPT_DIR/prompts" "$TARGET_DIR/.claude/"
+copy_dir "$SCRIPT_DIR/prompts" "$TARGET_DIR/.claude/prompts"
 
-# Copy skills
+# Copy skills (skip symlinks)
 echo "Installing skills..."
-cp -r "$SCRIPT_DIR/skills" "$TARGET_DIR/.claude/"
+copy_dir "$SCRIPT_DIR/skills" "$TARGET_DIR/.claude/skills"
 
-# Copy CLAUDE.md
+# Copy CLAUDE.md (skip if symlink)
 echo "Installing CLAUDE.md..."
 if [ -f "$SCRIPT_DIR/templates/CLAUDE.md" ]; then
-    cp "$SCRIPT_DIR/templates/CLAUDE.md" "$TARGET_DIR/.claude/CLAUDE.md"
+    if [ -L "$TARGET_DIR/.claude/CLAUDE.md" ]; then
+        echo "  (skipped - is symlink)"
+    else
+        cp "$SCRIPT_DIR/templates/CLAUDE.md" "$TARGET_DIR/.claude/CLAUDE.md"
+    fi
 else
     echo -e "${YELLOW}Warning: templates/CLAUDE.md not found${NC}"
 fi
 
-# Copy settings.json if it doesn't exist
-if [ ! -f "$TARGET_DIR/.claude/settings.json" ]; then
+# Copy settings.json if it doesn't exist (never overwrite user settings)
+if [ ! -e "$TARGET_DIR/.claude/settings.json" ]; then
     if [ -f "$SCRIPT_DIR/templates/settings.json" ]; then
         echo "Installing settings.json..."
         cp "$SCRIPT_DIR/templates/settings.json" "$TARGET_DIR/.claude/settings.json"
     fi
+else
+    echo "Skipping settings.json (already exists)"
 fi
 
 # Copy hooks
 if [ -d "$SCRIPT_DIR/templates/hooks" ]; then
     echo "Installing hooks..."
     mkdir -p "$TARGET_DIR/.claude/hooks"
-    cp -r "$SCRIPT_DIR/templates/hooks/"* "$TARGET_DIR/.claude/hooks/" 2>/dev/null || true
+    copy_dir "$SCRIPT_DIR/templates/hooks" "$TARGET_DIR/.claude/hooks"
     chmod +x "$TARGET_DIR/.claude/hooks/"*.sh 2>/dev/null || true
     chmod +x "$TARGET_DIR/.claude/hooks/"*.py 2>/dev/null || true
 fi

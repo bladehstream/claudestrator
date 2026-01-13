@@ -211,6 +211,44 @@ rm -rf .claude           # Remove old code
 
 ---
 
+## Concurrency Control
+
+The orchestrator limits concurrent agents to prevent resource exhaustion:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| MAX_CONCURRENT_AGENTS | 10 | Maximum agents running simultaneously |
+
+When all slots are in use, the orchestrator blocks until a slot frees up. This prevents scenarios where many independent tasks (e.g., all TEST tasks with no dependencies) spawn simultaneously and overwhelm system resources.
+
+---
+
+## E2E Test Integrity
+
+The Testing Agent enforces strict requirements for end-to-end tests:
+
+**Forbidden patterns (will cause rejection):**
+- `Database(':memory:')` - Must use real database files
+- `class Mock*` in E2E tests - No mocking allowed
+- Direct service calls - Must go through HTTP API
+
+**Required evidence:**
+- Server startup logs
+- HTTP request/response captures
+- Browser screenshots (for UI tests)
+
+**Browser automation priority:**
+1. Chrome extension (`mcp__claude-in-chrome__*`) if available
+2. Playwright if installed
+3. Puppeteer if installed
+4. Mark as BLOCKED if none available
+
+**BLOCKED is a valid completion state.** Agents should flag missing dependencies early rather than faking tests.
+
+See [DECISIONS.md](DECISIONS.md) for rationale.
+
+---
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.

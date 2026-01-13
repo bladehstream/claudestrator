@@ -1,6 +1,6 @@
 # /orchestrate
 
-> **Version**: MVP 3.7 - Research requires explicit --research flag.
+> **Version**: MVP 3.8 - Concurrency control (MAX_CONCURRENT_AGENTS = 10).
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
 
@@ -79,6 +79,17 @@ QUOTAS: [
 
 If `RESEARCH_ENABLED` is false, QUOTAS will be empty and Research Agent will not be spawned.
 If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD.md.
+
+---
+
+## Concurrency Configuration
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| MAX_CONCURRENT_AGENTS | 10 | Maximum agents running simultaneously |
+| RUNNING_TASKS_FILE | `.orchestrator/running_tasks.txt` | Tracks active task IDs |
+
+**Why this matters:** Without limits, tasks with no dependencies (e.g., all TEST tasks) spawn simultaneously, causing resource exhaustion.
 
 ---
 
@@ -638,7 +649,43 @@ done
 - Continue to next pending task
 
 **If ALL dependencies are `completed` (or task has no dependencies):**
-- Proceed to spawn agent
+- Proceed to concurrency gate (2a-1)
+
+### 2a-1. Concurrency Gate (Wait for Available Slot)
+
+**Before spawning any agent, enforce MAX_CONCURRENT_AGENTS = 10:**
+
+```bash
+# Initialize running tasks file
+touch .orchestrator/running_tasks.txt
+
+# Count currently running tasks
+RUNNING=$(wc -l < .orchestrator/running_tasks.txt 2>/dev/null | tr -d ' ')
+RUNNING=${RUNNING:-0}
+
+if [ "$RUNNING" -ge 10 ]; then
+  echo "⏸ At capacity ($RUNNING/10 agents). Waiting for slot..."
+
+  # Single blocking wait - poll until ANY task completes
+  while true; do
+    for TASK in $(cat .orchestrator/running_tasks.txt); do
+      if [ -f ".orchestrator/complete/${TASK}.done" ] || [ -f ".orchestrator/complete/${TASK}.failed" ]; then
+        # Remove completed task from running list
+        sed -i "/${TASK}/d" .orchestrator/running_tasks.txt
+        echo "✓ Slot freed: $TASK"
+        break 2  # Exit both loops
+      fi
+    done
+    sleep 5
+  done
+fi
+
+# Add task to running list BEFORE spawning
+echo "[TASK-ID]" >> .orchestrator/running_tasks.txt
+echo "▶ Spawning [TASK-ID] ($(wc -l < .orchestrator/running_tasks.txt | tr -d ' ')/10 slots used)"
+```
+
+**Then proceed to spawn agent (2b).**
 
 **Special Case: TASK-99999 (Final Verification)**
 
@@ -1048,6 +1095,12 @@ Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchest
 ```
 
 Output is `SUCCESS` or `FAILED`. Markers are cleaned immediately (task_queue.md status is source of truth).
+
+**Remove task from running list immediately after completion:**
+```bash
+sed -i "/[TASK-ID]/d" .orchestrator/running_tasks.txt
+echo "✓ [TASK-ID] complete. $(wc -l < .orchestrator/running_tasks.txt | tr -d ' ')/10 slots used"
+```
 
 ### 2c-1. Post-Completion Agent Cleanup (CRITICAL - Prevents Resource Exhaustion)
 

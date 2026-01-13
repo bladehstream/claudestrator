@@ -1061,4 +1061,100 @@ expect(handler).toHaveBeenCalledTimes(1);
 
 ---
 
-*Testing Implementation Agent v1.3 - Mandatory verification before marking issues completed*
+## CRITICAL: E2E Test Integrity Requirements
+
+### Anti-Pattern Detection (E2E Tests Will Be REJECTED If Found)
+
+The following patterns indicate fake E2E tests and will cause automatic task rejection:
+
+| Anti-Pattern | Why It's Wrong | Detection |
+|--------------|----------------|-----------|
+| `Database(':memory:')` | Not a real database | `grep -r ":memory:" *.test.ts` |
+| `class Mock*` | Mocking in E2E is forbidden | `grep -r "class Mock" *.test.ts` |
+| `vi.fn()` / `jest.fn()` in E2E | Mocking in E2E is forbidden | `grep -r "vi.fn\|jest.fn" e2e/*.test.ts` |
+| No `fetch()` or HTTP client | Not testing real API | Missing HTTP imports |
+| No server startup/shutdown | Not running real server | Missing lifecycle code |
+
+### Mandatory Evidence for E2E Test Completion
+
+E2E test task reports MUST include:
+
+1. **Server startup logs** - Actual output from `npm run api:dev` showing server is listening
+2. **HTTP request/response logs** - Real fetch() responses with status codes and bodies
+3. **Browser screenshots** - For UI tests, captured via browser automation tool
+4. **Process evidence** - PID of running server, proof it was started and stopped
+
+**No evidence = task rejected.** Do not mark E2E tests complete without this evidence in the task report.
+
+### BLOCKED Is A Valid Completion State
+
+If required infrastructure is missing, **do not fake the tests**. Instead:
+
+```
+BLOCKED: [dependency] not available
+
+Missing: [what's missing]
+Required for: [which tests]
+To unblock: [what needs to happen]
+```
+
+Valid blocking reasons:
+- Browser automation not available → Cannot run browser E2E tests
+- No frontend exists → Cannot test UI rendering
+- Server won't start → Cannot test API E2E
+- External service unavailable → Cannot test integration
+
+**Flagging a blocker early is SUCCESS, not failure.** Faking tests to hide blockers is FAILURE.
+
+### UI E2E Tests: Real Browser Automation Required
+
+For any test requiring UI verification (rendering, visual elements, user interactions):
+
+1. **Detect available browser automation tool** (in order of preference):
+   - `mcp__claude-in-chrome__*` - If Chrome extension is available
+   - Playwright (`@playwright/test`) - If installed in project
+   - Puppeteer - If installed in project
+
+2. **Use whichever is available** - Check in this order:
+   ```
+   IF mcp__claude-in-chrome__ tools respond → Use Chrome extension
+   ELSE IF playwright.config.* exists → Use Playwright
+   ELSE IF puppeteer in package.json → Use Puppeteer
+   ELSE → Mark test as BLOCKED: No browser automation available
+   ```
+
+3. **Capture screenshots regardless of tool**:
+   - Chrome extension: `mcp__claude-in-chrome__computer` with `action: "screenshot"`
+   - Playwright: `page.screenshot({ path: 'evidence.png' })`
+   - Puppeteer: `page.screenshot({ path: 'evidence.png' })`
+
+4. **Include screenshots in report** - Reference the captured images as evidence
+
+5. **If NO browser automation available** - Mark test as BLOCKED, do not mock
+
+Example evidence for UI test:
+```
+E2E-006 Evidence:
+- Browser tool used: Playwright (Chrome extension not available)
+- Server started: PID 12345, listening on :3000
+- Navigated to: http://localhost:3000/graph
+- Screenshot captured: evidence/graph-render-001.png
+- Interactive elements verified: 5 nodes, 12 edges clickable
+```
+
+### Self-Check Before Completion
+
+Before writing `.done` marker for E2E tests, verify:
+
+- [ ] Server was actually started (have startup logs)
+- [ ] HTTP requests were actually made (have response logs)
+- [ ] No mocks exist in E2E test files
+- [ ] No `:memory:` databases in E2E tests
+- [ ] UI tests have browser screenshots OR are marked BLOCKED
+- [ ] Task report includes all mandatory evidence
+
+**If any checkbox fails, do not complete. Fix or mark BLOCKED.**
+
+---
+
+*Testing Implementation Agent v1.4 - E2E integrity requirements and blocker-positive completion*

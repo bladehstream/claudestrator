@@ -27,12 +27,12 @@ Agents read their detailed instructions from prompt files. This keeps prompts:
 | Research | `.claude/prompts/research_agent.md` |
 | Analysis | `.claude/prompts/analysis_agent.md` |
 | **Failure Analysis** | `.claude/prompts/failure_analysis_agent.md` |
-| Frontend | `.claude/prompts/implementation/frontend_agent.md` |
-| Backend | `.claude/prompts/implementation/backend_agent.md` |
-| Fullstack | `.claude/prompts/implementation/fullstack_agent.md` |
-| DevOps | `.claude/prompts/implementation/devops_agent.md` |
-| Testing | `.claude/prompts/implementation/testing_agent.md` |
-| Docs | `.claude/prompts/implementation/docs_agent.md` |
+| Frontend | `.claude/prompts/frontend_agent.md` |
+| Backend | `.claude/prompts/backend_agent.md` |
+| Fullstack | `.claude/prompts/fullstack_agent.md` |
+| DevOps | `.claude/prompts/devops_agent.md` |
+| Testing | `.claude/prompts/testing_agent.md` |
+| Docs | `.claude/prompts/docs_agent.md` |
 
 ---
 
@@ -273,12 +273,12 @@ For each pending task in `.orchestrator/task_queue.md`:
    ```
    Category → Prompt File
    ─────────────────────────────────────────────
-   frontend  → .claude/prompts/implementation/frontend_agent.md
-   backend   → .claude/prompts/implementation/backend_agent.md
-   fullstack → .claude/prompts/implementation/fullstack_agent.md
-   devops    → .claude/prompts/implementation/devops_agent.md
-   testing   → .claude/prompts/implementation/testing_agent.md
-   docs      → .claude/prompts/implementation/docs_agent.md
+   frontend  → .claude/prompts/frontend_agent.md
+   backend   → .claude/prompts/backend_agent.md
+   fullstack → .claude/prompts/fullstack_agent.md
+   devops    → .claude/prompts/devops_agent.md
+   testing   → .claude/prompts/testing_agent.md
+   docs      → .claude/prompts/docs_agent.md
    ```
 
 2. **Select model by complexity:**
@@ -295,7 +295,7 @@ For each pending task in `.orchestrator/task_queue.md`:
    Task(
      model: [haiku|sonnet|opus based on complexity],
      run_in_background: true,
-     prompt: "Read('.claude/prompts/implementation/[category]_agent.md') and follow those instructions.
+     prompt: "Read('.claude/prompts/[category]_agent.md') and follow those instructions.
 
      ---
 
@@ -749,7 +749,7 @@ Issue Lifecycle:
 | Analytics HTML | `.orchestrator/analytics.html` |
 | Verification Steps | `.orchestrator/verification_steps.md` |
 | No Auto-Retry Flag | `.orchestrator/no_auto_retry` |
-| Agent Prompts | `.claude/prompts/*.md`, `.claude/prompts/implementation/*.md` |
+| Agent Prompts | `.claude/prompts/*.md`, `.claude/prompts/*.md` |
 
 ## CRITICAL RULES
 

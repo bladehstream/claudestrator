@@ -513,12 +513,12 @@ Agents read detailed instructions from prompt files:
 | Research | `.claude/prompts/research_agent.md` |
 | Analysis | `.claude/prompts/analysis_agent.md` |
 | **Failure Analysis** | `.claude/prompts/failure_analysis_agent.md` |
-| Frontend | `.claude/prompts/implementation/frontend_agent.md` |
-| Backend | `.claude/prompts/implementation/backend_agent.md` |
-| Fullstack | `.claude/prompts/implementation/fullstack_agent.md` |
-| DevOps | `.claude/prompts/implementation/devops_agent.md` |
-| Testing | `.claude/prompts/implementation/testing_agent.md` |
-| Docs | `.claude/prompts/implementation/docs_agent.md` |
+| Frontend | `.claude/prompts/frontend_agent.md` |
+| Backend | `.claude/prompts/backend_agent.md` |
+| Fullstack | `.claude/prompts/fullstack_agent.md` |
+| DevOps | `.claude/prompts/devops_agent.md` |
+| Testing | `.claude/prompts/testing_agent.md` |
+| Docs | `.claude/prompts/docs_agent.md` |
 
 ---
 
@@ -1033,12 +1033,12 @@ fi
 
 | Category | Prompt File | Default Model |
 |----------|-------------|---------------|
-| frontend | `prompts/implementation/frontend_agent.md` | sonnet |
-| backend | `prompts/implementation/backend_agent.md` | sonnet |
-| fullstack | `prompts/implementation/fullstack_agent.md` | sonnet |
-| devops | `prompts/implementation/devops_agent.md` | sonnet |
-| testing | `prompts/implementation/testing_agent.md` | sonnet |
-| docs | `prompts/implementation/docs_agent.md` | haiku |
+| frontend | `prompts/frontend_agent.md` | sonnet |
+| backend | `prompts/backend_agent.md` | sonnet |
+| fullstack | `prompts/fullstack_agent.md` | sonnet |
+| devops | `prompts/devops_agent.md` | sonnet |
+| testing | `prompts/testing_agent.md` | sonnet |
+| docs | `prompts/docs_agent.md` | haiku |
 
 **Override model based on Complexity:**
 ```
@@ -1055,7 +1055,7 @@ complex   → opus
 Task(
   model: [haiku|sonnet|opus based on Complexity],
   run_in_background: true,
-  prompt: "Read('.claude/prompts/implementation/[category]_agent.md') and follow those instructions.
+  prompt: "Read('.claude/prompts/[category]_agent.md') and follow those instructions.
 
   ---
 
@@ -1494,12 +1494,12 @@ The orchestrator NEVER:
 | Decomposition | Initial PRD breakdown | `prompts/decomposition_agent.md` |
 | Research | When `--research` enabled and queue clear | `prompts/research_agent.md` |
 | **Failure Analysis** | When task has `.failed` marker | `prompts/failure_analysis_agent.md` |
-| Frontend | Frontend tasks | `prompts/implementation/frontend_agent.md` |
-| Backend | Backend tasks | `prompts/implementation/backend_agent.md` |
-| Fullstack | Fullstack tasks | `prompts/implementation/fullstack_agent.md` |
-| DevOps | DevOps tasks | `prompts/implementation/devops_agent.md` |
-| Testing | Testing tasks | `prompts/implementation/testing_agent.md` |
-| Docs | Documentation tasks | `prompts/implementation/docs_agent.md` |
+| Frontend | Frontend tasks | `prompts/frontend_agent.md` |
+| Backend | Backend tasks | `prompts/backend_agent.md` |
+| Fullstack | Fullstack tasks | `prompts/fullstack_agent.md` |
+| DevOps | DevOps tasks | `prompts/devops_agent.md` |
+| Testing | Testing tasks | `prompts/testing_agent.md` |
+| Docs | Documentation tasks | `prompts/docs_agent.md` |
 | Analysis | End of all loops | `prompts/analysis_agent.md` |
 
 **FORBIDDEN:**
@@ -1529,7 +1529,7 @@ Use the Research Agent with `FOCUS: security` instead of a "security research ag
 | Analytics HTML | `.orchestrator/analytics.html` |
 | Verification Steps | `.orchestrator/verification_steps.md` |
 | No Auto-Retry Flag | `.orchestrator/no_auto_retry` |
-| Agent Prompts | `prompts/*.md`, `prompts/implementation/*.md` |
+| Agent Prompts | `prompts/*.md`, `prompts/*.md` |
 
 ---
 

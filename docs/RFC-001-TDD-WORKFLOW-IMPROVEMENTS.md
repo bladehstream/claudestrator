@@ -282,7 +282,7 @@ Decomposition agent must validate 100% of test IDs are mapped to tasks.
 
 ### Diff 3: testing_agent.md
 
-**Location:** `claudestrator/prompts/implementation/testing_agent.md`
+**Location:** `claudestrator/prompts/testing_agent.md`
 
 ```diff
 @@ -1,10 +1,50 @@

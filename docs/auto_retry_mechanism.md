@@ -242,7 +242,7 @@ Manual intervention required. Review:
 | Component | Change Required |
 |-----------|-----------------|
 | `commands/orchestrate.md` | Add auto-retry check at end of loop (authoritative) |
-| `prompts/implementation/testing_agent.md` | Add logic to flag critical issues |
+| `prompts/testing_agent.md` | Add logic to flag critical issues |
 | `.orchestrator/issue_queue.md` | Add auto-retry fields to format |
 | `.orchestrator/session_state.md` | Track retry counts |
 

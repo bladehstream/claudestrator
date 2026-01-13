@@ -154,8 +154,7 @@ project/
 │
 ├── .claude/                            # ORCHESTRATOR CODE (reinstallable)
 │   ├── commands/                       #   Slash command definitions
-│   ├── prompts/                        #   Agent prompt files
-│   │   └── implementation/             #   Implementation agent prompts
+│   ├── prompts/                        #   Agent prompt files (all agents)
 │   ├── skills/                         #   Skill library (if installed)
 │   └── hooks/                          #   Safety hooks (if configured)
 │

@@ -329,6 +329,70 @@ CATEGORY_DEPENDENCIES = {
 }
 ```
 
+### D.4b Create VERIFY Tasks from TEST Tasks (MANDATORY)
+
+**CRITICAL:** For EACH test category task (TASK-T##), you MUST create a corresponding VERIFY task (TASK-V##).
+
+VERIFY tasks ensure tests are not cheating. They run AFTER build tasks complete and validate:
+1. Tests compile and run without errors
+2. No forbidden patterns (mocks in E2E, in-memory DBs, etc.)
+3. Tests actually test real functionality
+4. Skip rate is acceptable (< 10%)
+5. No environmental issues blocking tests
+
+| Test Task | Verify Task | Category | Depends On |
+|-----------|-------------|----------|------------|
+| TASK-T01 | TASK-V01 | test_verification | TASK-T01 + related BUILD tasks |
+| TASK-T02 | TASK-V02 | test_verification | TASK-T02 + related BUILD tasks |
+| TASK-T03 | TASK-V03 | test_verification | TASK-T03 + related BUILD tasks |
+| TASK-T04 | TASK-V04 | test_verification | TASK-T04 + related BUILD tasks |
+| TASK-T05 | TASK-V05 | test_verification | TASK-T05 + related BUILD tasks |
+| TASK-T06 | TASK-V06 | test_verification | TASK-T06 + related BUILD tasks |
+| TASK-T10 | TASK-V10 | test_verification | TASK-T10 + ALL BUILD tasks |
+| TASK-T20 | TASK-V20 | test_verification | TASK-T20 + ALL BUILD tasks |
+| TASK-T30 | TASK-V30 | test_verification | TASK-T30 + ALL BUILD tasks |
+| TASK-T40 | TASK-V40 | test_verification | TASK-T40 + ALL BUILD tasks |
+| TASK-T50 | TASK-V50 | test_verification | TASK-T50 + related BUILD tasks |
+
+**TASK-V## Format:**
+
+```markdown
+### TASK-V01
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | test_verification |
+| Complexity | normal |
+| Depends On | TASK-T01, TASK-001, TASK-002 |
+| Test Scope | unit |
+| Test IDs | UNIT-001, UNIT-002, ... |
+
+---
+
+**Description:** Verify unit tests for [category] compile and execute correctly without cheating patterns or environmental skips.
+
+**Steps:**
+1. Read test files and grep for forbidden patterns (try/catch swallowing, mocks in E2E)
+2. Execute tests with project test command
+3. Capture pass/fail/skip counts
+4. Verify skip rate < 10% (environmental skips = BLOCKED)
+5. Check tests fail appropriately when dependencies missing
+6. Generate findings.json with verdict
+
+**Expected Result:** All tests pass, skip rate < 10%, no cheating patterns, no environmental issues.
+```
+
+**Execution Order:**
+
+VERIFY tasks run AFTER their corresponding BUILD tasks complete:
+
+```
+TASK-T01 (write tests) ──► TASK-001 (build) ──► TASK-V01 (verify) ──► TASK-99999 (QA)
+```
+
+This ensures verification checks real implementations, not stubs.
+
 ### D.5 CRITICAL FORMAT REQUIREMENT
 
 **Each task MUST have exactly two sections separated by `---`:**
@@ -1214,6 +1278,10 @@ Before finishing, verify:
 - [ ] **Source issues marked as `in_progress`** (BRANCH B/C only)
 - [ ] **Test Coverage Matrix included at bottom of task_queue.md**
 - [ ] **100% of test IDs from source are mapped to tasks**
+- [ ] **Created VERIFY tasks (TASK-V##) for each TEST task**
+- [ ] **VERIFY tasks depend on TEST + related BUILD tasks**
+- [ ] **VERIFY tasks use Category: test_verification**
+- [ ] **VERIFY tasks run BEFORE TASK-99999**
 - [ ] **FINAL TASK (TASK-99999) is Category: testing**
 - [ ] Wrote task_queue.md using Write tool (with Project Commands header)
 - [ ] **WROTE THE COMPLETION MARKER FILE**
@@ -1239,6 +1307,7 @@ COMMON MISTAKES
 | **Missing Integration Level** | **Unclear what to mock** | **Specify unit/mocked/real** |
 | **Not preserving retry fields** | **Infinite retry loops** | **Copy Retry-Count, Failure-Signature, etc.** |
 | **Creating task for Halted issue** | **Wasted effort** | **Skip Halted issues** |
+| **Missing VERIFY tasks (TASK-V##)** | **Tests never verified, cheating undetected** | **Create TASK-V## for each TASK-T##** |
 
 ===============================================================================
 START NOW

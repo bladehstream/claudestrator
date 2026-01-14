@@ -736,287 +736,30 @@ if [ "$INCOMPLETE" -gt 0 ]; then
 fi
 ```
 
-### 2a-0.5: Test Verification Phase (Before TASK-99999)
+### 2a-0.5: Test Verification (Handled via TASK-V## Tasks)
 
-**CRITICAL**: Before TASK-99999 (QA) can run, spawn parallel test verification agents.
+**NOTE:** Test verification is now handled via TASK-V## tasks in the task queue, NOT inline here.
 
-**Check if VERIFY phase needed:**
-```bash
-# Only run VERIFY if:
-# 1. All BUILD tasks are complete
-# 2. VERIFY has not already run this session
-if [ ! -f ".orchestrator/complete/verify-all.done" ]; then
-  INCOMPLETE_BUILD=$(grep -E "^### TASK-[0-9]+" .orchestrator/task_queue.md | grep -v "TASK-99999" | while read task; do
-    grep -A5 "$task" .orchestrator/task_queue.md | grep -q "Status | completed" || echo "incomplete"
-  done | wc -l)
+The decomposition agent creates TASK-V## tasks for each TASK-T## test task:
+- TASK-V01 verifies TASK-T01 (unit tests)
+- TASK-V10 verifies TASK-T10 (integration tests)
+- TASK-V20 verifies TASK-T20 (E2E tests)
+- etc.
 
-  if [ "$INCOMPLETE_BUILD" -eq 0 ]; then
-    echo "All BUILD tasks complete. Running VERIFY phase..."
-    # Proceed to spawn test agents
-  fi
-fi
+VERIFY tasks use Category: `test_verification` and are routed to `prompts/test_verification_agent.md`.
+
+**Execution Order:**
+```
+TASK-T## (write tests) → TASK-### (build) → TASK-V## (verify tests) → TASK-99999 (QA)
 ```
 
-**Spawn Test Verification Agents in PARALLEL:**
+The Test Verification Agent ensures:
+1. Tests compile and run without errors
+2. No cheating patterns (try/catch swallowing, mocks in E2E)
+3. Skip rate < 10%
+4. No environmental issues (Ollama not running, port conflicts)
 
-Sub-agents have NO context memory. Each must be told EXACTLY what to run.
-
-```
-# Spawn all three in parallel (single message, multiple Task calls)
-
-# 1. Unit Test Verification Agent
-Task(
-  model: "sonnet",
-  run_in_background: true,
-  prompt: "You are a TEST VERIFICATION AGENT. You run tests and report results.
-
-  MODE: verify-unit
-  WORKING_DIR: [absolute path]
-  RUN_ID: [run-YYYYMMDD-HHMMSS]
-
-  ## Your Task
-
-  Run ALL unit tests in the project. You have NO memory of previous work.
-
-  ### Step 1: Discover Unit Tests
-  ```
-  Glob('.orchestrator/app/**/*.test.ts')
-  Glob('.orchestrator/app/**/*.spec.ts')
-  ```
-  Exclude files in `/integration/`, `/e2e/`, `/playwright/` directories.
-
-  ### Step 2: Run Unit Tests
-  ```
-  Bash('cd .orchestrator/app && npm test -- --testPathIgnorePatterns=integration --testPathIgnorePatterns=e2e 2>&1')
-  ```
-
-  ### Step 3: Classify Failures by Severity
-
-  | Failure Type | Severity | Criteria |
-  |--------------|----------|----------|
-  | Build/compile error | CRITICAL | Tests won't run at all |
-  | Core business logic | CRITICAL | Functions in /core/, /services/, /models/ |
-  | Security-related | CRITICAL | Auth, crypto, validation failures |
-  | Edge case | MEDIUM | Boundary conditions, rare scenarios |
-  | Flaky/timeout | LOW | Intermittent, timing-dependent |
-
-  ### Step 4: Create Issues for Failures
-
-  **For CRITICAL failures:** Write to issue_queue.md with `Priority | critical`
-  **For MEDIUM failures:** Write to issue_queue.md with `Priority | medium`
-  **For LOW failures:** Log in report only, no issue created
-
-  ### Step 5: Write Report
-  ```
-  Write('.orchestrator/reports/verify-unit-[RUN_ID].json', {
-    test_type: 'unit',
-    total_tests: N,
-    passed: N,
-    failed: N,
-    failures_by_severity: { critical: N, medium: N, low: N },
-    critical_issues_created: [list],
-    timestamp: ISO
-  })
-  ```
-
-  ### Step 6: Write Completion Marker
-  ```
-  Write('.orchestrator/complete/verify-unit.done', 'done')
-  ```
-
-  START: Glob('.orchestrator/app/**/*.test.ts')"
-)
-
-# 2. Integration Test Verification Agent
-Task(
-  model: "sonnet",
-  run_in_background: true,
-  prompt: "You are a TEST VERIFICATION AGENT. You run tests and report results.
-
-  MODE: verify-integration
-  WORKING_DIR: [absolute path]
-  RUN_ID: [run-YYYYMMDD-HHMMSS]
-
-  ## Your Task
-
-  Run ALL integration tests. You have NO memory of previous work.
-
-  ### Step 1: Discover Integration Tests
-  ```
-  Glob('.orchestrator/app/**/integration/**/*.test.ts')
-  Glob('.orchestrator/app/**/*.integration.test.ts')
-  ```
-
-  ### Step 2: Pre-flight Checks
-  Verify required services are available:
-  ```
-  Bash('cd .orchestrator/app && npm run db:ping 2>/dev/null || echo \"DB not available\"')
-  ```
-  If services unavailable, skip those tests and note in report.
-
-  ### Step 3: Run Integration Tests
-  ```
-  Bash('cd .orchestrator/app && npm test -- --testPathPattern=integration 2>&1')
-  ```
-
-  ### Step 4: Classify Failures by Severity
-
-  | Failure Type | Severity | Criteria |
-  |--------------|----------|----------|
-  | Database connection | CRITICAL | Cannot connect to DB |
-  | API endpoint 5xx | CRITICAL | Server errors |
-  | API endpoint 4xx | MEDIUM | Client errors (may be expected) |
-  | Data integrity | CRITICAL | Wrong data returned/stored |
-  | Service unavailable | LOW | External service down (skip) |
-
-  ### Step 5: Create Issues for Failures
-  **CRITICAL → Priority: critical**
-  **MEDIUM → Priority: medium**
-  **LOW → Log only**
-
-  ### Step 6: Write Report
-  ```
-  Write('.orchestrator/reports/verify-integration-[RUN_ID].json', {...})
-  ```
-
-  ### Step 7: Write Completion Marker
-  ```
-  Write('.orchestrator/complete/verify-integration.done', 'done')
-  ```
-
-  START: Glob('.orchestrator/app/**/integration/**/*.test.ts')"
-)
-
-# 3. E2E Test Verification Agent
-Task(
-  model: "opus",
-  run_in_background: true,
-  prompt: "You are a TEST VERIFICATION AGENT. You run E2E tests and report results.
-
-  MODE: verify-e2e
-  WORKING_DIR: [absolute path]
-  RUN_ID: [run-YYYYMMDD-HHMMSS]
-
-  ## Your Task
-
-  Run ALL E2E tests using Playwright or browser automation. You have NO memory of previous work.
-
-  ### Step 1: Check for E2E Test Infrastructure
-  ```
-  Read('.orchestrator/app/playwright.config.ts')
-  Glob('.orchestrator/app/**/e2e/**/*.spec.ts')
-  Glob('.orchestrator/app/**/*.e2e.test.ts')
-  ```
-
-  If no E2E tests exist, write report noting 'no E2E tests found' and complete.
-
-  ### Step 2: Start Application Server (if needed)
-  ```
-  Bash('cd .orchestrator/app && npm run dev &')
-  Bash('sleep 5')  # Wait for server startup
-  ```
-
-  ### Step 3: Run E2E Tests
-  ```
-  Bash('cd .orchestrator/app && npx playwright test 2>&1')
-  ```
-
-  ### Step 4: Classify Failures by Severity
-
-  | Failure Type | Severity | Criteria |
-  |--------------|----------|----------|
-  | App won't start | CRITICAL | Server fails to launch |
-  | Login/auth flow | CRITICAL | Users cannot authenticate |
-  | Core user journey | CRITICAL | Primary workflows broken |
-  | Secondary features | MEDIUM | Non-critical features |
-  | Visual regression | LOW | UI differences |
-  | Flaky/timeout | LOW | Intermittent failures |
-
-  ### Step 5: Create Issues for Failures
-  **CRITICAL → Priority: critical**
-  **MEDIUM → Priority: medium**
-  **LOW → Log only**
-
-  ### Step 6: Cleanup
-  ```
-  Bash('pkill -f \"npm run dev\" 2>/dev/null || true')
-  ```
-
-  ### Step 7: Write Report
-  ```
-  Write('.orchestrator/reports/verify-e2e-[RUN_ID].json', {...})
-  ```
-
-  ### Step 8: Write Completion Marker
-  ```
-  Write('.orchestrator/complete/verify-e2e.done', 'done')
-  ```
-
-  START: Read('.orchestrator/app/playwright.config.ts')"
-)
-```
-
-**Wait for ALL verification agents to complete:**
-
-```bash
-# Wait for all three agents (run in single Bash call)
-while [ ! -f '.orchestrator/complete/verify-unit.done' ] || \
-      [ ! -f '.orchestrator/complete/verify-integration.done' ] || \
-      [ ! -f '.orchestrator/complete/verify-e2e.done' ]; do
-  sleep 10
-done
-
-# Clean up markers
-rm -f .orchestrator/complete/verify-unit.done
-rm -f .orchestrator/complete/verify-integration.done
-rm -f .orchestrator/complete/verify-e2e.done
-
-# Mark VERIFY phase complete
-echo "done" > .orchestrator/complete/verify-all.done
-
-echo "VERIFY phase complete"
-```
-
-**Check for Critical Failures:**
-
-```bash
-# Count critical issues created during VERIFY phase
-CRITICAL_FROM_VERIFY=$(grep -A3 "| Priority | critical |" .orchestrator/issue_queue.md 2>/dev/null | \
-  grep -c "| Source | verify-" || echo "0")
-
-if [ "$CRITICAL_FROM_VERIFY" -gt 0 ]; then
-  echo "⛔ VERIFY phase found $CRITICAL_FROM_VERIFY critical issue(s)"
-  echo "   TASK-99999 (QA) blocked until critical issues resolved"
-  # Return to critical issue loop
-else
-  echo "✓ VERIFY phase passed - no critical issues"
-  echo "   TASK-99999 (QA) may proceed"
-fi
-```
-
-**VERIFY Phase Output:**
-
-```
-═══════════════════════════════════════════════════════════════════════════════
-TEST VERIFICATION RESULTS
-═══════════════════════════════════════════════════════════════════════════════
-
-Unit Tests:        [PASS/FAIL] - [N] passed, [N] failed ([N] critical)
-Integration Tests: [PASS/FAIL] - [N] passed, [N] failed ([N] critical)
-E2E Tests:         [PASS/FAIL] - [N] passed, [N] failed ([N] critical)
-
-Critical Issues: [N] (blocking QA)
-Medium Issues:   [N] (logged for future)
-Low Issues:      [N] (logged only)
-
-[If critical > 0:]
-⛔ QA BLOCKED - Returning to critical issue resolution loop
-
-[If critical == 0:]
-✓ QA UNBLOCKED - Proceeding to TASK-99999
-
-═══════════════════════════════════════════════════════════════════════════════
-```
+If verification fails, a critical issue is created and TASK-99999 is blocked.
 
 ### 2a-1. TDD Validation (For BUILD Tasks Only)
 

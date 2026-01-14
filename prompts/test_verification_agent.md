@@ -297,6 +297,52 @@ mcp__claude-in-chrome__computer(action: "screenshot", tabId: X)
 
 ## Phase 5: Verdict Rules (STRICT)
 
+### 5.1 Skip Rate Calculation (MANDATORY)
+
+Before determining verdict, calculate:
+
+```
+total_tests = passed + failed + skipped
+skip_rate = skipped / total_tests
+```
+
+**CRITICAL:** "100% (of runnable)" is FORBIDDEN. This hides skipped tests.
+
+Report:
+- **Actual Pass Rate**: passed / total (e.g., "66% (50/76)")
+- **Skip Rate**: skipped / total (e.g., "34% skipped")
+
+### 5.2 Environmental Issue Detection (MANDATORY)
+
+Scan test output for these patterns. Track each occurrence:
+
+| Pattern | Issue Type | Impact |
+|---------|-----------|--------|
+| `ECONNREFUSED` | ENVIRONMENTAL | Service unavailable |
+| `Ollama` + (`not running`\|`unavailable`\|`connection`) | ENVIRONMENTAL | LLM not running |
+| `EADDRINUSE` | ENVIRONMENTAL | Port conflict |
+| `Server did not start` | ENVIRONMENTAL | App launch failed |
+| `timeout` in error context | ENVIRONMENTAL | Service unresponsive |
+| `Cannot find module` | CODE_ISSUE | Dependency missing |
+| `is not exported` | CODE_ISSUE | Import/export mismatch |
+| `ENOENT` | ENVIRONMENTAL | File/path not found |
+
+**Count affected tests for each pattern.**
+
+### 5.3 Skip Classification
+
+| Skip Reason | Classification | Verdict Impact |
+|-------------|---------------|----------------|
+| Platform-specific (Windows-only on Linux) | EXPECTED | Acceptable |
+| Feature flag disabled | EXPECTED | Acceptable |
+| External service unavailable (Ollama, DB) | ENVIRONMENTAL | BLOCKED |
+| Server failed to start | ENVIRONMENTAL | BLOCKED |
+| Port conflict | ENVIRONMENTAL | BLOCKED |
+| Import/export error | CODE_ISSUE | FAIL |
+| Timeout | ENVIRONMENTAL | BLOCKED |
+
+**Rule:** Any ENVIRONMENTAL or CODE_ISSUE skip → Cannot PASS
+
 ### PASS
 
 Only if ALL of the following are true:
@@ -307,6 +353,9 @@ Only if ALL of the following are true:
 - [ ] Tests actually tested real functionality (not just config strings)
 - [ ] Integration tests FAILED when you disabled their dependencies (spot check)
 - [ ] Producer's dependency claims match your Phase 0 results
+- [ ] **Skip rate ≤ 10%** (skipped / total ≤ 0.10)
+- [ ] **Zero environmental issues detected**
+- [ ] **Zero code issues detected** (import/export errors)
 
 ### FAIL
 
@@ -318,13 +367,22 @@ If ANY of the following are true:
 - [ ] UI tests claimed to pass without MCP verification
 - [ ] Evidence hashes mismatch
 - [ ] Integration tests pass when dependencies are DOWN
+- [ ] All tests skipped (skipped == total)
+- [ ] Zero tests passed (passed == 0)
+- [ ] **Skip rate > 10%** (too many tests skipped)
+- [ ] **Code issues detected** (import/export errors affect tests)
 
 ### BLOCKED
 
-Only if ALL of the following are true:
-- [ ] You personally attempted verification
-- [ ] Failure is due to missing prerequisites you verified are missing
-- [ ] NOT due to cheating patterns
+If ANY of the following are true:
+- [ ] You personally attempted verification AND failure is due to missing prerequisites
+- [ ] Server failed to start
+- [ ] Test framework failed to initialize
+- [ ] **Environmental issues detected** (Ollama not running, port conflicts, etc.)
+- [ ] Missing prerequisites prevented execution
+- [ ] All tests skipped due to environment issues
+
+**CRITICAL: BLOCKED is a failure state.** Do NOT write completion marker. Create critical issue instead.
 
 ---
 
@@ -392,14 +450,39 @@ Only if ALL of the following are true:
   "test_execution": {
     "discovery_exit_code": 0,
     "run_exit_code": 0,
-    "tests_passed": 15,
+    "tests_passed": 50,
     "tests_failed": 0,
-    "tests_actually_testing_something": 15,
-    "tests_that_would_fail_without_deps": 10
+    "tests_skipped": 26,
+    "tests_total": 76,
+    "skip_rate": 0.34,
+    "actual_pass_rate": 0.66,
+    "skipped_breakdown": {
+      "expected": 0,
+      "environmental": 21,
+      "code_issue": 5
+    },
+    "tests_actually_testing_something": 50,
+    "tests_that_would_fail_without_deps": 30
   },
 
+  "environmental_issues": [
+    {
+      "pattern": "Ollama not running",
+      "issue_type": "ENVIRONMENTAL",
+      "affected_tests": 9,
+      "examples": ["test_llm_query", "test_ollama_connection"]
+    },
+    {
+      "pattern": "startServer is not exported",
+      "issue_type": "CODE_ISSUE",
+      "affected_tests": 15,
+      "examples": ["test_api_endpoint_1"]
+    }
+  ],
+
   "cheating_detected": false,
-  "cheating_details": []
+  "cheating_details": [],
+  "verdict_reason": "BLOCKED: 21 tests blocked by environmental issues (Ollama not running)"
 }
 ```
 

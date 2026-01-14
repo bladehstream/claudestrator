@@ -27,6 +27,16 @@ copy_dir() {
     local copied=0
     local skipped=0
 
+    # Resolve real paths to detect same-file situations (e.g., symlinked destinations)
+    local src_real=$(realpath "$src" 2>/dev/null || echo "$src")
+    local dst_real=$(realpath "$dst" 2>/dev/null || echo "$dst")
+
+    # Skip if source and destination resolve to the same directory
+    if [ "$src_real" = "$dst_real" ]; then
+        echo "  (skipped - destination is symlink to source)"
+        return 0
+    fi
+
     # Create destination if it doesn't exist
     mkdir -p "$dst"
 
@@ -39,6 +49,14 @@ copy_dir() {
 
         # Skip if destination is a symlink
         if [ -L "$dest_path" ]; then
+            skipped=$((skipped + 1))
+            continue
+        fi
+
+        # Check if source and destination resolve to the same file
+        local item_real=$(realpath "$item" 2>/dev/null || echo "$item")
+        local dest_real=$(realpath "$dest_path" 2>/dev/null || echo "$dest_path")
+        if [ "$item_real" = "$dest_real" ]; then
             skipped=$((skipped + 1))
             continue
         fi

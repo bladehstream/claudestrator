@@ -314,18 +314,28 @@ Report:
 
 ### 5.2 Environmental Issue Detection (MANDATORY)
 
-Scan test output for these patterns. Track each occurrence:
+Scan test output for these **generic** error patterns. Track each occurrence:
 
 | Pattern | Issue Type | Impact |
 |---------|-----------|--------|
-| `ECONNREFUSED` | ENVIRONMENTAL | Service unavailable |
-| `Ollama` + (`not running`\|`unavailable`\|`connection`) | ENVIRONMENTAL | LLM not running |
-| `EADDRINUSE` | ENVIRONMENTAL | Port conflict |
-| `Server did not start` | ENVIRONMENTAL | App launch failed |
-| `timeout` in error context | ENVIRONMENTAL | Service unresponsive |
-| `Cannot find module` | CODE_ISSUE | Dependency missing |
-| `is not exported` | CODE_ISSUE | Import/export mismatch |
+| `ECONNREFUSED` | ENVIRONMENTAL | Service/port unavailable |
+| `EADDRINUSE` | ENVIRONMENTAL | Port already in use |
 | `ENOENT` | ENVIRONMENTAL | File/path not found |
+| `ETIMEDOUT` | ENVIRONMENTAL | Connection timeout |
+| `ENOTFOUND` | ENVIRONMENTAL | DNS/host not found |
+| `connection refused` | ENVIRONMENTAL | Service unavailable |
+| `not running` | ENVIRONMENTAL | Required service not started |
+| `unavailable` | ENVIRONMENTAL | Service/resource unavailable |
+| `failed to start` | ENVIRONMENTAL | App/service startup failure |
+| `server.*not.*start` | ENVIRONMENTAL | Server launch failed |
+| `timeout.*error` | ENVIRONMENTAL | Operation timed out |
+| `Cannot find module` | CODE_ISSUE | Missing dependency |
+| `is not exported` | CODE_ISSUE | Import/export mismatch |
+| `Module not found` | CODE_ISSUE | Missing module |
+| `ReferenceError:.*not defined` | CODE_ISSUE | Undefined variable/function |
+
+**Note:** These patterns are generic and work across different tech stacks.
+For project-specific services, add custom patterns to the Skip If Unavailable task field.
 
 **Count affected tests for each pattern.**
 
@@ -467,13 +477,13 @@ If ANY of the following are true:
 
   "environmental_issues": [
     {
-      "pattern": "Ollama not running",
+      "pattern": "ECONNREFUSED",
       "issue_type": "ENVIRONMENTAL",
       "affected_tests": 9,
-      "examples": ["test_llm_query", "test_ollama_connection"]
+      "examples": ["test_api_health", "test_db_connection"]
     },
     {
-      "pattern": "startServer is not exported",
+      "pattern": "is not exported",
       "issue_type": "CODE_ISSUE",
       "affected_tests": 15,
       "examples": ["test_api_endpoint_1"]
@@ -482,7 +492,7 @@ If ANY of the following are true:
 
   "cheating_detected": false,
   "cheating_details": [],
-  "verdict_reason": "BLOCKED: 21 tests blocked by environmental issues (Ollama not running)"
+  "verdict_reason": "BLOCKED: 9 tests blocked by ECONNREFUSED (service unavailable)"
 }
 ```
 

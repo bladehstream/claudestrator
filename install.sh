@@ -77,6 +77,7 @@ fi
 # Create target directories
 echo "Creating directories..."
 mkdir -p "$TARGET_DIR/.claude"
+mkdir -p "$TARGET_DIR/.claudestrator"
 mkdir -p "$TARGET_DIR/.orchestrator/complete"
 mkdir -p "$TARGET_DIR/.orchestrator/reports"
 
@@ -121,6 +122,24 @@ if [ -d "$SCRIPT_DIR/templates/hooks" ]; then
     copy_dir "$SCRIPT_DIR/templates/hooks" "$TARGET_DIR/.claude/hooks"
     chmod +x "$TARGET_DIR/.claude/hooks/"*.sh 2>/dev/null || true
     chmod +x "$TARGET_DIR/.claude/hooks/"*.py 2>/dev/null || true
+fi
+
+# Copy issue_reporter (required by /issue command)
+if [ -d "$SCRIPT_DIR/issue_reporter" ]; then
+    echo "Installing issue_reporter..."
+    copy_dir "$SCRIPT_DIR/issue_reporter" "$TARGET_DIR/.claudestrator/issue_reporter"
+fi
+
+# Copy prd_generator (required by /prdgen command)
+if [ -d "$SCRIPT_DIR/prd_generator" ]; then
+    echo "Installing prd_generator..."
+    copy_dir "$SCRIPT_DIR/prd_generator" "$TARGET_DIR/.claudestrator/prd_generator"
+fi
+
+# Copy templates to .claudestrator (required by /dashboard, /issue, etc.)
+if [ -d "$SCRIPT_DIR/templates" ]; then
+    echo "Installing claudestrator templates..."
+    copy_dir "$SCRIPT_DIR/templates" "$TARGET_DIR/.claudestrator/templates"
 fi
 
 echo ""

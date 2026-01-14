@@ -294,9 +294,7 @@ For each item in `core_functionality[]`:
 | Full flow, End-to-end feature, Both UI and API | `fullstack` |
 | Docker, CI/CD, Deployment | `devops` |
 
-### D.4 Create TEST Tasks from Test Plan (TDD - Tests First)
-
-**CRITICAL: TDD Workflow - Tests are written BEFORE implementation.**
+### D.4 Create TEST Tasks from Test Plan
 
 Group tests by category and create TEST batch tasks:
 
@@ -304,60 +302,86 @@ Group tests by category and create TEST batch tasks:
 
 | Test Type | Task ID Range | Dependencies |
 |-----------|---------------|--------------|
-| unit (data-model) | TASK-T01 | None (written first) |
-| unit (llm-processing) | TASK-T02 | None (written first) |
-| unit (filtering) | TASK-T03 | None (written first) |
-| unit (dashboard-ui) | TASK-T04 | None (written first) |
-| unit (data-ingestion) | TASK-T05 | None (written first) |
-| unit (admin-maintenance) | TASK-T06 | None (written first) |
-| integration | TASK-T10 | Related unit test tasks (TASK-T01, etc.) |
-| e2e | TASK-T20 | All unit + integration test tasks |
-| security | TASK-T30 | Related unit test tasks |
-| performance | TASK-T40 | Related unit test tasks |
-| edge_cases | TASK-T50 | Related unit test tasks |
+| unit (vulnerability-validation) | TASK-T01 | Related build tasks |
+| unit (llm-processing) | TASK-T02 | Related build tasks |
+| unit (filtering) | TASK-T03 | Related build tasks |
+| unit (dashboard-ui) | TASK-T04 | Related build tasks |
+| unit (data-ingestion) | TASK-T05 | Related build tasks |
+| unit (admin-maintenance) | TASK-T06 | Related build tasks |
+| integration | TASK-T10 | All related unit test tasks |
+| e2e | TASK-T20 | ALL build tasks |
+| security | TASK-T30 | ALL build tasks |
+| performance | TASK-T40 | ALL build tasks |
+| edge_cases | TASK-T50 | Related build tasks |
 
-**TEST tasks have NO dependencies on BUILD tasks. They are written first to define the contract.**
-
-### D.4b BUILD Task Dependencies (TDD - Implementation After Tests)
-
-**BUILD tasks MUST depend on their related TEST tasks:**
-
-| Build Category | Must Depend On |
-|----------------|----------------|
-| Data Model tasks | TASK-T01 (unit tests for data model) |
-| LLM/AI tasks | TASK-T02 (unit tests for LLM) |
-| API/Backend tasks | Related unit test tasks |
-| Frontend tasks | TASK-T04 (unit tests for UI) |
-| All BUILD tasks | At least one TEST task |
-
-**BUILD → TEST Dependency Mapping:**
+**Category → Build Task Dependency Mapping:**
 
 ```
-BUILD_TO_TEST_DEPENDENCIES = {
-  "Data Model": ["TASK-T01"],
-  "Interview Agent": ["TASK-T02"],
-  "LLM Gateway": ["TASK-T02"],
-  "Evidence Storage": ["TASK-T03"],
-  "API Routes": ["TASK-T01", "TASK-T03"],
-  "Dashboard UI": ["TASK-T04"],
-  "Report Generator": ["TASK-T01", "TASK-T05"],
-  "Backup/Restore": ["TASK-T03"],
-  "Security features": ["TASK-T30"],
-  "Performance features": ["TASK-T40"]
+CATEGORY_DEPENDENCIES = {
+  "vulnerability-validation": ["Vulnerability Dashboard", "Vulnerability Table"],
+  "dashboard-ui": ["Vulnerability Dashboard", "Filter-Responsive Statistics", "Trend Chart"],
+  "llm-processing": ["LLM Integration", "Two-Table Async Processing", "Low-Confidence Review Queue"],
+  "data-ingestion": ["Data Source Management", "EPSS Enrichment", "Two-Table Async Processing"],
+  "filtering": ["Vulnerability Table with Filters", "Filter-Responsive Statistics"],
+  "admin-maintenance": ["Product Inventory Management", "Source Health Monitoring", "Low-Confidence Review Queue", "Data Source Management"],
+  "security": "ALL_BUILD_TASKS",
+  "performance": "ALL_BUILD_TASKS"
 }
 ```
 
-**Rationale:** Tests written FIRST define the contract. Implementation must satisfy existing tests, not write tests to match implementation. This prevents the "fox guarding the henhouse" problem where implementation agents write weak tests designed to pass their own code.
+### D.4b Create VERIFY Tasks for Test Verification
 
-**Example TDD Task Order:**
-```
-TASK-T01 (Unit Tests - Data Model)     ← No dependencies, runs FIRST
-    ↓
-TASK-001 (Data Model Implementation)   ← Depends on TASK-T01
-    ↓
-TASK-T10 (Integration Tests)           ← Depends on TASK-T01
-    ↓
-TASK-002 (API Routes)                  ← Depends on TASK-001, TASK-T10
+After creating TEST tasks (TASK-T##), create corresponding VERIFY tasks (TASK-V##) to verify tests compile and don't cheat:
+
+**Verification Task Naming:** `TASK-V{category_number}` (matches TASK-T##)
+
+| Test Task | Verify Task | Purpose |
+|-----------|-------------|---------|
+| TASK-T01 | TASK-V01 | Verify unit tests (vulnerability-validation) |
+| TASK-T02 | TASK-V02 | Verify unit tests (llm-processing) |
+| TASK-T03 | TASK-V03 | Verify unit tests (filtering) |
+| TASK-T04 | TASK-V04 | Verify unit tests (dashboard-ui) |
+| TASK-T05 | TASK-V05 | Verify unit tests (data-ingestion) |
+| TASK-T06 | TASK-V06 | Verify unit tests (admin-maintenance) |
+| TASK-T10 | TASK-V10 | Verify integration tests |
+| TASK-T20 | TASK-V20 | Verify E2E tests |
+| TASK-T30 | TASK-V30 | Verify security tests |
+| TASK-T40 | TASK-V40 | Verify performance tests |
+| TASK-T50 | TASK-V50 | Verify edge case tests |
+
+**Dependencies:** Each TASK-V## depends on its corresponding TASK-T##.
+
+**Agent:** Uses `test_verification_agent.md` prompt (zero-trust adversarial auditor).
+
+**Verification Checks:**
+1. Tests compile without errors
+2. No cheating patterns (try/catch error swallowing, expected-failure comments)
+3. Tests actually verify behavior (not just config strings)
+4. Dependencies are actually tested (Ollama, MCP, etc.)
+
+**TASK-V## Format:**
+
+```markdown
+### TASK-V01
+
+| Field | Value |
+|-------|-------|
+| Status | pending |
+| Category | test_verification |
+| Complexity | normal |
+| Depends On | TASK-T01 |
+
+---
+
+**Description:** Verify unit tests for vulnerability-validation category compile and execute correctly without cheating patterns.
+
+**Steps:**
+1. Run cheating pattern detection (try/catch error swallowing, null-swallowing, expected-failure comments)
+2. Execute tests and verify they actually test functionality
+3. Check tests fail when dependencies are unavailable
+4. Generate findings.json with verdict
+
+**Expected Result:** All tests pass verification with no cheating patterns detected. Tests fail appropriately when dependencies are missing.
 ```
 
 ### D.5 CRITICAL FORMAT REQUIREMENT
@@ -556,6 +580,30 @@ Dependencies: ALL build tasks (TASK-001 through TASK-N)
 [Performance Tests]
 Dependencies: ALL build tasks
 
+## Verify Tasks
+
+### TASK-V01
+[Verify Unit Tests - Vulnerability Validation]
+Dependencies: TASK-T01
+
+### TASK-V10
+[Verify Integration Tests]
+Dependencies: TASK-T10
+
+### TASK-V20
+[Verify E2E Tests]
+Dependencies: TASK-T20
+
+### TASK-V30
+[Verify Security Tests]
+Dependencies: TASK-T30
+
+### TASK-V40
+[Verify Performance Tests]
+Dependencies: TASK-T40
+
+...
+
 ## Final Verification
 
 ### TASK-99999
@@ -577,6 +625,9 @@ Before finishing, verify:
 - [ ] Linked TEST tasks to BUILD tasks via Dependencies
 - [ ] Cross-cutting tests (security, performance, e2e) depend on ALL build tasks
 - [ ] Generated test code for each test batch
+- [ ] Created VERIFY tasks (TASK-V##) for each TEST task (TASK-T##)
+- [ ] VERIFY tasks depend on corresponding TEST tasks
+- [ ] VERIFY tasks use test_verification category
 - [ ] Created TASK-99999 for final verification
 - [ ] Wrote task_queue.md with proper structure
 - [ ] **WROTE THE COMPLETION MARKER FILE**

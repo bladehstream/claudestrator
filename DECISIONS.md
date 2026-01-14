@@ -256,6 +256,22 @@ Migration:
 - `category: testing` → `category: test_creation` (for writing tests)
 - Add `category: test_verification` tasks after implementation
 
+### v1.1 Update: MCP-First Browser Testing
+
+Both agents updated to enforce MCP-first browser verification:
+
+**Test Creation Agent v1.1:**
+- MUST specify MCP verification steps for UI tests
+- curl/fetch-only UI tests are FORBIDDEN
+- If MCP unavailable, UI tests must be marked BLOCKED (not faked with curl)
+
+**Test Verification Agent v1.1:**
+- MUST independently verify UI tests using MCP browser tools
+- Captures its own screenshots (doesn't trust producer evidence)
+- UI tests without MCP verification are automatically BLOCKED
+
+**Rationale:** curl/fetch can test API responses but cannot verify actual UI rendering. An API that returns `200 OK` can still have a broken frontend. MCP browser tools interact with the real rendered DOM, proving the UI actually works.
+
 ---
 
 ## Future Considerations
@@ -282,4 +298,4 @@ Currently evidence is described in task reports. Could store actual artifacts:
 
 ---
 
-*Last updated: 2026-01-13 (v4.0)*
+*Last updated: 2026-01-13 (v4.1 - MCP-first browser testing)*

@@ -91,6 +91,14 @@ If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD
 
 **Why this matters:** Without limits, tasks with no dependencies (e.g., all TEST tasks) spawn simultaneously, causing resource exhaustion.
 
+## System Dependencies
+
+| Package | Install Command | Purpose |
+|---------|-----------------|---------|
+| `inotify-tools` | `sudo apt install inotify-tools` | True blocking file watch (no polling) |
+
+**Critical:** The orchestrator uses `inotifywait` for zero-output blocking waits. Without it, completion waits will fail.
+
 ---
 
 ## TDD Workflow Overview
@@ -222,7 +230,8 @@ For each TASK_ID in FAILED_TASKS:
 3. **Wait for all analysis to complete:**
    ```bash
    for TASK_ID in $FAILED_TASKS; do
-     while [ ! -f ".orchestrator/complete/analysis-${TASK_ID}.done" ]; do sleep 5; done
+     [ -f ".orchestrator/complete/analysis-${TASK_ID}.done" ] || \
+       inotifywait -q -q -e create --include "analysis-${TASK_ID}\\.done" .orchestrator/complete/
    done
    echo "All failure analysis complete"
    ```
@@ -409,8 +418,8 @@ WHILE CRITICAL_COUNT > 0:
       START: Read('.orchestrator/issue_queue.md')"
     )
 
-    # 2. Wait for completion (and clean up marker)
-    Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
+    # 2. Wait for completion (and clean up marker) - true blocking, no polling
+    Bash("[ -f '.orchestrator/complete/decomposition.done' ] || inotifywait -q -q -e create --include 'decomposition\\.done' .orchestrator/complete/ && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
 
     # 3. VERIFY tasks were created (Step 10c)
     # 4. Run Implementation Agents on critical tasks (markers cleaned inline per Step 2c)
@@ -608,7 +617,7 @@ Task(
 
 **Wait for completion (and clean up marker):**
 ```
-Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'Decomposition complete'", timeout: 600000)
+Bash("[ -f '.orchestrator/complete/decomposition.done' ] || inotifywait -q -q -e create --include 'decomposition\\.done' .orchestrator/complete/ && rm .orchestrator/complete/decomposition.done && echo 'Decomposition complete'", timeout: 600000)
 ```
 
 ---
@@ -1095,10 +1104,12 @@ Task(
 ### 2c. Wait for Completion, Check Result, Clean Up (single command)
 
 ```
-Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 10; done && (test -f '.orchestrator/complete/[TASK-ID].done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/[TASK-ID].done .orchestrator/complete/[TASK-ID].failed", timeout: 1800000)
+Bash("[ -f '.orchestrator/complete/[TASK-ID].done' ] || [ -f '.orchestrator/complete/[TASK-ID].failed' ] || inotifywait -q -q -e create --include '\\[TASK-ID\\]\\.(done|failed)' .orchestrator/complete/ && (test -f '.orchestrator/complete/[TASK-ID].done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/[TASK-ID].done .orchestrator/complete/[TASK-ID].failed", timeout: 1800000)
 ```
 
 Output is `SUCCESS` or `FAILED`. Markers are cleaned immediately (task_queue.md status is source of truth).
+
+**Note:** Uses `inotifywait` for true blocking (no polling). Requires `inotify-tools` package.
 
 **Remove task from running list immediately after completion:**
 ```bash
@@ -1180,7 +1191,7 @@ Task(
 
 Wait for analysis:
 ```
-Bash("while [ ! -f '.orchestrator/complete/analysis-[TASK-ID].done' ]; do sleep 10; done && echo 'Failure analysis complete'", timeout: 600000)
+Bash("[ -f '.orchestrator/complete/analysis-[TASK-ID].done' ] || inotifywait -q -q -e create --include 'analysis-\\[TASK-ID\\]\\.done' .orchestrator/complete/ && echo 'Failure analysis complete'", timeout: 600000)
 ```
 
 **Result**: Failure Analysis Agent creates issue(s) with `Priority | critical` in issue_queue.md.
@@ -1280,7 +1291,7 @@ Task(
 
 Wait for completion:
 ```
-Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 10; done && rm .orchestrator/complete/research.done && echo 'Research complete'", timeout: 900000)
+Bash("[ -f '.orchestrator/complete/research.done' ] || inotifywait -q -q -e create --include 'research\\.done' .orchestrator/complete/ && rm .orchestrator/complete/research.done && echo 'Research complete'", timeout: 900000)
 ```
 
 **3. Spawn Decomposition Agent (convert issues to tasks)**
@@ -1312,7 +1323,7 @@ Task(
 
 Wait for completion:
 ```
-Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 10; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
+Bash("[ -f '.orchestrator/complete/decomposition.done' ] || inotifywait -q -q -e create --include 'decomposition\\.done' .orchestrator/complete/ && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
 ```
 
 **4. Execute tasks**
@@ -1368,7 +1379,7 @@ Task(
 
 **Wait for completion:**
 ```
-Bash("while [ ! -f '.orchestrator/complete/analysis.done' ]; do sleep 10; done && echo 'Analysis complete'", timeout: 300000)
+Bash("[ -f '.orchestrator/complete/analysis.done' ] || inotifywait -q -q -e create --include 'analysis\\.done' .orchestrator/complete/ && echo 'Analysis complete'", timeout: 300000)
 ```
 
 ---
@@ -1467,7 +1478,7 @@ Historical Data: .orchestrator/history.csv
    Full issue processing is handled by Decomposition Agent.
 4. **CAN mark task as done** - when completion marker detected (minimal update)
 5. **Use category-specific prompts** - agents read their detailed prompt file first
-6. **ONE blocking Bash per agent** - not a polling loop
+6. **ONE blocking Bash per agent** - uses `inotifywait` for true blocking (no polling, no output until complete)
 7. **NEVER use TaskOutput** - adds 50-100k tokens to context
 8. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
 9. **NEVER improvise the flow** - follow the documented steps exactly

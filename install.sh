@@ -47,8 +47,8 @@ copy_dir() {
             # Recursively copy directory
             copy_dir "$item" "$dest_path"
         else
-            # Copy file (overwrite if exists)
-            cp "$item" "$dest_path"
+            # Copy file (force overwrite if exists)
+            cp -f "$item" "$dest_path"
             copied=$((copied + 1))
         fi
     done
@@ -98,7 +98,7 @@ if [ -f "$SCRIPT_DIR/templates/CLAUDE.md" ]; then
     if [ -L "$TARGET_DIR/.claude/CLAUDE.md" ]; then
         echo "  (skipped - is symlink)"
     else
-        cp "$SCRIPT_DIR/templates/CLAUDE.md" "$TARGET_DIR/.claude/CLAUDE.md"
+        cp -f "$SCRIPT_DIR/templates/CLAUDE.md" "$TARGET_DIR/.claude/CLAUDE.md"
     fi
 else
     echo -e "${YELLOW}Warning: templates/CLAUDE.md not found${NC}"

@@ -2,6 +2,32 @@
 
 All notable changes to Claudestrator are documented here.
 
+## [4.1] - 2026-01-13
+
+### Changed
+- **MCP-First Browser Testing** - Both test agents now enforce MCP browser tools over curl/fetch for UI testing
+
+- **Test Creation Agent v1.1**:
+  - Added "MCP-First Testing Principle (CRITICAL)" section
+  - UI tests MUST specify MCP verification steps
+  - curl/fetch-only UI tests are FORBIDDEN
+  - If MCP unavailable, UI tests must be BLOCKED (not faked)
+  - New test header field: `@mcp-required: true|false`
+  - Added `verification_method` field to testid-map.json
+
+- **Test Verification Agent v1.1**:
+  - Added "MCP-First Verification Principle (CRITICAL)" section
+  - Phase 4.4: MCP Browser Verification (MANDATORY for UI Tests)
+  - Verifier captures its own screenshots via MCP
+  - UI tests without MCP verification are automatically BLOCKED
+  - Updated findings.json with `mcp_verification` section
+  - Updated report template with MCP verification table
+
+### Why This Change
+curl/fetch can test API responses but cannot verify actual UI rendering. A broken frontend can return `200 OK` via API while showing errors to users. MCP browser tools interact with the real rendered DOM, proving the UI actually works.
+
+---
+
 ## [4.0] - 2026-01-13
 
 ### Added

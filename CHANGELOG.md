@@ -2,6 +2,41 @@
 
 All notable changes to Claudestrator are documented here.
 
+## [4.2] - 2026-01-14
+
+### Added
+- **`--test-only` mode**: Create and verify tests without running BUILD tasks
+  - Use when implementation exists and tests need rework/validation
+  - Executes: TASK-T## (test creation) → TASK-V## (verification)
+  - Skips: TASK-### (build) and TASK-99999 (QA)
+
+- **`--help` flag**: Comprehensive help output with all options and examples
+  - `/orchestrate --help` or `/orchestrate -h`
+  - Shows usage, options, examples, task types, and modes
+
+- **Skip rate verification** in Test Verification Agent:
+  - Enforces ≤10% skip rate for PASS verdict
+  - Environmental issues (ECONNREFUSED, EADDRINUSE, etc.) → BLOCKED
+  - Code issues (import/export errors) → FAIL
+  - Two-tier pattern detection: universal system errors + project-specific patterns
+
+- **TASK-V## (verification tasks)** now created by Decomposition Agent:
+  - Verification handled through task queue, not inline in orchestrator
+  - Each TASK-T## gets a corresponding TASK-V##
+  - Proper dependency chain: TEST → BUILD → VERIFY → QA
+
+### Changed
+- Updated orchestrate.md to v4.2
+- install.sh now properly handles symlinked destinations
+- Improved documentation consistency for test-only mode
+
+### Fixed
+- Verification tasks were never being created via task queue (were inline in orchestrator)
+- Environmental skip "cheating" where tests passed with "100% (of runnable)" while 34% skipped
+- install.sh "same file" errors when destination is symlinked to source
+
+---
+
 ## [4.1] - 2026-01-13
 
 ### Changed

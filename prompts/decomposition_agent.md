@@ -24,6 +24,7 @@ CONTEXT
 Working Directory: {working_dir}
 Source Document:   {source} (PRD.md for initial, .orchestrator/issue_queue.md for loops)
 Mode:              {mode} (initial | improvement_loop | critical_only)
+Test Only:         {test_only} (false | true)
 
 ### Mode Definitions
 
@@ -33,6 +34,20 @@ Mode:              {mode} (initial | improvement_loop | critical_only)
 | `improvement_loop` | issue_queue.md | All pending issues |
 | `critical_only` | issue_queue.md | **ONLY** issues with `Priority \| critical` |
 | `external_spec` | projectspec/*.json | Features from spec-final.json + tests from test-plan-output.json |
+
+### Test Only Flag
+
+| `test_only` | Tasks Created |
+|-------------|---------------|
+| `false` | All tasks: TEST (TASK-T##), BUILD (TASK-###), VERIFY (TASK-V##), QA (TASK-99999) |
+| `true` | **Only TEST tasks (TASK-T##)** - Skip BUILD, VERIFY, QA |
+
+**When `test_only=true`:**
+- Create TASK-T## (test creation) tasks normally
+- **DO NOT** create TASK-### (BUILD) tasks
+- **DO NOT** create TASK-V## (VERIFY) tasks
+- **DO NOT** create TASK-99999 (QA) task
+- This is the TDD setup phase - tests are written, but not yet run against implementation
 
 ===============================================================================
 PHASE 1: MODE BRANCH (READ THIS FIRST)
@@ -133,7 +148,9 @@ Repeat for each issue you created a task for.
 
 ### B.4 Create Final Testing Task
 
-Always create TASK-99999 (testing task) that depends on all other tasks.
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS SECTION**.
+
+Always create TASK-99999 (testing task) that depends on all other tasks (unless in test-only mode).
 
 **→ Continue to Section 1.3 (Build/Test Commands), then Phase 3, 4**
 
@@ -202,7 +219,9 @@ Edit(
 
 ### C.5 Create Final Testing Task (REQUIRED)
 
-**Even in critical_only mode, you MUST create TASK-99999 (testing task).**
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS SECTION**.
+
+**Even in critical_only mode, you MUST create TASK-99999 (testing task)** (unless in test-only mode).
 
 This task:
 - Has `Category: testing`
@@ -272,6 +291,8 @@ Parse the JSON structures:
 
 ### D.3 Create BUILD Tasks from Features
 
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS ENTIRE SECTION**. Do not create BUILD tasks.
+
 For each item in `core_functionality[]`:
 
 1. **Assign Task ID**: TASK-001, TASK-002, etc. (in order)
@@ -331,7 +352,7 @@ CATEGORY_DEPENDENCIES = {
 
 ### D.4b Create VERIFY Tasks from TEST Tasks (MANDATORY)
 
-**CRITICAL:** For EACH test category task (TASK-T##), you MUST create a corresponding VERIFY task (TASK-V##).
+**CRITICAL:** For EACH test category task (TASK-T##), you MUST create a corresponding VERIFY task (TASK-V##). This applies in ALL modes including `test_only`.
 
 VERIFY tasks ensure tests are not cheating. They run AFTER build tasks complete and validate:
 1. Tests compile and run without errors
@@ -590,6 +611,8 @@ Dependencies: ALL build tasks (TASK-001 through TASK-N)
 Dependencies: ALL build tasks
 
 ## Final Verification
+
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **DO NOT CREATE TASK-99999**. Skip final verification in test-only mode.
 
 ### TASK-99999
 [E2E Verification & Documentation]
@@ -860,12 +883,14 @@ Each task must be:
 
 ### REQUIRED: Final Testing & Verification Task
 
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS SECTION**. Do not create TASK-99999 in test-only mode.
+
 **CRITICAL**: You MUST always create a final task with Category `testing` that:
 - Depends on ALL other tasks (runs last)
 - Writes tests for the implemented features
 - Creates `.orchestrator/VERIFICATION.md` with user instructions
 
-This task is MANDATORY for every task queue. Example:
+This task is MANDATORY for every task queue (except in test-only mode). Example:
 
 ```
 ### TASK-99999 (always the LAST task)

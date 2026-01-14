@@ -1,14 +1,67 @@
 # /orchestrate
 
-> **Version**: MVP 3.8 - Concurrency control (MAX_CONCURRENT_AGENTS = 10).
+> **Version**: MVP 4.2 - Test-only mode, skip rate verification, environmental detection.
 
 You are a PROJECT MANAGER. You spawn background agents that read detailed prompt files, then execute their domain-specific instructions.
+
+## Help (--help)
+
+**If the user runs `/orchestrate --help` or `/orchestrate -h`, output this help text and stop:**
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                            /orchestrate - Help                                 ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                                ║
+║  USAGE:                                                                        ║
+║    /orchestrate [OPTIONS] [LOOPS] [--research [QUOTAS...]]                     ║
+║                                                                                ║
+║  OPTIONS:                                                                      ║
+║    --help, -h              Show this help message                              ║
+║    --dry-run               Preview tasks without executing                     ║
+║    --test-only             Create/run tests only (skip BUILD/QA)               ║
+║    --source <type>         Source type: prd (default) or external_spec         ║
+║    --research [quotas]     Enable Research Agent with optional quotas          ║
+║                                                                                ║
+║  LOOPS:                                                                        ║
+║    N                       Number of improvement loops (default: 0)            ║
+║                                                                                ║
+║  EXAMPLES:                                                                     ║
+║    /orchestrate                        Single pass from PRD.md                 ║
+║    /orchestrate --dry-run              Preview without executing               ║
+║    /orchestrate --test-only            Create tests, verify, skip builds       ║
+║    /orchestrate 3                      3 improvement loops                     ║
+║    /orchestrate 3 --research           3 loops with research                   ║
+║    /orchestrate 3 --research 2 security 3 UI    Quotas per category            ║
+║    /orchestrate --source external_spec          Use projectspec/*.json         ║
+║                                                                                ║
+║  TASK TYPES:                                                                   ║
+║    TASK-T##     Test creation (runs first)                                     ║
+║    TASK-###     Build/implementation                                           ║
+║    TASK-V##     Test verification (runs after build)                           ║
+║    TASK-99999   Final QA                                                       ║
+║                                                                                ║
+║  MODES:                                                                        ║
+║    Normal       All tasks: TEST → BUILD → VERIFY → QA                          ║
+║    --test-only  TEST → VERIFY only (for testing existing implementation)       ║
+║    --dry-run    Show tasks without executing                                   ║
+║                                                                                ║
+║  See: /claudestrator-help for all commands                                     ║
+║                                                                                ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
+
+**After outputting help, do NOT proceed with orchestration. Exit immediately.**
+
+---
 
 ## Usage
 
 ```
 /orchestrate                              # Single pass - decompose PRD and execute tasks
+/orchestrate --help                       # Show help message
 /orchestrate --dry-run                    # Preview tasks without executing
+/orchestrate --test-only                  # Create and verify tests (skip BUILD/QA)
 /orchestrate N                            # Run N loops processing existing issues only
 /orchestrate N --research                 # Run N loops with research for new issues
 /orchestrate N --research <focus>         # Run N loops researching specific area
@@ -21,24 +74,29 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 **CRITICAL**: Parse arguments in this order:
 
 ```
-/orchestrate <loops> [--source <source_type>] [--research [<count> <category>]...]
+/orchestrate <loops> [--dry-run] [--test-only] [--source <source_type>] [--research [<count> <category>]...]
 ```
 
 1. **First token** → LOOP_COUNT (number of improvement loops)
-2. **Check for `--source` flag** → SOURCE_TYPE (default: "prd", or "external_spec")
-3. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
-4. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas per loop)
-5. **If a token following `--research` is NOT a number** → Treat as category with no quota (general focus)
+2. **Check for `--dry-run` flag** → DRY_RUN (boolean) - preview tasks without executing
+3. **Check for `--test-only` flag** → TEST_ONLY (boolean) - create and run tests only
+4. **Check for `--source` flag** → SOURCE_TYPE (default: "prd", or "external_spec")
+5. **Check for `--research` flag** → RESEARCH_ENABLED (boolean)
+6. **Tokens after `--research`** → Parse as `<count> <category>` pairs (quotas per loop)
+7. **If a token following `--research` is NOT a number** → Treat as category with no quota (general focus)
 
 **Without `--research`:** Only process existing issues. When queue is clear, skip to Analysis Agent.
 **With `--research`:** Launch Research Agent when queue is clear to find new issues.
 **With `--source external_spec`:** Use projectspec/spec-final.json and projectspec/test-plan-output.json instead of PRD.md.
+**With `--test-only`:** Only create and execute TEST (TASK-T##) and VERIFY (TASK-V##) tasks. Skip BUILD and QA tasks. Useful for testing existing implementation.
 
 ### Parsing Rules
 
 | Token Pattern | Interpretation |
 |---------------|----------------|
 | `3` (first) | 3 loops |
+| `--dry-run` | Preview tasks without executing |
+| `--test-only` | Create tests and verify against existing implementation (skip BUILD/QA) |
 | `--source external_spec` | Use projectspec/*.json files |
 | `--source prd` | Use PRD.md (default) |
 | `--research` | Enable Research Agent |
@@ -52,6 +110,8 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 |---------|-------|--------|----------|----------|
 | `/orchestrate` | 0 | prd | No | Initial build OR process pending issues (single pass) |
 | `/orchestrate 3` | 3 | prd | No | Process existing issues only (3 loops max) |
+| `/orchestrate --dry-run` | 0 | prd | No | Preview tasks without executing |
+| `/orchestrate --test-only` | 0 | prd | No | Create and verify tests (skip BUILD/QA) |
 | `/orchestrate --source external_spec` | 0 | external_spec | No | Build from projectspec/*.json files |
 | `/orchestrate 3 --source external_spec` | 3 | external_spec | No | Build + 3 improvement loops |
 | `/orchestrate 3 --research` | 3 | prd | Yes | General improvements + new issue discovery |
@@ -69,6 +129,8 @@ You are a PROJECT MANAGER. You spawn background agents that read detailed prompt
 Store as structured data:
 ```
 LOOP_COUNT: 3
+DRY_RUN: false
+TEST_ONLY: false
 SOURCE_TYPE: prd | external_spec
 RESEARCH_ENABLED: true
 QUOTAS: [
@@ -77,6 +139,8 @@ QUOTAS: [
 ]
 ```
 
+If `DRY_RUN` is true, preview tasks without executing any agents.
+If `TEST_ONLY` is true, only create and execute TEST (TASK-T##) and VERIFY (TASK-V##) tasks. Skip BUILD and QA tasks.
 If `RESEARCH_ENABLED` is false, QUOTAS will be empty and Research Agent will not be spawned.
 If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD.md.
 
@@ -423,6 +487,7 @@ WHILE CRITICAL_COUNT > 0:
       WORKING_DIR: [absolute path from pwd]
       SOURCE: .orchestrator/issue_queue.md
       MODE: critical_only
+      TEST_ONLY: false
 
       Read .orchestrator/issue_queue.md and create tasks ONLY for issues with Priority: critical.
       Ignore all non-critical issues.
@@ -596,8 +661,11 @@ Task(
   WORKING_DIR: [absolute path from pwd]
   SOURCE: PRD.md
   MODE: initial
+  TEST_ONLY: [value from parsed TEST_ONLY flag]
 
   Read PRD.md and create .orchestrator/task_queue.md with implementation tasks.
+
+  If TEST_ONLY is true, only create TEST (TASK-T##) and VERIFY (TASK-V##) tasks. Skip BUILD and QA tasks.
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
@@ -623,10 +691,11 @@ Task(
   WORKING_DIR: [absolute path from pwd]
   SOURCE: projectspec/spec-final.json + projectspec/test-plan-output.json
   MODE: external_spec
+  TEST_ONLY: [value from parsed TEST_ONLY flag]
 
   Parse the external spec files and create .orchestrator/task_queue.md with:
-  - BUILD tasks from spec-final.json core_functionality
-  - TEST tasks from test-plan-output.json, linked to BUILD tasks via dependencies
+  - TEST tasks from test-plan-output.json
+  - If TEST_ONLY is false: also create BUILD tasks from spec-final.json core_functionality, linked to TEST tasks via dependencies
 
   CRITICAL: Write completion marker when done:
   Write('[absolute path]/.orchestrator/complete/decomposition.done', 'done')
@@ -649,6 +718,39 @@ Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 120; 
 Read `.orchestrator/task_queue.md` to get pending tasks.
 
 For each task with `Status | pending`:
+
+### 2a-0-pre. TEST_ONLY Mode Filtering
+
+**If `TEST_ONLY` is true**, filter tasks before execution:
+
+```bash
+# Get task category
+TASK_CATEGORY=$(grep -A10 "### $TASK_ID" .orchestrator/task_queue.md | grep "Category" | head -1 | sed 's/.*| //' | tr -d ' ')
+
+# Only execute TEST (TASK-T##) and VERIFY (TASK-V##) tasks in test-only mode
+if [ "$TEST_ONLY" = "true" ]; then
+  if [[ ! "$TASK_ID" =~ ^TASK-[TV][0-9]+$ ]]; then
+    echo "⏸ Skipping $TASK_ID: TEST_ONLY mode - only TEST and VERIFY tasks execute"
+    continue
+  fi
+fi
+```
+
+| Mode | Tasks Executed | Tasks Skipped |
+|------|----------------|---------------|
+| Normal | All pending tasks | None |
+| `--test-only` | TASK-T## (test_creation), TASK-V## (verification) | BUILD (TASK-###), TASK-99999 (QA) |
+
+**In TEST_ONLY mode:**
+- TASK-T## creates/reworks test files
+- TASK-V## runs tests against existing implementation
+- Tests pass/fail results are recorded
+- Skip BUILD tasks (implementation already exists) and TASK-99999 (QA)
+- Skip improvement loops
+
+**After all TEST and VERIFY tasks complete:**
+- Output: `✓ TEST_ONLY mode complete. Tests created and verified.`
+- Exit orchestration
 
 ### 2a-0. Check Dependencies (MANDATORY)
 
@@ -1076,6 +1178,7 @@ Task(
   WORKING_DIR: [absolute path]
   SOURCE: issue_queue.md
   MODE: convert_issues
+  TEST_ONLY: false
 
   Read .orchestrator/issue_queue.md and convert pending issues to tasks in .orchestrator/task_queue.md.
 

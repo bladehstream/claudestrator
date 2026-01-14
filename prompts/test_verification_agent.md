@@ -314,30 +314,56 @@ Report:
 
 ### 5.2 Environmental Issue Detection (MANDATORY)
 
-Scan test output for these **generic** error patterns. Track each occurrence:
+Scan test output for error patterns using a **two-tier approach**:
 
-| Pattern | Issue Type | Impact |
-|---------|-----------|--------|
-| `ECONNREFUSED` | ENVIRONMENTAL | Service/port unavailable |
-| `EADDRINUSE` | ENVIRONMENTAL | Port already in use |
+#### Tier 1: System Error Patterns (Universal)
+
+These patterns indicate system-level issues and are checked for ALL projects:
+
+| Pattern | Issue Type | Description |
+|---------|-----------|-------------|
+| `ECONNREFUSED` | ENVIRONMENTAL | TCP connection refused |
+| `EADDRINUSE` | ENVIRONMENTAL | Port already bound |
 | `ENOENT` | ENVIRONMENTAL | File/path not found |
-| `ETIMEDOUT` | ENVIRONMENTAL | Connection timeout |
-| `ENOTFOUND` | ENVIRONMENTAL | DNS/host not found |
-| `connection refused` | ENVIRONMENTAL | Service unavailable |
-| `not running` | ENVIRONMENTAL | Required service not started |
-| `unavailable` | ENVIRONMENTAL | Service/resource unavailable |
-| `failed to start` | ENVIRONMENTAL | App/service startup failure |
-| `server.*not.*start` | ENVIRONMENTAL | Server launch failed |
-| `timeout.*error` | ENVIRONMENTAL | Operation timed out |
-| `Cannot find module` | CODE_ISSUE | Missing dependency |
-| `is not exported` | CODE_ISSUE | Import/export mismatch |
-| `Module not found` | CODE_ISSUE | Missing module |
-| `ReferenceError:.*not defined` | CODE_ISSUE | Undefined variable/function |
+| `ETIMEDOUT` | ENVIRONMENTAL | Connection/operation timeout |
+| `ENOTFOUND` | ENVIRONMENTAL | DNS lookup failed |
+| `EPERM` | ENVIRONMENTAL | Permission denied |
+| `Cannot find module` | CODE_ISSUE | Missing npm/import |
+| `is not exported` | CODE_ISSUE | Export mismatch |
+| `ReferenceError` | CODE_ISSUE | Undefined reference |
+| `SyntaxError` | CODE_ISSUE | Parse error |
 
-**Note:** These patterns are generic and work across different tech stacks.
-For project-specific services, add custom patterns to the Skip If Unavailable task field.
+#### Tier 2: Project-Specific Patterns (From Task Config)
 
-**Count affected tests for each pattern.**
+Read additional patterns from the task's `Skip If Unavailable` field:
+
+```markdown
+| Field | Value |
+|-------|-------|
+| Skip If Unavailable | ollama, redis, postgres |
+```
+
+For each service listed in `Skip If Unavailable`:
+1. Generate service-specific patterns: `{service}.*not.*running`, `{service}.*unavailable`
+2. Check test output for these patterns
+3. If found, classify as ENVIRONMENTAL (the service is expected but unavailable)
+
+**Example:** If task has `Skip If Unavailable | ollama, redis`:
+- Check for: `ollama not running`, `ollama unavailable`, `redis connection refused`, etc.
+- These are ENVIRONMENTAL issues for THIS task, not code problems
+
+#### Pattern Detection Algorithm
+
+```
+1. Run Tier 1 patterns against test output (always)
+2. Read Skip If Unavailable field from task definition
+3. Generate Tier 2 patterns for each listed service
+4. Run Tier 2 patterns against test output
+5. Classify and count all matches
+```
+
+**This approach is extensible:** Projects add their services to `Skip If Unavailable`
+rather than modifying the verification agent.
 
 ### 5.3 Skip Classification
 
@@ -475,24 +501,37 @@ If ANY of the following are true:
     "tests_that_would_fail_without_deps": 30
   },
 
-  "environmental_issues": [
-    {
-      "pattern": "ECONNREFUSED",
-      "issue_type": "ENVIRONMENTAL",
-      "affected_tests": 9,
-      "examples": ["test_api_health", "test_db_connection"]
-    },
-    {
-      "pattern": "is not exported",
-      "issue_type": "CODE_ISSUE",
-      "affected_tests": 15,
-      "examples": ["test_api_endpoint_1"]
-    }
-  ],
+  "environmental_issues": {
+    "tier1_system": [
+      {
+        "pattern": "ECONNREFUSED",
+        "issue_type": "ENVIRONMENTAL",
+        "affected_tests": 5,
+        "examples": ["test_api_health"]
+      }
+    ],
+    "tier2_project_specific": [
+      {
+        "service": "redis",
+        "pattern": "redis.*connection refused",
+        "issue_type": "ENVIRONMENTAL",
+        "affected_tests": 4,
+        "examples": ["test_cache_set"]
+      }
+    ],
+    "code_issues": [
+      {
+        "pattern": "is not exported",
+        "issue_type": "CODE_ISSUE",
+        "affected_tests": 15,
+        "examples": ["test_api_endpoint_1"]
+      }
+    ]
+  },
 
   "cheating_detected": false,
   "cheating_details": [],
-  "verdict_reason": "BLOCKED: 9 tests blocked by ECONNREFUSED (service unavailable)"
+  "verdict_reason": "BLOCKED: 9 tests blocked by environmental issues (ECONNREFUSED, redis unavailable)"
 }
 ```
 

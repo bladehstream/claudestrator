@@ -17,16 +17,16 @@ PRD.md ──▶ DECOMPOSE ──▶ task_queue.md ──▶ IMPLEMENT ──▶
 │                                         │  │ SETUP (before T1):                      │
 │ /orchestrate         Start/resume       │  │   /prdgen            Generate PRD       │
 │ /orchestrate N       N improvement loops│  │   /audit-skills      Skill health       │
-│ /orchestrate N security  Focused loops  │  │   /ingest-skill <url> Add skills        │
-│ /orchestrate --dry-run   Preview only   │  │                                         │
-│                                         │  │ WHILE RUNNING:                          │
-│ /progress            Project overview   │  │   /issue             Report bug         │
-│ /progress tasks      Task list          │  │   /issues            View queue         │
-│ /progress agents     Agent status       │  │   /refresh prd       Queue restart      │
-│                                         │  │   /refresh skills    Reload skills      │
-│ /checkpoint          Save state         │  │   /abort             Emergency stop     │
-│ /deorchestrate       Clean exit         │  │                                         │
-│                                         │  │ UTILITY:                                │
+│ /orchestrate --dry-run   Preview only   │  │   /ingest-skill <url> Add skills        │
+│ /orchestrate --test-only Test & verify  │  │                                         │
+│ /orchestrate --help      Show options   │  │ WHILE RUNNING:                          │
+│                                         │  │   /issue             Report bug         │
+│ /progress            Project overview   │  │   /issues            View queue         │
+│ /progress tasks      Task list          │  │   /refresh prd       Queue restart      │
+│ /progress agents     Agent status       │  │   /refresh skills    Reload skills      │
+│                                         │  │   /abort             Emergency stop     │
+│ /checkpoint          Save state         │  │                                         │
+│ /deorchestrate       Clean exit         │  │ UTILITY:                                │
 │                                         │  │   /skills            List skills        │
 │                                         │  │   /claudestrator-help                   │
 └─────────────────────────────────────────┘  └─────────────────────────────────────────┘
@@ -45,10 +45,16 @@ curl -fsSL https://raw.githubusercontent.com/bladehstream/claudestrator/main/ins
 
 **Run (Standard - PRD-based):**
 ```
-Terminal 2: /prdgen          # Create PRD first
-Terminal 2: /clear           # Clear context
-Terminal 1: /orchestrate     # Start orchestration
-Terminal 2: /issue           # Report bugs while running
+Terminal 2: /prdgen              # Create PRD first
+Terminal 2: /clear               # Clear context
+Terminal 1: /orchestrate         # Start orchestration
+Terminal 2: /issue               # Report bugs while running
+```
+
+**Run (Test-only mode):**
+```
+Terminal 1: /orchestrate --test-only   # Create and verify tests against existing code
+# Use when implementation exists and you need to rework/validate tests
 ```
 
 **Run (Alternative - External Spec Files):**
@@ -58,7 +64,11 @@ Terminal 2: /issue           # Report bugs while running
 #   - test-plan-output.json  (test cases)
 
 Terminal 1: /orchestrate --source external_spec
-# Orchestrator prompts for file paths and generates tasks from JSON specs
+```
+
+**Get help:**
+```
+/orchestrate --help          # Show all options and examples
 ```
 
 See [User Guide](docs/user_guide.md) for detailed setup and usage.

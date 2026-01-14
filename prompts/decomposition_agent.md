@@ -797,7 +797,7 @@ Test tasks require additional fields for integration requirements:
 | Integration Level | real / mocked / unit |
 | External Dependencies | ollama, clamav, database |
 | Mock Policy | database-seeding-only |
-| Skip If Unavailable | ollama |
+| Required Services | ollama |
 | Build Command | {PROJECT_BUILD_COMMAND} |
 | Test Command | pytest tests/unit/test_llm_gateway.py -v |
 
@@ -825,8 +825,38 @@ Test tasks require additional fields for integration requirements:
 |--------|---------------|
 | **none** | No mocking allowed - all calls must be real |
 | **database-seeding-only** | May seed test data, but queries must hit real DB |
-| **external-services-only** | May mock 3rd party APIs if skip-if-unavailable |
+| **external-services-only** | May mock 3rd party APIs (unit tests only) |
 | **internal-only** | May mock internal services, external must be real |
+
+### Required Services (CRITICAL)
+
+The `Required Services` field lists external services that MUST be available for tests to run.
+
+**Semantics:**
+- If a required service is unavailable → Task is **BLOCKED** (not PASS-with-skips)
+- The verification agent detects environmental issues and returns BLOCKED
+- Tests should NOT silently skip when required services are down
+- This prevents false confidence from "100% pass rate (of runnable tests)"
+
+**Why NOT "Skip If Unavailable":**
+- Skipping hides broken infrastructure
+- "Pass with skips" inflates success metrics
+- E2E/integration tests without real dependencies aren't testing anything
+
+**Integration Level determines strictness:**
+
+| Integration Level | Required Services Unavailable | Result |
+|-------------------|------------------------------|--------|
+| `unit` | N/A (no external deps) | Tests run |
+| `mocked` | Services can be mocked | Tests run with mocks |
+| `real` | Services unavailable | **BLOCKED** |
+
+**Example:**
+```markdown
+| Integration Level | real |
+| Required Services | ollama, database |
+```
+If Ollama is down → BLOCKED (not "95% pass rate with 5% skipped")
 
 ===============================================================================
 PHASE 2D: TEST COVERAGE VALIDATION (MANDATORY)

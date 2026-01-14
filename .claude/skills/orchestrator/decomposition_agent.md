@@ -76,7 +76,7 @@ QA verification (TASK-99999)
 | `Test IDs` | Which test IDs from test plan this task covers |
 | `Integration Level` | `unit` / `mocked` / `real` |
 | `Mock Policy` | `none` / `database-seeding-only` / `external-services-only` |
-| `Skip If Unavailable` | External services that can be skipped |
+| `Required Services` | External services that MUST be available (unavailable → BLOCKED) |
 
 ---
 

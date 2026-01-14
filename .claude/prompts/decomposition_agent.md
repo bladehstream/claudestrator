@@ -24,6 +24,7 @@ CONTEXT
 Working Directory: {working_dir}
 Source Document:   {source} (PRD.md for initial, .orchestrator/issue_queue.md for loops)
 Mode:              {mode} (initial | improvement_loop | critical_only)
+Test Only:         {test_only} (false | true)
 
 ### Mode Definitions
 
@@ -33,6 +34,20 @@ Mode:              {mode} (initial | improvement_loop | critical_only)
 | `improvement_loop` | issue_queue.md | All pending issues |
 | `critical_only` | issue_queue.md | **ONLY** issues with `Priority \| critical` |
 | `external_spec` | projectspec/*.json | Features from spec-final.json + tests from test-plan-output.json |
+
+### Test Only Flag
+
+| `test_only` | Tasks Created |
+|-------------|---------------|
+| `false` | All tasks: TEST (TASK-T##), BUILD (TASK-###), VERIFY (TASK-V##), QA (TASK-99999) |
+| `true` | **Only TEST tasks (TASK-T##)** - Skip BUILD, VERIFY, QA |
+
+**When `test_only=true`:**
+- Create TASK-T## (test creation) tasks normally
+- **DO NOT** create TASK-### (BUILD) tasks
+- **DO NOT** create TASK-V## (VERIFY) tasks
+- **DO NOT** create TASK-99999 (QA) task
+- This is the TDD setup phase - tests are written, but not yet run against implementation
 
 ===============================================================================
 PHASE 1: MODE BRANCH (READ THIS FIRST)
@@ -133,7 +148,9 @@ Repeat for each issue you created a task for.
 
 ### B.4 Create Final Testing Task
 
-Always create TASK-99999 (testing task) that depends on all other tasks.
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS SECTION**.
+
+Always create TASK-99999 (testing task) that depends on all other tasks (unless in test-only mode).
 
 **→ Continue to Section 1.3 (Build/Test Commands), then Phase 3, 4**
 
@@ -202,7 +219,9 @@ Edit(
 
 ### C.5 Create Final Testing Task (REQUIRED)
 
-**Even in critical_only mode, you MUST create TASK-99999 (testing task).**
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS SECTION**.
+
+**Even in critical_only mode, you MUST create TASK-99999 (testing task)** (unless in test-only mode).
 
 This task:
 - Has `Category: testing`
@@ -272,6 +291,8 @@ Parse the JSON structures:
 
 ### D.3 Create BUILD Tasks from Features
 
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS ENTIRE SECTION**. Do not create BUILD tasks.
+
 For each item in `core_functionality[]`:
 
 1. **Assign Task ID**: TASK-001, TASK-002, etc. (in order)
@@ -329,35 +350,30 @@ CATEGORY_DEPENDENCIES = {
 }
 ```
 
-### D.4b Create VERIFY Tasks for Test Verification
+### D.4b Create VERIFY Tasks from TEST Tasks (MANDATORY)
 
-After creating TEST tasks (TASK-T##), create corresponding VERIFY tasks (TASK-V##) to verify tests compile and don't cheat:
+**CRITICAL:** For EACH test category task (TASK-T##), you MUST create a corresponding VERIFY task (TASK-V##). This applies in ALL modes including `test_only`.
 
-**Verification Task Naming:** `TASK-V{category_number}` (matches TASK-T##)
+VERIFY tasks ensure tests are not cheating. They run AFTER build tasks complete and validate:
+1. Tests compile and run without errors
+2. No forbidden patterns (mocks in E2E, in-memory DBs, etc.)
+3. Tests actually test real functionality
+4. Skip rate is acceptable (< 10%)
+5. No environmental issues blocking tests
 
-| Test Task | Verify Task | Purpose |
-|-----------|-------------|---------|
-| TASK-T01 | TASK-V01 | Verify unit tests (vulnerability-validation) |
-| TASK-T02 | TASK-V02 | Verify unit tests (llm-processing) |
-| TASK-T03 | TASK-V03 | Verify unit tests (filtering) |
-| TASK-T04 | TASK-V04 | Verify unit tests (dashboard-ui) |
-| TASK-T05 | TASK-V05 | Verify unit tests (data-ingestion) |
-| TASK-T06 | TASK-V06 | Verify unit tests (admin-maintenance) |
-| TASK-T10 | TASK-V10 | Verify integration tests |
-| TASK-T20 | TASK-V20 | Verify E2E tests |
-| TASK-T30 | TASK-V30 | Verify security tests |
-| TASK-T40 | TASK-V40 | Verify performance tests |
-| TASK-T50 | TASK-V50 | Verify edge case tests |
-
-**Dependencies:** Each TASK-V## depends on its corresponding TASK-T##.
-
-**Agent:** Uses `test_verification_agent.md` prompt (zero-trust adversarial auditor).
-
-**Verification Checks:**
-1. Tests compile without errors
-2. No cheating patterns (try/catch error swallowing, expected-failure comments)
-3. Tests actually verify behavior (not just config strings)
-4. Dependencies are actually tested (Ollama, MCP, etc.)
+| Test Task | Verify Task | Category | Depends On |
+|-----------|-------------|----------|------------|
+| TASK-T01 | TASK-V01 | test_verification | TASK-T01 + related BUILD tasks |
+| TASK-T02 | TASK-V02 | test_verification | TASK-T02 + related BUILD tasks |
+| TASK-T03 | TASK-V03 | test_verification | TASK-T03 + related BUILD tasks |
+| TASK-T04 | TASK-V04 | test_verification | TASK-T04 + related BUILD tasks |
+| TASK-T05 | TASK-V05 | test_verification | TASK-T05 + related BUILD tasks |
+| TASK-T06 | TASK-V06 | test_verification | TASK-T06 + related BUILD tasks |
+| TASK-T10 | TASK-V10 | test_verification | TASK-T10 + ALL BUILD tasks |
+| TASK-T20 | TASK-V20 | test_verification | TASK-T20 + ALL BUILD tasks |
+| TASK-T30 | TASK-V30 | test_verification | TASK-T30 + ALL BUILD tasks |
+| TASK-T40 | TASK-V40 | test_verification | TASK-T40 + ALL BUILD tasks |
+| TASK-T50 | TASK-V50 | test_verification | TASK-T50 + related BUILD tasks |
 
 **TASK-V## Format:**
 
@@ -369,20 +385,34 @@ After creating TEST tasks (TASK-T##), create corresponding VERIFY tasks (TASK-V#
 | Status | pending |
 | Category | test_verification |
 | Complexity | normal |
-| Depends On | TASK-T01 |
+| Depends On | TASK-T01, TASK-001, TASK-002 |
+| Test Scope | unit |
+| Test IDs | UNIT-001, UNIT-002, ... |
 
 ---
 
-**Description:** Verify unit tests for vulnerability-validation category compile and execute correctly without cheating patterns.
+**Description:** Verify unit tests for [category] compile and execute correctly without cheating patterns or environmental skips.
 
 **Steps:**
-1. Run cheating pattern detection (try/catch error swallowing, null-swallowing, expected-failure comments)
-2. Execute tests and verify they actually test functionality
-3. Check tests fail when dependencies are unavailable
-4. Generate findings.json with verdict
+1. Read test files and grep for forbidden patterns (try/catch swallowing, mocks in E2E)
+2. Execute tests with project test command
+3. Capture pass/fail/skip counts
+4. Verify skip rate < 10% (environmental skips = BLOCKED)
+5. Check tests fail appropriately when dependencies missing
+6. Generate findings.json with verdict
 
-**Expected Result:** All tests pass verification with no cheating patterns detected. Tests fail appropriately when dependencies are missing.
+**Expected Result:** All tests pass, skip rate < 10%, no cheating patterns, no environmental issues.
 ```
+
+**Execution Order:**
+
+VERIFY tasks run AFTER their corresponding BUILD tasks complete:
+
+```
+TASK-T01 (write tests) ──► TASK-001 (build) ──► TASK-V01 (verify) ──► TASK-99999 (QA)
+```
+
+This ensures verification checks real implementations, not stubs.
 
 ### D.5 CRITICAL FORMAT REQUIREMENT
 
@@ -580,31 +610,9 @@ Dependencies: ALL build tasks (TASK-001 through TASK-N)
 [Performance Tests]
 Dependencies: ALL build tasks
 
-## Verify Tasks
-
-### TASK-V01
-[Verify Unit Tests - Vulnerability Validation]
-Dependencies: TASK-T01
-
-### TASK-V10
-[Verify Integration Tests]
-Dependencies: TASK-T10
-
-### TASK-V20
-[Verify E2E Tests]
-Dependencies: TASK-T20
-
-### TASK-V30
-[Verify Security Tests]
-Dependencies: TASK-T30
-
-### TASK-V40
-[Verify Performance Tests]
-Dependencies: TASK-T40
-
-...
-
 ## Final Verification
+
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **DO NOT CREATE TASK-99999**. Skip final verification in test-only mode.
 
 ### TASK-99999
 [E2E Verification & Documentation]
@@ -625,9 +633,6 @@ Before finishing, verify:
 - [ ] Linked TEST tasks to BUILD tasks via Dependencies
 - [ ] Cross-cutting tests (security, performance, e2e) depend on ALL build tasks
 - [ ] Generated test code for each test batch
-- [ ] Created VERIFY tasks (TASK-V##) for each TEST task (TASK-T##)
-- [ ] VERIFY tasks depend on corresponding TEST tasks
-- [ ] VERIFY tasks use test_verification category
 - [ ] Created TASK-99999 for final verification
 - [ ] Wrote task_queue.md with proper structure
 - [ ] **WROTE THE COMPLETION MARKER FILE**
@@ -792,7 +797,7 @@ Test tasks require additional fields for integration requirements:
 | Integration Level | real / mocked / unit |
 | External Dependencies | ollama, clamav, database |
 | Mock Policy | database-seeding-only |
-| Skip If Unavailable | ollama |
+| Required Services | ollama |
 | Build Command | {PROJECT_BUILD_COMMAND} |
 | Test Command | pytest tests/unit/test_llm_gateway.py -v |
 
@@ -820,8 +825,38 @@ Test tasks require additional fields for integration requirements:
 |--------|---------------|
 | **none** | No mocking allowed - all calls must be real |
 | **database-seeding-only** | May seed test data, but queries must hit real DB |
-| **external-services-only** | May mock 3rd party APIs if skip-if-unavailable |
+| **external-services-only** | May mock 3rd party APIs (unit tests only) |
 | **internal-only** | May mock internal services, external must be real |
+
+### Required Services (CRITICAL)
+
+The `Required Services` field lists external services that MUST be available for tests to run.
+
+**Semantics:**
+- If a required service is unavailable → Task is **BLOCKED** (not PASS-with-skips)
+- The verification agent detects environmental issues and returns BLOCKED
+- Tests should NOT silently skip when required services are down
+- This prevents false confidence from "100% pass rate (of runnable tests)"
+
+**Why NOT "Skip If Unavailable":**
+- Skipping hides broken infrastructure
+- "Pass with skips" inflates success metrics
+- E2E/integration tests without real dependencies aren't testing anything
+
+**Integration Level determines strictness:**
+
+| Integration Level | Required Services Unavailable | Result |
+|-------------------|------------------------------|--------|
+| `unit` | N/A (no external deps) | Tests run |
+| `mocked` | Services can be mocked | Tests run with mocks |
+| `real` | Services unavailable | **BLOCKED** |
+
+**Example:**
+```markdown
+| Integration Level | real |
+| Required Services | ollama, database |
+```
+If Ollama is down → BLOCKED (not "95% pass rate with 5% skipped")
 
 ===============================================================================
 PHASE 2D: TEST COVERAGE VALIDATION (MANDATORY)
@@ -878,12 +913,14 @@ Each task must be:
 
 ### REQUIRED: Final Testing & Verification Task
 
+**⚠️ TEST_ONLY GUARD:** If `test_only=true`, **SKIP THIS SECTION**. Do not create TASK-99999 in test-only mode.
+
 **CRITICAL**: You MUST always create a final task with Category `testing` that:
 - Depends on ALL other tasks (runs last)
 - Writes tests for the implemented features
 - Creates `.orchestrator/VERIFICATION.md` with user instructions
 
-This task is MANDATORY for every task queue. Example:
+This task is MANDATORY for every task queue (except in test-only mode). Example:
 
 ```
 ### TASK-99999 (always the LAST task)
@@ -1296,6 +1333,10 @@ Before finishing, verify:
 - [ ] **Source issues marked as `in_progress`** (BRANCH B/C only)
 - [ ] **Test Coverage Matrix included at bottom of task_queue.md**
 - [ ] **100% of test IDs from source are mapped to tasks**
+- [ ] **Created VERIFY tasks (TASK-V##) for each TEST task**
+- [ ] **VERIFY tasks depend on TEST + related BUILD tasks**
+- [ ] **VERIFY tasks use Category: test_verification**
+- [ ] **VERIFY tasks run BEFORE TASK-99999**
 - [ ] **FINAL TASK (TASK-99999) is Category: testing**
 - [ ] Wrote task_queue.md using Write tool (with Project Commands header)
 - [ ] **WROTE THE COMPLETION MARKER FILE**
@@ -1321,6 +1362,7 @@ COMMON MISTAKES
 | **Missing Integration Level** | **Unclear what to mock** | **Specify unit/mocked/real** |
 | **Not preserving retry fields** | **Infinite retry loops** | **Copy Retry-Count, Failure-Signature, etc.** |
 | **Creating task for Halted issue** | **Wasted effort** | **Skip Halted issues** |
+| **Missing VERIFY tasks (TASK-V##)** | **Tests never verified, cheating undetected** | **Create TASK-V## for each TASK-T##** |
 
 ===============================================================================
 START NOW

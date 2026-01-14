@@ -335,34 +335,40 @@ These patterns indicate system-level issues and are checked for ALL projects:
 
 #### Tier 2: Project-Specific Patterns (From Task Config)
 
-Read additional patterns from the task's `Skip If Unavailable` field:
+Read additional patterns from the task's `Required Services` field:
 
 ```markdown
 | Field | Value |
 |-------|-------|
-| Skip If Unavailable | ollama, redis, postgres |
+| Required Services | ollama, redis, postgres |
 ```
 
-For each service listed in `Skip If Unavailable`:
-1. Generate service-specific patterns: `{service}.*not.*running`, `{service}.*unavailable`
+For each service listed in `Required Services`:
+1. Generate service-specific patterns: `{service}.*not.*running`, `{service}.*unavailable`, `{service}.*connection refused`
 2. Check test output for these patterns
-3. If found, classify as ENVIRONMENTAL (the service is expected but unavailable)
+3. If found, classify as ENVIRONMENTAL → **BLOCKED** (the service is required but unavailable)
 
-**Example:** If task has `Skip If Unavailable | ollama, redis`:
+**Example:** If task has `Required Services | ollama, redis`:
 - Check for: `ollama not running`, `ollama unavailable`, `redis connection refused`, etc.
-- These are ENVIRONMENTAL issues for THIS task, not code problems
+- These are ENVIRONMENTAL issues → **BLOCKED** (not PASS-with-skips)
+
+**CRITICAL:** Required Services are REQUIRED, not optional. If unavailable:
+- Task verdict = **BLOCKED**
+- Do NOT write completion marker
+- Create issue for infrastructure setup
 
 #### Pattern Detection Algorithm
 
 ```
 1. Run Tier 1 patterns against test output (always)
-2. Read Skip If Unavailable field from task definition
+2. Read Required Services field from task definition
 3. Generate Tier 2 patterns for each listed service
 4. Run Tier 2 patterns against test output
-5. Classify and count all matches
+5. If ANY match found → BLOCKED (service unavailable)
+6. Classify and count all matches
 ```
 
-**This approach is extensible:** Projects add their services to `Skip If Unavailable`
+**This approach is extensible:** Projects add their services to `Required Services`
 rather than modifying the verification agent.
 
 ### 5.3 Skip Classification
@@ -618,10 +624,12 @@ Tests must FAIL when dependencies are unavailable, not pass with error handling.
 Only after all evidence is written AND no cheating detected:
 
 ```bash
-Write(".orchestrator/complete/{task_id}.verified", "verified")
+Write(".orchestrator/complete/{task_id}.done", "done")
 ```
 
-**If cheating detected: Do NOT write .verified marker. Write issue instead.**
+**If cheating detected: Do NOT write .done marker. Write issue instead.**
+
+**NOTE:** The orchestrator waits for `.done` files, not `.verified`. Always use `.done` for consistency with other agents.
 
 ---
 

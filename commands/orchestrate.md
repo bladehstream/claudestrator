@@ -93,11 +93,7 @@ If `SOURCE_TYPE` is `external_spec`, use projectspec/*.json files instead of PRD
 
 ## System Dependencies
 
-| Package | Install Command | Purpose |
-|---------|-----------------|---------|
-| `inotify-tools` | `sudo apt install inotify-tools` | True blocking file watch (no polling) |
-
-**Critical:** The orchestrator uses `inotifywait` for zero-output blocking waits. Without it, completion waits will fail.
+No external dependencies required. Completion waits use polling (120-second intervals).
 
 ---
 
@@ -142,11 +138,38 @@ The Decomposition Agent creates both TEST and BUILD tasks with proper dependenci
 
 ## Startup Checklist
 
-1. **Check source files exist:**
-   - If `SOURCE_TYPE = prd`: Check PRD.md exists → if not, tell user to run `/prdgen` first
-   - If `SOURCE_TYPE = external_spec`: Check projectspec/spec-final.json AND projectspec/test-plan-output.json exist → if not, tell user to provide spec files
-2. Check git → init if needed
-3. **Pre-flight checks for directory structure:**
+1. **Check for existing work FIRST (before requiring source files):**
+   ```bash
+   # Check for pending issues
+   PENDING_ISSUES=$(grep -cE "Status \| (pending|accepted)" .orchestrator/issue_queue.md 2>/dev/null || echo "0")
+
+   # Check for pending tasks
+   PENDING_TASKS=$(grep -c "| Status | pending |" .orchestrator/task_queue.md 2>/dev/null || echo "0")
+
+   # Check if task queue exists at all
+   TASK_QUEUE_EXISTS=$(test -f .orchestrator/task_queue.md && echo "yes" || echo "no")
+   ```
+
+   **If PENDING_ISSUES > 0 OR PENDING_TASKS > 0:** Skip source file check, proceed with existing work.
+
+   **If no existing work:** Continue to step 2 (source file check).
+
+2. **Check source files exist (only if no existing work):**
+   - If `SOURCE_TYPE = external_spec`: Check projectspec/spec-final.json AND projectspec/test-plan-output.json exist
+   - If `SOURCE_TYPE = prd`: Check PRD.md exists
+     - If PRD.md missing, check for external spec files as fallback:
+       ```bash
+       if [ -f "projectspec/spec-final.json" ] && [ -f "projectspec/test-plan-output.json" ]; then
+         echo "PRD.md not found, but external spec files exist. Switching to external_spec mode."
+         SOURCE_TYPE="external_spec"
+       else
+         echo "ERROR: No PRD.md and no external spec files found."
+         echo "Run /prdgen to create a PRD, or provide projectspec/*.json files"
+         exit 1
+       fi
+       ```
+3. Check git → init if needed
+4. **Pre-flight checks for directory structure:**
    ```bash
    # Verify no project files in framework repo
    for dir in tests app dashboard; do
@@ -167,7 +190,7 @@ The Decomposition Agent creates both TEST and BUILD tasks with proper dependenci
      fi
    done
    ```
-4. **Initialize project output directory (.orchestrator/):**
+5. **Initialize project output directory (.orchestrator/):**
    ```bash
    # Create project output directory structure
    mkdir -p .orchestrator/{app,tests,docs,complete,reports,pids,process-logs}
@@ -178,14 +201,14 @@ The Decomposition Agent creates both TEST and BUILD tasks with proper dependenci
    - `claudestrator/` = Framework repo (commands, prompts, skills)
    - `.claudestrator/` = Runtime config (symlinks to framework)
    - `.orchestrator/` = Project OUTPUT (app/, tests/, docs/, task_queue.md, reports/)
-5. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
-6. Get absolute working directory with `pwd` (store for agent prompts)
-7. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
-8. Initialize LOOP_NUMBER to 1
-9. **Scan for failed tasks** (see Step 9 below)
-10. **Scan for critical blocking issues** (see Step 10 below)
+6. Create `.orchestrator/complete/` and `.orchestrator/reports/` directories if missing
+7. Get absolute working directory with `pwd` (store for agent prompts)
+8. Generate RUN_ID: `run-YYYYMMDD-HHMMSS` (e.g., `run-20240115-143022`)
+9. Initialize LOOP_NUMBER to 1
+10. **Scan for failed tasks** (see Step 10 below)
+11. **Scan for critical blocking issues** (see Step 11 below)
 
-### Step 9: Failed Task Detection (BEFORE Critical Issues)
+### Step 10: Failed Task Detection (BEFORE Critical Issues)
 
 **IMPORTANT:** Failed tasks must be processed FIRST because they generate critical issues.
 
@@ -230,17 +253,16 @@ For each TASK_ID in FAILED_TASKS:
 3. **Wait for all analysis to complete:**
    ```bash
    for TASK_ID in $FAILED_TASKS; do
-     [ -f ".orchestrator/complete/analysis-${TASK_ID}.done" ] || \
-       inotifywait -q -q -e create --include "analysis-${TASK_ID}\\.done" .orchestrator/complete/
+     while [ ! -f ".orchestrator/complete/analysis-${TASK_ID}.done" ]; do sleep 120; done
    done
    echo "All failure analysis complete"
    ```
 
-**Result:** Critical issues now exist in issue_queue.md. Proceed to Step 10.
+**Result:** Critical issues now exist in issue_queue.md. Proceed to Step 11.
 
 ---
 
-### Critical Issue Loop (Step 10)
+### Critical Issue Loop (Step 11)
 
 **IMPORTANT:** Before ANY other work, you must resolve ALL critical issues.
 
@@ -279,7 +301,7 @@ This is a LOOP that continues until the critical queue is empty:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 10a: Scan for Critical Issues
+### Step 11a: Scan for Critical Issues
 
 Critical issues need processing if they are in ANY of these states:
 
@@ -290,7 +312,7 @@ Critical issues need processing if they are in ANY of these states:
 | `in_progress` | Task has `.failed` marker | Implementation failed, needs Failure Analysis |
 | `in_progress` | Task has `.done` marker but issue not `completed` | False completion, needs re-work |
 
-**Step 10a.1: Count pending/accepted critical issues**
+**Step 11a.1: Count pending/accepted critical issues**
 
 Run this command to count actionable critical issues:
 
@@ -300,7 +322,7 @@ Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/nul
 
 Store the output as `PENDING_CRITICAL`.
 
-**Step 10a.2: Check for stalled in_progress critical issues**
+**Step 11a.2: Check for stalled in_progress critical issues**
 
 Run this command to find critical in_progress issues with Task Refs:
 
@@ -317,13 +339,13 @@ For each result that shows BOTH `Priority | critical` AND `Status | in_progress`
 
 Count how many stalled tasks you find as `STALLED_COUNT`.
 
-**Step 10a.3: Calculate total**
+**Step 11a.3: Calculate total**
 
 ```
 CRITICAL_COUNT = PENDING_CRITICAL + STALLED_COUNT
 ```
 
-**Step 10a.4: Handle stalled issues**
+**Step 11a.4: Handle stalled issues**
 
 For each stalled task found:
 
@@ -348,7 +370,7 @@ For each stalled task found:
   ```
 - Output: `⚠️ False completion detected: TASK-XXX marked done but issue unresolved. Resetting for re-work.`
 
-**Step 10a.5: Re-count after resets**
+**Step 11a.5: Re-count after resets**
 
 After handling stalled issues, re-run the pending/accepted count:
 
@@ -358,7 +380,7 @@ Bash("grep -A3 '| Priority | critical |' .orchestrator/issue_queue.md 2>/dev/nul
 
 Update `CRITICAL_COUNT` with the new value.
 
-### Step 10b: Critical Loop Logic
+### Step 11b: Critical Loop Logic
 
 ```python
 CRITICAL_ITERATION = 0
@@ -418,10 +440,10 @@ WHILE CRITICAL_COUNT > 0:
       START: Read('.orchestrator/issue_queue.md')"
     )
 
-    # 2. Wait for completion (and clean up marker) - true blocking, no polling
-    Bash("[ -f '.orchestrator/complete/decomposition.done' ] || inotifywait -q -q -e create --include 'decomposition\\.done' .orchestrator/complete/ && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
+    # 2. Wait for completion (and clean up marker)
+    Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 120; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 600000)
 
-    # 3. VERIFY tasks were created (Step 10c)
+    # 3. VERIFY tasks were created (Step 11c)
     # 4. Run Implementation Agents on critical tasks (markers cleaned inline per Step 2c)
     # 5. Wait for all critical tasks to complete (including TASK-99999)
     # 6. Commit changes
@@ -445,7 +467,7 @@ Proceeding with normal orchestration flow.
 """
 ```
 
-### Step 10c: Verify Tasks Created (within loop)
+### Step 11c: Verify Tasks Created (within loop)
 
 **After Decomposition Agent completes, verify tasks were created:**
 
@@ -476,7 +498,7 @@ Action: HALT orchestration. Manual intervention required.
 
 **HALT immediately.** Do NOT continue the loop or proceed to normal orchestration.
 
-### Step 10d: After Critical Loop Completes
+### Step 11d: After Critical Loop Completes
 
 Only after CRITICAL_COUNT == 0 should you proceed. The next step depends on:
 
@@ -617,7 +639,7 @@ Task(
 
 **Wait for completion (and clean up marker):**
 ```
-Bash("[ -f '.orchestrator/complete/decomposition.done' ] || inotifywait -q -q -e create --include 'decomposition\\.done' .orchestrator/complete/ && rm .orchestrator/complete/decomposition.done && echo 'Decomposition complete'", timeout: 600000)
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 120; done && rm .orchestrator/complete/decomposition.done && echo 'Decomposition complete'", timeout: 600000)
 ```
 
 ---
@@ -1104,12 +1126,12 @@ Task(
 ### 2c. Wait for Completion, Check Result, Clean Up (single command)
 
 ```
-Bash("[ -f '.orchestrator/complete/[TASK-ID].done' ] || [ -f '.orchestrator/complete/[TASK-ID].failed' ] || inotifywait -q -q -e create --include '\\[TASK-ID\\]\\.(done|failed)' .orchestrator/complete/ && (test -f '.orchestrator/complete/[TASK-ID].done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/[TASK-ID].done .orchestrator/complete/[TASK-ID].failed", timeout: 1800000)
+Bash("while [ ! -f '.orchestrator/complete/[TASK-ID].done' ] && [ ! -f '.orchestrator/complete/[TASK-ID].failed' ]; do sleep 120; done && (test -f '.orchestrator/complete/[TASK-ID].done' && echo 'SUCCESS' || echo 'FAILED') && rm -f .orchestrator/complete/[TASK-ID].done .orchestrator/complete/[TASK-ID].failed", timeout: 1800000)
 ```
 
 Output is `SUCCESS` or `FAILED`. Markers are cleaned immediately (task_queue.md status is source of truth).
 
-**Note:** Uses `inotifywait` for true blocking (no polling). Requires `inotify-tools` package.
+**Note:** Uses 120-second polling intervals. No external dependencies required.
 
 **Remove task from running list immediately after completion:**
 ```bash
@@ -1191,7 +1213,7 @@ Task(
 
 Wait for analysis:
 ```
-Bash("[ -f '.orchestrator/complete/analysis-[TASK-ID].done' ] || inotifywait -q -q -e create --include 'analysis-\\[TASK-ID\\]\\.done' .orchestrator/complete/ && echo 'Failure analysis complete'", timeout: 600000)
+Bash("while [ ! -f '.orchestrator/complete/analysis-[TASK-ID].done' ]; do sleep 120; done && echo 'Failure analysis complete'", timeout: 600000)
 ```
 
 **Result**: Failure Analysis Agent creates issue(s) with `Priority | critical` in issue_queue.md.
@@ -1291,7 +1313,7 @@ Task(
 
 Wait for completion:
 ```
-Bash("[ -f '.orchestrator/complete/research.done' ] || inotifywait -q -q -e create --include 'research\\.done' .orchestrator/complete/ && rm .orchestrator/complete/research.done && echo 'Research complete'", timeout: 900000)
+Bash("while [ ! -f '.orchestrator/complete/research.done' ]; do sleep 120; done && rm .orchestrator/complete/research.done && echo 'Research complete'", timeout: 900000)
 ```
 
 **3. Spawn Decomposition Agent (convert issues to tasks)**
@@ -1323,7 +1345,7 @@ Task(
 
 Wait for completion:
 ```
-Bash("[ -f '.orchestrator/complete/decomposition.done' ] || inotifywait -q -q -e create --include 'decomposition\\.done' .orchestrator/complete/ && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
+Bash("while [ ! -f '.orchestrator/complete/decomposition.done' ]; do sleep 120; done && rm .orchestrator/complete/decomposition.done && echo 'done'", timeout: 300000)
 ```
 
 **4. Execute tasks**
@@ -1379,7 +1401,7 @@ Task(
 
 **Wait for completion:**
 ```
-Bash("[ -f '.orchestrator/complete/analysis.done' ] || inotifywait -q -q -e create --include 'analysis\\.done' .orchestrator/complete/ && echo 'Analysis complete'", timeout: 300000)
+Bash("while [ ! -f '.orchestrator/complete/analysis.done' ]; do sleep 120; done && echo 'Analysis complete'", timeout: 300000)
 ```
 
 ---
@@ -1478,7 +1500,7 @@ Historical Data: .orchestrator/history.csv
    Full issue processing is handled by Decomposition Agent.
 4. **CAN mark task as done** - when completion marker detected (minimal update)
 5. **Use category-specific prompts** - agents read their detailed prompt file first
-6. **ONE blocking Bash per agent** - uses `inotifywait` for true blocking (no polling, no output until complete)
+6. **ONE blocking Bash per agent** - uses 120-second polling (no output until complete)
 7. **NEVER use TaskOutput** - adds 50-100k tokens to context
 8. **NEVER spawn ad-hoc agents** - only use the predefined agent types below
 9. **NEVER improvise the flow** - follow the documented steps exactly

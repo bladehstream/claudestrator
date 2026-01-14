@@ -1,4 +1,4 @@
-# Test Verification Agent v1.0 (Zero-Trust, Adversarial Auditor)
+# Test Verification Agent v1.1 (Zero-Trust, Adversarial Auditor)
 
 > **Category**: Test Verification & Execution
 > **Mode**: `MODE: verify` (only)
@@ -263,13 +263,18 @@ If ANY of the following are true:
 - [ ] E2E tests use in-process injection instead of real HTTP
 - [ ] Coverage map missing or invalid
 - [ ] Required artifacts missing or are symlinks
+- [ ] **All tests skipped** (skipped == total, nothing actually ran)
+- [ ] **Zero tests passed** (passed == 0, even if no failures)
 
 ### BLOCKED
 
-Only if ALL of the following are true:
-- [ ] You attempted execution and captured outputs
-- [ ] Failure is due to missing prerequisites (deps, services, tools)
-- [ ] NOT due to invalid tests or cheating
+If ANY of the following are true:
+- [ ] Server failed to start (look for "Server did not start", "ECONNREFUSED", "timeout" in output)
+- [ ] Test framework failed to initialize
+- [ ] Missing prerequisites (deps, services, tools) prevented execution
+- [ ] All tests skipped due to environment issues
+
+**CRITICAL: BLOCKED is still a failure state.** Do NOT write completion marker. Create critical issue.
 
 ---
 
@@ -392,13 +397,32 @@ If verdict is FAIL or BLOCKED, write to `.orchestrator/issue_queue.md`:
 
 ## Completion
 
-Only after all evidence is written:
+### Completion Marker Rules
+
+Write `.orchestrator/complete/{task_id}.verified` **ONLY** when ALL conditions are met:
+- [ ] Verdict is **PASS** (not FAIL, not BLOCKED)
+- [ ] Exit code == 0
+- [ ] Passed tests > 0 (at least one test actually ran and passed)
+- [ ] Failed tests == 0
+- [ ] Skipped tests < Total tests (not everything was skipped)
+- [ ] No server startup failures detected
+- [ ] All evidence files written successfully
 
 ```bash
+# Only if ALL above conditions are true:
 Write(".orchestrator/complete/{task_id}.verified", "verified")
 ```
 
-**If FAIL or BLOCKED, do NOT write the .verified marker.**
+### When NOT to Write Completion Marker
+
+**NEVER write the .verified marker if:**
+- Verdict is FAIL or BLOCKED
+- All tests were skipped
+- Zero tests passed
+- Server failed to start
+- Any blocking condition was detected
+
+Instead: Create critical issue in `issue_queue.md` and STOP.
 
 ---
 
@@ -413,4 +437,5 @@ After writing completion marker (or issue for FAIL/BLOCKED):
 
 ---
 
-*Test Verification Agent v1.0 - Zero-trust, adversarial auditor, cheat detector*
+*Test Verification Agent v1.1 - Zero-trust, adversarial auditor, cheat detector*
+*v1.1: Added blocking conditions for 100% skipped tests, server startup failures, and explicit completion marker rules*
